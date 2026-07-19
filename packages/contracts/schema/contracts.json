@@ -1,0 +1,324 @@
+{
+  "models": {
+    "ErrorEnvelope": {
+      "$defs": {
+        "ErrorDetail": {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "details": {
+              "additionalProperties": true,
+              "title": "Details",
+              "type": "object"
+            },
+            "message": {
+              "title": "Message",
+              "type": "string"
+            },
+            "request_id": {
+              "title": "Request Id",
+              "type": "string"
+            },
+            "retryable": {
+              "default": false,
+              "title": "Retryable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "request_id"
+          ],
+          "title": "ErrorDetail",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/ErrorDetail"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "ErrorEnvelope",
+      "type": "object"
+    },
+    "HealthResponse": {
+      "$defs": {
+        "AgentExecutableHealth": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "enum": [
+                "codex-local",
+                "claude-local"
+              ],
+              "title": "Agent Id",
+              "type": "string"
+            },
+            "authentication": {
+              "const": "not_checked",
+              "default": "not_checked",
+              "title": "Authentication",
+              "type": "string"
+            },
+            "executable": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Executable"
+            },
+            "installed": {
+              "title": "Installed",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "agent_id",
+            "installed",
+            "executable"
+          ],
+          "title": "AgentExecutableHealth",
+          "type": "object"
+        },
+        "DataHealth": {
+          "additionalProperties": false,
+          "properties": {
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "healthy",
+                "degraded",
+                "unavailable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Version"
+            },
+            "writable": {
+              "title": "Writable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "path",
+            "writable"
+          ],
+          "title": "DataHealth",
+          "type": "object"
+        },
+        "DatabaseHealth": {
+          "additionalProperties": false,
+          "properties": {
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "foreign_keys": {
+              "title": "Foreign Keys",
+              "type": "boolean"
+            },
+            "journal_mode": {
+              "title": "Journal Mode",
+              "type": "string"
+            },
+            "migration_current": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Migration Current"
+            },
+            "migration_head": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Migration Head"
+            },
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "healthy",
+                "degraded",
+                "unavailable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Version"
+            }
+          },
+          "required": [
+            "status",
+            "path",
+            "journal_mode",
+            "foreign_keys",
+            "migration_current",
+            "migration_head"
+          ],
+          "title": "DatabaseHealth",
+          "type": "object"
+        },
+        "HealthService": {
+          "additionalProperties": false,
+          "properties": {
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "status": {
+              "enum": [
+                "healthy",
+                "degraded",
+                "unavailable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Version"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "title": "HealthService",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/$defs/AgentExecutableHealth"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "api": {
+          "$ref": "#/$defs/HealthService"
+        },
+        "data": {
+          "$ref": "#/$defs/DataHealth"
+        },
+        "database": {
+          "$ref": "#/$defs/DatabaseHealth"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "degraded"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "request_id",
+        "api",
+        "database",
+        "data",
+        "agents"
+      ],
+      "title": "HealthResponse",
+      "type": "object"
+    }
+  },
+  "schema_version": "1.0"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "replaytutor",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "api": "uv run --project apps/api replaytutor api",
+    "web": "pnpm --filter @replaytutor/web dev",
+    "dev": "concurrently --kill-others --success first --names web,api --prefix-colors cyan,magenta \"pnpm web\" \"pnpm api\"",
+    "contracts": "uv run --project apps/api replaytutor contracts check",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.0"
+  }
+}
