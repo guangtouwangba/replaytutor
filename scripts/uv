@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd "$script_dir/.." && pwd)"
+
+# Keep Node-based Python tools such as pyright on the same pinned Node runtime
+# even when Make was launched from a terminal with a minimal PATH.
+if ! command -v node >/dev/null 2>&1; then
+  nvm_root="${NVM_DIR:-$HOME/.nvm}"
+  if test -s "$nvm_root/nvm.sh"; then
+    set +u
+    # shellcheck source=/dev/null
+    source "$nvm_root/nvm.sh"
+    set -u
+    node_version="$(tr -d '[:space:]' < "$project_root/.nvmrc")"
+    nvm use --silent "$node_version" >/dev/null
+  fi
+fi
+
+if command -v uv >/dev/null 2>&1; then
+  exec uv "$@"
+fi
+
+for candidate in \
+  "$HOME/.local/bin/uv" \
+  "$HOME/.cargo/bin/uv" \
+  /opt/homebrew/bin/uv \
+  /usr/local/bin/uv; do
+  if test -x "$candidate"; then
+    exec "$candidate" "$@"
+  fi
+done
+
+cat >&2 <<'EOF'
+ReplayTutor requires uv.
+Install it from https://docs.astral.sh/uv/getting-started/installation/ and retry.
+EOF
+exit 127

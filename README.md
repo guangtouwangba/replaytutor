@@ -24,7 +24,7 @@
 
 ## 本地开发
 
-要求：Node 24、pnpm 11.9.0、uv 和 GNU Make。Python 3.12 由 uv 安装与固定，不使用系统 Python。
+要求：Node 24、Corepack、uv 和 GNU Make。项目自带运行时解析脚本：会从 nvm 加载 Node 24，由 Corepack 按 `packageManager` 固定 pnpm 11.9.0，并查找常见位置中的 uv。Python 3.12 由 uv 安装与固定，不使用系统 Python。
 
 ```bash
 make setup
@@ -48,6 +48,14 @@ make clean       # 只清构建缓存，不删除 data/ 和 logs/
 ```
 
 本地覆盖配置复制 `.env.example` 为 `.env`；所有服务端配置使用 `REPLAYTUTOR_` 前缀。Vite 与 FastAPI 都固定监听 loopback，端口被占用时直接失败。
+
+如果当前终端没有继承 nvm、pnpm 或 uv 的 PATH，可先检查项目解析结果：
+
+```bash
+make runtime
+```
+
+无需全局启用 pnpm；`make` 会通过 `scripts/pnpm` 调用 Corepack。若 Node 24 尚未安装，脚本会给出明确的 `nvm install 24` 提示。
 
 M0 Spike 可通过以下方式复现：
 

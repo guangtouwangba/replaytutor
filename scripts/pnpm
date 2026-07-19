@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd "$script_dir/.." && pwd)"
+
+run_corepack() {
+  exec corepack pnpm "$@"
+}
+
+if command -v corepack >/dev/null 2>&1; then
+  run_corepack "$@"
+fi
+
+nvm_root="${NVM_DIR:-$HOME/.nvm}"
+if test -s "$nvm_root/nvm.sh"; then
+  # nvm is a shell function, so non-interactive Make cannot discover it unless
+  # its initialization script is loaded explicitly.
+  set +u
+  # shellcheck source=/dev/null
+  source "$nvm_root/nvm.sh"
+  set -u
+  node_version="$(tr -d '[:space:]' < "$project_root/.nvmrc")"
+  nvm use --silent "$node_version" >/dev/null
+  if command -v corepack >/dev/null 2>&1; then
+    run_corepack "$@"
+  fi
+fi
+
+if command -v pnpm >/dev/null 2>&1; then
+  exec pnpm "$@"
+fi
+
+cat >&2 <<'EOF'
+ReplayTutor requires Node 24 with Corepack.
+Install/use the pinned runtime, then retry:
+  nvm install 24
+  nvm use 24
+  corepack pnpm --version
+EOF
+exit 127

@@ -1,7 +1,9 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+PNPM := ./scripts/pnpm
+UV := ./scripts/uv
 
-.PHONY: help setup dirs hooks dev api web migrate contracts lint typecheck test build verify clean
+.PHONY: help runtime setup dirs hooks dev api web migrate contracts lint typecheck test build verify clean
 
 help:
 	@echo "ReplayTutor local development"
@@ -9,9 +11,13 @@ help:
 	@echo "  make dev        Start Vite (:5173) and FastAPI (:8788)"
 	@echo "  make verify     Contract, lint, type, test, and build gate"
 
-setup: dirs
-	pnpm install --frozen-lockfile
-	uv sync --project apps/api --frozen
+runtime:
+	@$(PNPM) --version
+	@$(UV) --version
+
+setup: runtime dirs
+	$(PNPM) install --frozen-lockfile
+	$(UV) sync --project apps/api --frozen
 	$(MAKE) migrate
 	$(MAKE) hooks
 
@@ -22,36 +28,37 @@ hooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/pre-push
 
-dev: dirs
-	pnpm dev
+dev: runtime dirs
+	$(PNPM) dev
 
-api: dirs
-	pnpm api
+api: runtime dirs
+	$(PNPM) api
 
-web:
-	pnpm web
+web: runtime
+	$(PNPM) web
 
 migrate: dirs
-	uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head
+	$(UV) run --project apps/api alembic -c apps/api/alembic.ini upgrade head
 
 contracts:
-	pnpm contracts
+	$(PNPM) contracts
 
 lint:
-	pnpm lint
-	uv run --project apps/api ruff check apps/api tests/backend scripts
+	$(PNPM) lint
+	$(UV) run --project apps/api ruff check apps/api tests/backend scripts
 
 typecheck:
-	pnpm typecheck
-	uv run --project apps/api pyright apps/api/replaytutor tests/backend scripts
+	$(PNPM) typecheck
+	$(UV) run --project apps/api pyright apps/api/replaytutor tests/backend scripts
 
 test:
-	pnpm test
-	uv run --project apps/api pytest tests/backend
+	/bin/bash tests/infrastructure/test-runtime-bootstrap.sh
+	$(PNPM) test
+	$(UV) run --project apps/api pytest tests/backend
 
 build:
-	pnpm build
-	uv run --project apps/api python -c "import replaytutor.main"
+	$(PNPM) build
+	$(UV) run --project apps/api python -c "import replaytutor.main"
 
 verify: contracts lint typecheck test build
 
