@@ -61,6 +61,5 @@ def health(request: Request) -> HealthResponse:
         ),
         agents=[
             executable_probe("codex-local", "codex"),
-            executable_probe("claude-local", "claude"),
         ],
     )

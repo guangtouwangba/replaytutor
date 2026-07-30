@@ -1,7 +1,17 @@
 # ReplayTutor 系统架构
 
-状态：Approved v1.0  
-更新时间：2026-07-19
+状态：Implemented through MVP 1A
+更新时间：2026-07-30
+
+实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
+`0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根
+激活的模拟撮合、Decimal 账本、确定性复盘、不可变 Playbook、用户/AI 图层，
+以及 Codex-only Tutor Runtime。Codex 输出只能进入解释和 AI 标注层，不能修改
+订单、成交、账本、行情或用户图层。
+
+实施注记（2026-07-19）：M1 已按本文 seam 实现 `Instrument`、`DataSnapshot`、Parquet 原子提交、DuckDB 参数化查询、Binance/File/Golden 数据入口与 Alembic `0002_market_data`。数据中心可以浏览完整 Snapshot；M2 Replay 接口必须在此查询层之上增加由服务端 Session 解析的 `visible_at`，不得把数据中心的自由浏览接口直接复用于回放客户端。
+
+实施注记（2026-07-27）：新增 Binance U 本位只读交易复盘切片与 Alembic `0003_trade_review`。`ExecutionFill → TradeEpisode → PriceActionAnnotation → ReviewArtifact` 全链路写入本地 SQLite/离线 HTML；1m 行情按 UTC 聚合为 5m/15m/1h/2h/4h。所有 `decision_time` 标注只能读取入场前已收盘 K 线，入场后数据只进入 `after_action` 管理审查。私有适配器只暴露签名 GET，不包含下单、撤单、转账或提现方法。
 
 ## 1. 架构目标
 
@@ -31,7 +41,7 @@
 
 SQLite 保存账户、品种元数据、回放会话、订单、成交、日志和 Agent 运行；大体量 OHLCV/tick 数据保存为不可变 Parquet 分区。不要把全部分钟线塞进 SQLite。
 
-MVP 不把 FastAPI 和 Agent Runtime 放进 Docker。开发环境提供一条宿主机启动命令，同时启动 API、前端和后台 worker。Docker 只作为可选的可复现开发环境，不能成为访问本机 Codex/Claude 登录态的前提。
+MVP 不把 FastAPI 和 Agent Runtime 放进 Docker。开发环境提供一条宿主机启动命令，同时启动 API、前端和后台 worker。Docker 只作为可选的可复现开发环境，不能成为访问本机 Codex 登录态的前提。MVP 只实现 CodexAdapter；其他 Agent Adapter 属于 Post-MVP。
 
 ## 3. 总体结构
 
@@ -62,9 +72,9 @@ flowchart TB
 
     TU --> AR["Agent Runtime Module"]
     AR --> CX["Codex Adapter"]
-    AR --> CL["Claude Code Adapter"]
-    AR --> KM["Kimi Adapter"]
-    AR --> GA["Generic CLI/API Adapter"]
+    AR -. Post-MVP .-> CL["Claude Code Adapter"]
+    AR -. Post-MVP .-> KM["Kimi Adapter"]
+    AR -. Post-MVP .-> GA["Generic CLI/API Adapter"]
 ```
 
 ## 4. 深模块与接口

@@ -29,6 +29,8 @@ logs/
 *.sqlite
 *.sqlite3
 *.parquet
+!tests/fixtures/**/*.parquet
+!tests/fixtures/**/*.json
 
 runtime/
 *.log

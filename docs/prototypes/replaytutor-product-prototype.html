@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReplayTutor · 全页面交互原型</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --canvas: #090d13;
+      --chart: #0c1119;
+      --panel: #111722;
+      --raised: #182131;
+      --overlay: #202c3d;
+      --border: #243043;
+      --strong: #36465e;
+      --text: #e8eef7;
+      --secondary: #9aa8ba;
+      --muted: #66758a;
+      --blue: #3b82f6;
+      --blue-2: #72a7ff;
+      --violet: #9b7cff;
+      --green: #25c792;
+      --red: #f2687d;
+      --warning: #e9a23b;
+      --cyan: #36c8f4;
+      --shadow: 0 18px 54px rgba(0, 0, 0, .28);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 1040px; min-height: 100vh; overflow: hidden; background: var(--canvas); color: var(--text); }
+    button, input, select, textarea { color: inherit; font: inherit; }
+    button { cursor: pointer; }
+    .mono { font-family: "SFMono-Regular", Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .app { height: 100vh; display: grid; grid-template-rows: 44px minmax(0, 1fr); }
+    .topbar {
+      display: flex; align-items: center; gap: 12px; padding: 0 12px;
+      border-bottom: 1px solid var(--border); background: #0f151f; z-index: 30;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; min-width: 170px; font-weight: 750; font-size: 13px; letter-spacing: -.01em; }
+    .brand-mark {
+      width: 24px; height: 24px; display: grid; place-items: center; border-radius: 5px;
+      background: linear-gradient(145deg, #3b82f6, #2765cf); color: #fff; font-weight: 800;
+    }
+    .prototype-pill { padding: 4px 7px; border: 1px solid #30517f; border-radius: 3px; background: #132641; color: #8fbbff; font-size: 9px; letter-spacing: .08em; }
+    .top-context { color: var(--muted); font-size: 10px; }
+    .page-switcher {
+      margin-left: auto; height: 28px; min-width: 156px; padding: 0 28px 0 9px;
+      border: 1px solid var(--border); border-radius: 4px; background: var(--raised); font-size: 10px;
+    }
+    .top-icon { width: 28px; height: 28px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); }
+    .top-icon:hover { background: var(--raised); color: var(--text); }
+    .shell { min-height: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); transition: grid-template-columns .2s ease; }
+    .shell-nav { padding: 8px 5px; overflow: auto; border-right: 1px solid var(--border); background: #0f151f; }
+    .nav-btn {
+      width: 100%; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 5px; margin-bottom: 3px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 9px;
+    }
+    .nav-btn .nav-icon { font-size: 15px; line-height: 1; }
+    .nav-btn:hover, .nav-btn.active { background: var(--raised); color: var(--text); }
+    .nav-btn.active { box-shadow: inset 2px 0 var(--blue); color: #85b4ff; }
+    .main { min-width: 0; min-height: 0; overflow: auto; position: relative; background: var(--canvas); }
+    .screen { display: none; min-height: calc(100vh - 44px); animation: pageIn .16s ease-out; }
+    .screen.active { display: block; }
+    @keyframes pageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .page { min-height: 100%; padding: 28px 30px 48px; }
+    .content-max { max-width: 1420px; margin: 0 auto; }
+    .eyebrow { color: #76aaff; font: 9px "SFMono-Regular", Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: 26px; letter-spacing: -.035em; }
+    h2 { margin-bottom: 10px; font-size: 15px; letter-spacing: -.015em; }
+    h3 { margin-bottom: 7px; font-size: 12px; }
+    p { color: var(--secondary); font-size: 12px; line-height: 1.65; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .page-head p { margin: 0; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    .btn {
+      min-height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 0 12px; border: 1px solid transparent; border-radius: 4px; background: var(--raised); color: var(--secondary);
+      font-size: 10px; font-weight: 650;
+    }
+    .btn:hover { border-color: var(--strong); color: var(--text); }
+    .btn.primary { background: var(--blue); color: white; }
+    .btn.primary:hover { background: #5794f8; border-color: transparent; }
+    .btn.violet { background: #6d52d8; color: white; }
+    .btn.ghost { background: transparent; border-color: var(--border); }
+    .btn.danger { border-color: #66323c; background: #2d171d; color: #ff9cab; }
+    .btn.small { min-height: 26px; padding: 0 9px; font-size: 9px; }
+    .card { border: 1px solid var(--border); border-radius: 6px; background: var(--panel); box-shadow: 0 1px 0 rgba(255,255,255,.015); }
+    .card:hover { border-color: #34445b; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 10px; }
+    .section-title h2 { margin: 0; }
+    .muted { color: var(--muted); }
+    .secondary { color: var(--secondary); }
+    .blue { color: var(--blue-2); }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    .violet { color: #b39cff; }
+    .tag { display: inline-flex; align-items: center; min-height: 21px; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--secondary); font-size: 9px; }
+    .tag.blue { border-color: #294d7d; background: #122743; color: #94beff; }
+    .tag.violet { border-color: #514180; background: #211b3d; color: #c2afff; }
+    .tag.green { border-color: #255544; background: #112b24; color: #8fe2c3; }
+    .tag.warning { border-color: #5d4927; background: #2d2415; color: #efc675; }
+    .progress { height: 4px; overflow: hidden; border-radius: 999px; background: #222c3a; }
+    .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
+
+    /* Onboarding */
+    .onboarding { min-height: 100%; display: grid; grid-template-columns: .82fr 1.18fr; }
+    .onboarding-copy { padding: 64px 52px; display: flex; flex-direction: column; justify-content: center; border-right: 1px solid var(--border); background: #0d131d; }
+    .onboarding-copy h1 { max-width: 570px; margin: 12px 0 15px; font-size: 42px; line-height: 1.08; }
+    .onboarding-copy > p { max-width: 540px; font-size: 14px; }
+    .steps { display: grid; gap: 10px; margin: 24px 0 30px; }
+    .step { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+    .step-num { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid #31588e; border-radius: 50%; color: #8ab8ff; font: 10px monospace; }
+    .step strong { display: block; margin-bottom: 2px; font-size: 11px; }
+    .step span { color: var(--muted); font-size: 10px; }
+    .onboarding-demo { padding: 32px; display: flex; align-items: center; background: radial-gradient(circle at 55% 40%, #15243a 0, #0a0f17 58%); }
+    .demo-window { width: 100%; max-width: 900px; margin: auto; overflow: hidden; border: 1px solid #33445d; border-radius: 8px; background: #0c1119; box-shadow: 0 34px 90px rgba(0,0,0,.48); }
+    .demo-toolbar { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 11px; border-bottom: 1px solid var(--border); color: var(--secondary); font-size: 9px; }
+    .demo-body { height: 470px; display: grid; grid-template-columns: minmax(0, 1fr) 235px; }
+    .demo-chart { min-width: 0; position: relative; padding: 14px; background: #0b1018; }
+    .demo-side { padding: 13px; border-left: 1px solid var(--border); background: #101720; }
+    .demo-side .ai-card { margin-top: 12px; }
+
+    /* Today */
+    .today-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, .7fr); gap: 14px; }
+    .recommend {
+      min-height: 280px; padding: 24px; display: grid; grid-template-columns: 1fr 320px; gap: 20px;
+      background: linear-gradient(125deg, #14223a 0, #111722 52%, #17142a 100%);
+    }
+    .recommend h2 { margin: 10px 0 8px; font-size: 22px; }
+    .recommend-copy { display: flex; flex-direction: column; align-items: flex-start; }
+    .recommend-copy .actions { margin-top: auto; }
+    .metric-line { display: flex; flex-wrap: wrap; gap: 16px; margin: 13px 0; }
+    .metric-line span { color: var(--muted); font-size: 9px; }
+    .metric-line b { display: block; margin-top: 3px; color: var(--text); font: 12px monospace; }
+    .mini-chart-wrap { min-width: 0; position: relative; border: 1px solid #2a3d59; border-radius: 5px; background: #0b111b; }
+    .weakness-card { padding: 18px; }
+    .weakness-item { padding: 13px 0; border-top: 1px solid var(--border); }
+    .weakness-top { display: flex; justify-content: space-between; margin-bottom: 7px; font-size: 10px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+    .stat-card { min-height: 92px; padding: 16px; }
+    .stat-card span { color: var(--muted); font-size: 9px; }
+    .stat-card strong { display: block; margin-top: 8px; font: 22px monospace; }
+    .session-row { min-height: 66px; display: grid; grid-template-columns: 1fr .8fr .7fr .7fr auto; align-items: center; gap: 14px; padding: 0 15px; border-top: 1px solid var(--border); font-size: 10px; }
+    .session-row:first-of-type { border-top: 0; }
+    .session-row strong { display: block; margin-bottom: 4px; font-size: 11px; }
+
+    /* Academy */
+    .filter-row { display: flex; gap: 7px; margin-bottom: 14px; }
+    .filter-chip { min-height: 27px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--muted); font-size: 9px; }
+    .filter-chip.active { border-color: #3c68a5; background: #142844; color: #96beff; }
+    .strategy-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .strategy-card { min-height: 270px; overflow: hidden; }
+    .strategy-art { height: 112px; position: relative; overflow: hidden; border-bottom: 1px solid var(--border); background: #0b1119; }
+    .strategy-art::before, .strategy-art::after { content: ""; position: absolute; border: 1px solid; }
+    .strategy-art.pullback::before { width: 210px; height: 0; left: 35px; top: 75px; border-color: var(--cyan); transform: rotate(-16deg); }
+    .strategy-art.pullback::after { width: 82px; height: 30px; left: 175px; top: 48px; border-color: var(--violet); background: rgba(155,124,255,.08); }
+    .strategy-art.breakout::before { width: 78%; left: 11%; top: 62px; border-color: var(--warning); }
+    .strategy-art.breakout::after { width: 68px; height: 55px; left: 58%; top: 17px; border-color: var(--green); transform: skewX(-18deg); }
+    .strategy-art.range::before { width: 74%; height: 52px; left: 13%; top: 28px; border-color: #44617e; }
+    .strategy-art.range::after { width: 18px; height: 18px; left: 18%; top: 60px; border-radius: 50%; border-color: var(--violet); background: rgba(155,124,255,.18); }
+    .strategy-body { padding: 15px; }
+    .strategy-body p { min-height: 54px; margin-bottom: 13px; font-size: 10px; }
+    .strategy-meta { display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--muted); font-size: 9px; }
+    .strategy-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; }
+
+    /* Strategy detail */
+    .detail-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr) 300px; gap: 12px; }
+    .lesson-path, .checklist { padding: 14px; }
+    .lesson-item { min-height: 47px; display: flex; align-items: center; gap: 10px; padding: 0 8px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; }
+    .lesson-item.active { color: var(--text); background: #162236; box-shadow: inset 2px 0 var(--blue); }
+    .lesson-dot { width: 19px; height: 19px; display: grid; place-items: center; border: 1px solid var(--strong); border-radius: 50%; font-size: 8px; }
+    .rule-board { min-height: 530px; overflow: hidden; }
+    .rule-board-head { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid var(--border); }
+    .rule-canvas { height: 360px; position: relative; background: #0b1119; }
+    .rule-explain { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--border); }
+    .rule-explain div { min-height: 118px; padding: 14px; border-right: 1px solid var(--border); }
+    .rule-explain div:last-child { border: 0; }
+    .rule-explain span { color: var(--muted); font-size: 9px; }
+    .rule-explain strong { display: block; margin: 7px 0; font-size: 11px; }
+    .check-row { display: grid; grid-template-columns: 18px 1fr auto; gap: 7px; align-items: start; padding: 11px 0; border-top: 1px solid var(--border); font-size: 9px; }
+    .check-row:first-of-type { border-top: 0; }
+    .check-box { width: 15px; height: 15px; display: grid; place-items: center; border: 1px solid var(--strong); border-radius: 3px; color: var(--green); }
+
+    /* Setup */
+    .setup-shell { max-width: 1120px; margin: 0 auto; }
+    .setup-progress { display: grid; grid-template-columns: repeat(5, 1fr); margin-bottom: 16px; }
+    .setup-progress span { position: relative; padding-top: 11px; border-top: 2px solid var(--border); color: var(--muted); font-size: 9px; }
+    .setup-progress span.done, .setup-progress span.active { border-color: var(--blue); color: var(--text); }
+    .setup-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 13px; }
+    .setup-form { padding: 18px; }
+    .form-section { padding: 15px 0; border-top: 1px solid var(--border); }
+    .form-section:first-child { padding-top: 0; border-top: 0; }
+    .form-section-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .form-section-head span { color: var(--muted); font-size: 9px; }
+    .choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .choice {
+      min-height: 76px; padding: 11px; border: 1px solid var(--border); border-radius: 5px; background: #0f151f; text-align: left;
+    }
+    .choice:hover, .choice.selected { border-color: #3f6da9; background: #14243a; }
+    .choice.selected { box-shadow: inset 0 0 0 1px #3d6dad; }
+    .choice strong { display: block; margin-bottom: 5px; font-size: 10px; }
+    .choice small { color: var(--muted); font-size: 8px; line-height: 1.4; }
+    .field-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .field label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 8px; }
+    .input { width: 100%; height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 4px; background: #0c121b; font-size: 10px; }
+    .setup-summary { padding: 16px; align-self: start; position: sticky; top: 10px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); font-size: 9px; }
+    .summary-row:first-of-type { margin-top: 9px; }
+    .quality-box { margin: 13px 0; padding: 11px; border: 1px solid #285445; border-radius: 4px; background: #102820; color: #96e2c6; font-size: 9px; }
+
+    /* Workbench */
+    .workbench-screen { height: calc(100vh - 44px); overflow: hidden; background: var(--chart); }
+    .workbench { height: 100%; display: grid; grid-template-rows: 40px minmax(0, 1fr) 48px 148px; grid-template-columns: 42px minmax(0, 1fr) 330px; }
+    .work-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 0 10px; border-bottom: 1px solid var(--border); background: #101720; font-size: 9px; }
+    .work-top .spacer { flex: 1; }
+    .draw-rail { grid-row: 2 / 5; padding: 6px 4px; border-right: 1px solid var(--border); background: #101720; }
+    .tool-btn { width: 33px; height: 34px; margin-bottom: 3px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); }
+    .tool-btn:hover, .tool-btn.active { background: var(--raised); color: var(--blue-2); }
+    .chart-zone { grid-column: 2; grid-row: 2; min-width: 0; min-height: 0; position: relative; background: #0b1119; }
+    .chart-header { position: absolute; z-index: 4; top: 9px; left: 11px; display: flex; gap: 8px; color: var(--secondary); font: 9px monospace; }
+    .layer-legend { position: absolute; z-index: 4; top: 30px; left: 11px; display: flex; gap: 5px; }
+    .legend-btn { height: 23px; padding: 0 8px; border: 1px solid var(--border); border-radius: 3px; background: rgba(15,22,32,.9); color: var(--secondary); font-size: 8px; }
+    .legend-btn.off { opacity: .35; text-decoration: line-through; }
+    .chart-svg { width: 100%; height: 100%; display: block; }
+    .annotation-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .annotation-layer.dimmed { opacity: .25; }
+    .annotation-layer.ai-hidden, .annotation-layer.user-hidden, .annotation-layer.standard-hidden { display: none; }
+    .ai-draw { stroke-dasharray: 7 5; animation: dash 1.4s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -24; } }
+    .evidence-pulse { animation: evidencePulse 1.2s ease 2; }
+    @keyframes evidencePulse { 50% { filter: drop-shadow(0 0 8px #fff); opacity: 1; } }
+    .ai-dock { grid-column: 3; grid-row: 2 / 4; min-height: 0; overflow: auto; padding: 12px; border-left: 1px solid var(--border); background: #101720; }
+    .dock-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .stage-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+    .stage-tab { height: 30px; border: 0; border-radius: 4px; background: #151d29; color: var(--muted); font-size: 8px; }
+    .stage-tab.active { background: #17305a; color: #98c0ff; }
+    .ai-card { padding: 12px; border: 1px solid #38435a; border-radius: 5px; background: #131a25; }
+    .ai-card.accepted { border-color: #315b8f; box-shadow: inset 2px 0 var(--blue); }
+    .ai-card-head { display: flex; justify-content: space-between; margin-bottom: 8px; color: #c5b7ff; font-size: 9px; }
+    .ai-card p { margin-bottom: 10px; font-size: 9px; }
+    .evidence-list { margin: 8px 0; padding: 8px; border-radius: 4px; background: #0e141e; color: var(--secondary); font-size: 8px; line-height: 1.8; }
+    .ai-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .plan-card { margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 5px; }
+    .plan-row { display: grid; grid-template-columns: 64px 1fr; gap: 6px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 8px; }
+    .plan-row:first-of-type { margin-top: 8px; }
+    .plan-row span { color: var(--muted); }
+    .followup { display: none; margin-top: 8px; padding: 8px; border-left: 2px solid var(--violet); background: #18162a; color: #c4b8ee; font-size: 8px; line-height: 1.6; }
+    .followup.show { display: block; }
+    .replay-bar { grid-column: 2; grid-row: 3; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-top: 1px solid var(--border); background: #101720; }
+    .play-btn { width: 34px; height: 30px; border: 1px solid #3b69a7; border-radius: 4px; background: #142b4b; color: #8bb8ff; }
+    .timeline { flex: 1; height: 3px; border-radius: 999px; background: #293345; }
+    .timeline span { display: block; width: 46%; height: 100%; border-radius: inherit; background: var(--blue); transition: width .22s ease; }
+    .bottom-dock { grid-column: 2 / 4; grid-row: 4; overflow: hidden; border-top: 1px solid var(--border); background: #101720; }
+    .dock-tabs { height: 32px; display: flex; gap: 18px; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 9px; }
+    .dock-tabs span:first-child { color: #8db9ff; }
+    .order-table { width: 100%; border-collapse: collapse; font: 9px monospace; }
+    .order-table th, .order-table td { height: 34px; padding: 0 10px; border-bottom: 1px solid #1b2533; text-align: left; }
+    .order-table th { color: var(--muted); font-weight: 500; }
+
+    /* Complete and review */
+    .complete-hero { max-width: 1180px; margin: 0 auto; padding-top: 30px; }
+    .complete-banner { padding: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 22px; background: linear-gradient(120deg, #112640, #151824 60%, #211a36); }
+    .grade-cluster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-self: stretch; }
+    .grade { padding: 14px; border: 1px solid #344056; border-radius: 5px; background: rgba(8,12,18,.38); }
+    .grade span { color: var(--muted); font-size: 8px; }
+    .grade strong { display: block; margin-top: 8px; font: 21px monospace; }
+    .comparison-grid { display: grid; grid-template-columns: 1.3fr .7fr; gap: 12px; margin-top: 12px; }
+    .summary-chart { height: 330px; position: relative; overflow: hidden; }
+    .takeaways { padding: 16px; }
+    .takeaway { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
+    .takeaway:first-of-type { border: 0; }
+    .takeaway i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #172d4c; color: #8db9ff; font-style: normal; font-size: 9px; }
+    .takeaway strong { display: block; margin-bottom: 4px; font-size: 10px; }
+    .takeaway span { color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .review-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 600px; overflow: hidden; }
+    .review-sidebar { border-right: 1px solid var(--border); }
+    .review-filter { padding: 10px; border-bottom: 1px solid var(--border); }
+    .review-item { width: 100%; min-height: 78px; padding: 11px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; }
+    .review-item:hover, .review-item.active { background: var(--raised); }
+    .review-item.active { box-shadow: inset 2px 0 var(--blue); }
+    .review-item strong { display: block; margin-bottom: 5px; font-size: 10px; }
+    .review-item span { color: var(--muted); font-size: 8px; }
+    .review-overview { padding: 16px; }
+    .report-detail { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; }
+    .evidence-chart { height: 470px; position: relative; overflow: hidden; }
+    .report-side { padding: 14px; }
+    .radar { width: 180px; height: 180px; margin: 0 auto 10px; display: block; }
+    .evidence-card { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: #0f151f; text-align: left; margin-top: 6px; }
+    .evidence-card:hover { border-color: var(--violet); }
+    .evidence-card b { display: block; margin-bottom: 4px; font-size: 9px; }
+    .evidence-card span { color: var(--muted); font-size: 8px; }
+
+    /* Playbooks, sessions, data, settings */
+    .split-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 610px; overflow: hidden; }
+    .list-pane { border-right: 1px solid var(--border); }
+    .list-head { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); }
+    .list-item { width: 100%; min-height: 70px; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; }
+    .list-item:hover, .list-item.active { background: var(--raised); }
+    .list-item.active { box-shadow: inset 2px 0 var(--blue); }
+    .list-item strong { display: block; margin-bottom: 5px; font-size: 10px; }
+    .list-item small { color: var(--muted); font-size: 8px; }
+    .editor-pane { min-width: 0; padding: 18px; background: #0d131c; }
+    .editor-head { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .rule-table { overflow: hidden; }
+    .rule-row { display: grid; grid-template-columns: 34px 1fr 100px 80px; align-items: center; gap: 8px; min-height: 52px; padding: 0 10px; border-top: 1px solid var(--border); font-size: 9px; }
+    .drag { color: var(--muted); }
+    .table-card { overflow: hidden; }
+    .table-row { display: grid; grid-template-columns: 1.3fr .7fr .8fr .7fr .7fr .7fr auto; min-height: 55px; align-items: center; gap: 8px; padding: 0 12px; border-top: 1px solid var(--border); font-size: 9px; }
+    .table-row.header { min-height: 34px; color: var(--muted); background: #0f151f; }
+    .table-row strong { font-size: 10px; }
+    .data-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 620px; overflow: hidden; }
+    .dataset-inspector { padding: 16px; background: #0c121b; }
+    .quality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+    .quality-cell { padding: 12px; border: 1px solid var(--border); border-radius: 4px; }
+    .quality-cell span { color: var(--muted); font-size: 8px; }
+    .quality-cell strong { display: block; margin-top: 7px; font: 14px monospace; }
+    .bar-preview { width: 100%; border-collapse: collapse; font: 9px monospace; }
+    .bar-preview th, .bar-preview td { height: 32px; padding: 0 10px; border-bottom: 1px solid #1b2431; text-align: right; }
+    .bar-preview th:first-child, .bar-preview td:first-child { text-align: left; }
+    .bar-preview th { color: var(--muted); font-weight: 500; }
+    .settings-layout { display: grid; grid-template-columns: 190px minmax(0, 720px); gap: 18px; }
+    .settings-menu { padding: 8px; align-self: start; }
+    .settings-menu button { width: 100%; height: 38px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); text-align: left; padding: 0 10px; font-size: 9px; }
+    .settings-menu button.active { background: var(--raised); color: var(--text); }
+    .settings-panel { padding: 18px; }
+    .setting-row { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--border); }
+    .setting-row:first-of-type { border-top: 0; }
+    .setting-row strong { display: block; margin-bottom: 4px; font-size: 10px; }
+    .setting-row small { color: var(--muted); font-size: 8px; }
+    .switch { width: 34px; height: 19px; padding: 2px; border: 0; border-radius: 999px; background: #2d394a; }
+    .switch::after { content: ""; display: block; width: 15px; height: 15px; border-radius: 50%; background: #a9b3c0; transition: transform .16s; }
+    .switch.on { background: var(--blue); }
+    .switch.on::after { transform: translateX(15px); background: white; }
+
+    /* Toast and modal */
+    .toast {
+      position: fixed; z-index: 100; right: 18px; bottom: 18px; max-width: 320px; padding: 11px 14px;
+      border: 1px solid #365b88; border-radius: 5px; background: #13243a; box-shadow: var(--shadow);
+      color: #b8d3ff; font-size: 10px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .18s;
+    }
+    .toast.show { opacity: 1; transform: none; }
+    .modal-backdrop { position: fixed; z-index: 80; inset: 0; display: none; place-items: center; background: rgba(3,6,10,.68); backdrop-filter: blur(3px); }
+    .modal-backdrop.show { display: grid; }
+    .modal { width: 420px; padding: 18px; border: 1px solid var(--strong); border-radius: 7px; background: var(--panel); box-shadow: var(--shadow); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 17px; }
+    .workbench-mode .shell { grid-template-columns: 0 minmax(0, 1fr); }
+    .workbench-mode .shell-nav { visibility: hidden; padding: 0; border: 0; }
+    .workbench-mode .page-switcher { display: none; }
+
+    @media (max-width: 1180px) {
+      .onboarding-copy { padding: 42px 32px; }
+      .onboarding-copy h1 { font-size: 34px; }
+      .recommend { grid-template-columns: 1fr 270px; }
+      .detail-layout { grid-template-columns: 190px minmax(0, 1fr); }
+      .detail-layout .checklist { grid-column: 1 / -1; }
+      .workbench { grid-template-columns: 40px minmax(0, 1fr) 300px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">R</span><span>ReplayTutor</span></div>
+      <span class="prototype-pill">INTERACTIVE PROTOTYPE</span>
+      <span class="top-context" id="topContext">产品首次体验</span>
+      <select class="page-switcher" id="pageSwitcher" aria-label="切换原型页面">
+        <option value="onboarding">首次引导</option>
+        <option value="today">今日训练</option>
+        <option value="academy">策略学院</option>
+        <option value="strategy">策略详情</option>
+        <option value="setup">训练配置</option>
+        <option value="workbench">回放工作台</option>
+        <option value="complete">会话完成</option>
+        <option value="reviews">复盘中心</option>
+        <option value="review">复盘详情</option>
+        <option value="playbooks">Playbook</option>
+        <option value="sessions">会话库</option>
+        <option value="data">数据中心</option>
+        <option value="settings">设置</option>
+      </select>
+      <button class="top-icon" data-toast="原型帮助：使用左侧导航或页面地图浏览全部页面">?</button>
+    </header>
+
+    <div class="shell">
+      <nav class="shell-nav" aria-label="一级导航">
+        <button class="nav-btn" data-go="today"><span class="nav-icon">⌂</span><span>今日</span></button>
+        <button class="nav-btn" data-go="academy"><span class="nav-icon">◇</span><span>学院</span></button>
+        <button class="nav-btn" data-go="workbench"><span class="nav-icon">⌁</span><span>工作台</span></button>
+        <button class="nav-btn" data-go="reviews"><span class="nav-icon">◎</span><span>复盘</span></button>
+        <button class="nav-btn" data-go="playbooks"><span class="nav-icon">≡</span><span>策略</span></button>
+        <button class="nav-btn" data-go="sessions"><span class="nav-icon">◫</span><span>会话</span></button>
+        <button class="nav-btn" data-go="data"><span class="nav-icon">▦</span><span>数据</span></button>
+        <button class="nav-btn" data-go="settings"><span class="nav-icon">⚙</span><span>设置</span></button>
+      </nav>
+
+      <main class="main">
+        <!-- 01 Onboarding -->
+        <section class="screen active" data-screen="onboarding">
+          <div class="onboarding">
+            <div class="onboarding-copy">
+              <span class="eyebrow">Welcome to ReplayTutor</span>
+              <h1>你先画，<br>AI 再回应。</h1>
+              <p>在答案尚未出现时做出判断，再用同一张图复盘计划与执行。第一次体验只需要 5–8 分钟。</p>
+              <div class="steps">
+                <div class="step"><span class="step-num">01</span><div><strong>标出你看到的市场结构</strong><span>趋势、关键位、候选入场区都留在用户图层。</span></div></div>
+                <div class="step"><span class="step-num">02</span><div><strong>让 AI 在图上回应</strong><span>AI 补画、指出冲突并引用可见 K 线证据。</span></div></div>
+                <div class="step"><span class="step-num">03</span><div><strong>按计划交易，再对照结果</strong><span>盈利不等于正确，评分优先看计划与纪律。</span></div></div>
+              </div>
+              <div class="actions">
+                <button class="btn primary" data-go="workbench" data-toast="已载入固定 BTCUSDT 引导片段">开始 5 分钟引导</button>
+                <button class="btn ghost" data-go="today">先看看产品</button>
+              </div>
+            </div>
+            <div class="onboarding-demo">
+              <div class="demo-window">
+                <div class="demo-toolbar"><b>BTCUSDT</b><span>15m</span><span class="tag blue">REPLAY</span><span class="mono">Visible to 10:45</span></div>
+                <div class="demo-body">
+                  <div class="demo-chart">
+                    <svg id="chartOnboarding" class="chart-svg" aria-label="引导图表示意"></svg>
+                    <svg class="annotation-layer" viewBox="0 0 700 440" preserveAspectRatio="none">
+                      <path d="M70 330 L390 130" fill="none" stroke="#36c8f4" stroke-width="2"/>
+                      <rect x="365" y="175" width="145" height="48" fill="rgba(155,124,255,.1)" stroke="#9b7cff"/>
+                      <path d="M405 210 C455 170 480 200 535 105" fill="none" stroke="#9b7cff" stroke-width="2" stroke-dasharray="7 5"/>
+                      <text x="374" y="166" fill="#baa8ff" font-size="12">AI：回踩关注区</text>
+                      <rect x="348" y="236" width="110" height="31" fill="rgba(54,200,244,.08)" stroke="#36c8f4" stroke-dasharray="5 4"/>
+                      <text x="349" y="285" fill="#63d8fa" font-size="11">用户入场区</text>
+                    </svg>
+                  </div>
+                  <aside class="demo-side">
+                    <div class="dock-title"><strong>AI 共画教练</strong><span class="tag violet">半自动</span></div>
+                    <div class="stage-tabs"><button class="stage-tab active">环境</button><button class="stage-tab">计划</button><button class="stage-tab">持仓</button><button class="stage-tab">退出</button></div>
+                    <div class="ai-card">
+                      <div class="ai-card-head"><span>AI 观察</span><span>证据 4</span></div>
+                      <p>你的上升结构判断成立，但入场区仍在前一结构低点上方，失效条件需要更明确。</p>
+                      <div class="evidence-list">趋势结构 · 更高高点保持<br>支撑反应 · 3 根 K 线<br>未知 · 回踩尚未确认</div>
+                      <div class="ai-actions"><button class="btn small primary" data-toast="已接受 AI 标注">接受</button><button class="btn small">修改</button><button class="btn small">追问</button></div>
+                    </div>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 02 Today -->
+        <section class="screen" data-screen="today">
+          <div class="page content-max">
+            <div class="page-head">
+              <div><span class="eyebrow">Thursday · Training Day 07</span><h1>早上好，今天练一个弱项。</h1><p>系统根据最近 6 次训练，为你选择了“回踩确认”场景。</p></div>
+              <div class="actions"><button class="btn ghost" data-go="sessions">查看训练历史</button><button class="btn primary" data-go="setup">开始推荐训练</button></div>
+            </div>
+            <div class="today-grid">
+              <article class="card recommend">
+                <div class="recommend-copy">
+                  <div><span class="tag blue">今日推荐 · 12 分钟</span><span class="tag violet" style="margin-left:5px">半自动 AI</span></div>
+                  <h2>突破后的第一次回踩</h2>
+                  <p>你最近 4 次训练中有 3 次在回踩尚未确认时提前入场。今天只训练等待确认，不追求盈利。</p>
+                  <div class="metric-line"><span>训练品种<b>BTC / ETH</b></span><span>主周期<b>15m</b></span><span>通过标准<b>纪律 ≥ 80%</b></span></div>
+                  <div class="actions"><button class="btn primary" data-go="setup">进入训练配置</button><button class="btn" data-go="strategy">先复习策略</button></div>
+                </div>
+                <div class="mini-chart-wrap"><svg id="chartToday" class="chart-svg"></svg></div>
+              </article>
+              <aside class="card weakness-card">
+                <div class="dock-title"><h2>当前弱项</h2><span class="tag warning">6 次样本</span></div>
+                <div class="weakness-item"><div class="weakness-top"><span>等待触发确认</span><b class="red">54%</b></div><div class="progress"><span style="width:54%;background:var(--red)"></span></div></div>
+                <div class="weakness-item"><div class="weakness-top"><span>失效条件清晰度</span><b class="warning">68%</b></div><div class="progress"><span style="width:68%;background:var(--warning)"></span></div></div>
+                <div class="weakness-item"><div class="weakness-top"><span>风险金额一致性</span><b class="green">91%</b></div><div class="progress"><span style="width:91%;background:var(--green)"></span></div></div>
+                <button class="btn ghost" style="width:100%;margin-top:12px" data-go="review">查看证据来源</button>
+              </aside>
+            </div>
+            <div class="stats-row">
+              <div class="card stat-card"><span>本周训练</span><strong>6</strong><small class="muted">目标 8 次</small></div>
+              <div class="card stat-card"><span>计划完成率</span><strong>83%</strong><small class="green">较上周 +9%</small></div>
+              <div class="card stat-card"><span>平均纪律</span><strong>76</strong><small class="muted">不含盈亏结果</small></div>
+              <div class="card stat-card"><span>连续训练</span><strong>7d</strong><small class="blue">个人最长 11 天</small></div>
+            </div>
+            <div class="section-title"><h2>继续最近的会话</h2><button class="btn small ghost" data-go="sessions">全部会话</button></div>
+            <div class="card">
+              <div class="session-row"><div><strong>BTCUSDT · 突破回踩</strong><span class="muted">今天 08:42 · 15m</span></div><span class="tag warning">进行中</span><span>Visible 10:45</span><span>AI 半自动</span><button class="btn small primary" data-go="workbench">继续</button></div>
+              <div class="session-row"><div><strong>ETHUSDT · 趋势回调</strong><span class="muted">昨天 21:18 · 15m</span></div><span class="tag green">已完成</span><span>纪律 82</span><span>计划 B+</span><button class="btn small" data-go="review">复盘</button></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 03 Academy -->
+        <section class="screen" data-screen="academy">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Strategy Academy</span><h1>策略学院</h1><p>从官方策略开始，先学会识别，再形成自己的 Playbook。</p></div><button class="btn ghost" data-go="playbooks">我的 Playbook</button></div>
+            <div class="filter-row"><button class="filter-chip active">全部策略</button><button class="filter-chip">学习中</button><button class="filter-chip">可考试</button><button class="filter-chip">已掌握</button></div>
+            <div class="strategy-grid">
+              <article class="card strategy-card"><div class="strategy-art pullback"></div><div class="strategy-body"><div class="strategy-meta"><span>LEVEL 1 · 趋势</span><span>完成 72%</span></div><h2>趋势回调</h2><p>在明确趋势中等待价格回到价值区，并用结构失效定义风险。</p><div class="progress"><span style="width:72%"></span></div><div class="strategy-footer"><span class="tag blue">学习中</span><button class="btn small primary" data-go="strategy">继续学习</button></div></div></article>
+              <article class="card strategy-card"><div class="strategy-art breakout"></div><div class="strategy-body"><div class="strategy-meta"><span>LEVEL 2 · 突破</span><span>完成 48%</span></div><h2>突破回踩</h2><p>区分有效突破与假突破，等待第一次回踩确认后再制定计划。</p><div class="progress"><span style="width:48%;background:var(--violet)"></span></div><div class="strategy-footer"><span class="tag violet">今日推荐</span><button class="btn small primary" data-go="strategy">打开策略</button></div></div></article>
+              <article class="card strategy-card"><div class="strategy-art range"></div><div class="strategy-body"><div class="strategy-meta"><span>LEVEL 3 · 区间</span><span>尚未解锁</span></div><h2>区间反转</h2><p>识别区间边缘的流动性扫取与失败延续，不在区间中部交易。</p><div class="progress"><span style="width:12%;background:var(--muted)"></span></div><div class="strategy-footer"><span class="tag">需通过 Level 2</span><button class="btn small" disabled>未解锁</button></div></div></article>
+            </div>
+            <div class="section-title"><h2>专项训练</h2><span class="muted" style="font-size:9px">针对单一识别能力重复练习</span></div>
+            <div class="stats-row">
+              <div class="card stat-card"><span>结构高低点</span><strong>18</strong><small class="green">正确率 88%</small></div>
+              <div class="card stat-card"><span>突破有效性</span><strong>12</strong><small class="warning">正确率 67%</small></div>
+              <div class="card stat-card"><span>失效位定位</span><strong>9</strong><small class="red">正确率 56%</small></div>
+              <div class="card stat-card"><span>等待确认</span><strong>6</strong><small class="blue">今日训练</small></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04 Strategy -->
+        <section class="screen" data-screen="strategy">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Official Strategy · v1.3</span><h1>突破回踩</h1><p>先证明关键位被有效突破，再等待回踩确认；不在突破瞬间追价。</p></div><div class="actions"><button class="btn ghost" data-go="academy">返回学院</button><button class="btn primary" data-go="setup">开始练习</button></div></div>
+            <div class="detail-layout">
+              <aside class="card lesson-path"><h3>学习路径</h3><div class="lesson-item"><span class="lesson-dot green">✓</span><span>1. 适用环境</span></div><div class="lesson-item"><span class="lesson-dot green">✓</span><span>2. 有效突破</span></div><div class="lesson-item active"><span class="lesson-dot">3</span><span>3. 回踩确认</span></div><div class="lesson-item"><span class="lesson-dot">4</span><span>4. 失效与风险</span></div><div class="lesson-item"><span class="lesson-dot">5</span><span>5. 带提示练习</span></div><div class="lesson-item"><span class="lesson-dot">6</span><span>6. 无提示考试</span></div></aside>
+              <article class="card rule-board"><div class="rule-board-head"><strong>规则图解 · 回踩确认</strong><div><button class="btn small">反例</button> <button class="btn small primary">正例</button></div></div><div class="rule-canvas"><svg id="chartStrategy" class="chart-svg"></svg><svg class="annotation-layer" viewBox="0 0 800 360" preserveAspectRatio="none"><line x1="70" y1="225" x2="720" y2="225" stroke="#e9a23b" stroke-width="2"/><rect x="475" y="196" width="150" height="56" fill="rgba(155,124,255,.1)" stroke="#9b7cff"/><path d="M445 228 C500 152 540 202 600 110" fill="none" stroke="#25c792" stroke-width="2.5"/><text x="74" y="216" fill="#efc675" font-size="11">前高 / 关键位</text><text x="486" y="190" fill="#b8a5ff" font-size="11">回踩确认区</text></svg></div><div class="rule-explain"><div><span>01 · 前提</span><strong>突破前有清晰结构</strong><p>关键位至少被市场多次确认，而不是临时画出的任意价格。</p></div><div><span>02 · 触发</span><strong>突破后回踩不破</strong><p>价格重新测试关键位，并出现拒绝或结构重新转强。</p></div><div><span>03 · 失效</span><strong>收回原区间内部</strong><p>失效位必须来自结构，不因仓位大小反向调整。</p></div></div></article>
+              <aside class="card checklist"><div class="dock-title"><h3>策略检查表</h3><span class="tag blue">6 条规则</span></div><div class="check-row"><span class="check-box">✓</span><span>高周期方向与突破方向一致</span><span class="tag green">系统</span></div><div class="check-row"><span class="check-box">✓</span><span>关键位在突破前已被确认</span><span class="tag violet">共画</span></div><div class="check-row"><span class="check-box"></span><span>突破实体收在关键位外侧</span><span class="tag green">系统</span></div><div class="check-row"><span class="check-box"></span><span>首次回踩没有深度收回区间</span><span class="tag violet">共画</span></div><div class="check-row"><span class="check-box"></span><span>失效位对应结构破坏</span><span class="tag violet">共画</span></div><div class="check-row"><span class="check-box"></span><span>计划收益风险比不低于 2R</span><span class="tag green">系统</span></div><button class="btn primary" style="width:100%;margin-top:14px" data-go="setup">带提示练习</button><button class="btn ghost" style="width:100%;margin-top:6px" data-go="setup" data-toast="考试模式默认关闭主动 AI 标注">无提示考试</button></aside>
+            </div>
+          </div>
+        </section>
+
+        <!-- 05 Setup -->
+        <section class="screen" data-screen="setup">
+          <div class="page">
+            <div class="setup-shell">
+              <div class="page-head"><div><span class="eyebrow">New Training Session</span><h1>训练配置</h1><p>确认训练目标、历史片段和 AI 协作方式。</p></div><button class="btn ghost" data-go="today">取消</button></div>
+              <div class="setup-progress"><span class="done">策略</span><span class="done">品种</span><span class="active">AI 模式</span><span>风险</span><span>确认</span></div>
+              <div class="setup-grid">
+                <div class="card setup-form">
+                  <div class="form-section"><div class="form-section-head"><h3>训练策略</h3><span>官方策略 v1.3</span></div><div class="choice-grid"><button class="choice selected"><strong>突破回踩</strong><small>今天的弱项训练 · 推荐</small></button><button class="choice"><strong>趋势回调</strong><small>继续上次学习进度</small></button><button class="choice"><strong>自由回放</strong><small>不绑定策略评分</small></button></div></div>
+                  <div class="form-section"><div class="form-section-head"><h3>品种与历史片段</h3><span>日期将在结束后揭示</span></div><div class="field-row"><div class="field"><label>品种</label><select class="input"><option>BTCUSDT</option><option>ETHUSDT</option></select></div><div class="field"><label>主周期</label><select class="input"><option>15m</option><option>5m</option><option>1h</option></select></div><div class="field"><label>片段</label><select class="input"><option>随机盲测 · 6 小时</option><option>固定引导片段</option></select></div></div></div>
+                  <div class="form-section"><div class="form-section-head"><h3>AI 协作强度</h3><span>训练中可降级，不可升级</span></div><div class="choice-grid" id="aiModeChoices"><button class="choice"><strong>手动</strong><small>AI 仅在请求时回应 · 考试有效</small></button><button class="choice selected"><strong>半自动</strong><small>你先画，AI 对照与追问 · 推荐</small></button><button class="choice"><strong>全自动</strong><small>AI 持续维护图层 · 不计考试成绩</small></button></div></div>
+                  <div class="form-section"><div class="form-section-head"><h3>账户与风险</h3><span>现货现金账户</span></div><div class="field-row"><div class="field"><label>初始资金</label><input class="input mono" value="10,000 USDT"></div><div class="field"><label>单笔风险</label><input class="input mono" value="1.0%"></div><div class="field"><label>手续费 / 滑点</label><input class="input mono" value="0.10% / 3 bps"></div></div></div>
+                </div>
+                <aside class="card setup-summary"><div class="dock-title"><h2>会话摘要</h2><span class="tag blue">学习模式</span></div><div class="summary-row"><span class="muted">策略</span><b>突破回踩 v1.3</b></div><div class="summary-row"><span class="muted">市场</span><b>BTCUSDT · 15m</b></div><div class="summary-row"><span class="muted">片段</span><b>随机盲测 · 6h</b></div><div class="summary-row"><span class="muted">AI</span><b id="aiModeSummary">半自动协作</b></div><div class="summary-row"><span class="muted">通过标准</span><b>纪律 ≥ 80%</b></div><div class="quality-box">✓ 数据质量通过<br><span style="opacity:.7">1m 基础数据完整 · 无关键缺口 · 快照已锁定</span></div><button class="btn primary" style="width:100%" data-go="workbench" data-toast="训练会话已创建，未来数据已隐藏">开始训练</button><button class="btn ghost" style="width:100%;margin-top:7px" data-go="data">查看数据快照</button></aside>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 06 Workbench -->
+        <section class="screen workbench-screen" data-screen="workbench">
+          <div class="workbench">
+            <div class="work-top"><strong>BTCUSDT</strong><span>15m</span><span class="tag blue">REPLAY</span><span class="tag violet">AI 半自动</span><span class="mono muted">Frame 0048 · Visible to 10:45</span><span class="spacer"></span><span class="green">数据质量 · OK</span><button class="btn small danger" id="finishSession">结束会话</button></div>
+            <aside class="draw-rail"><button class="tool-btn active">↖</button><button class="tool-btn">＋</button><button class="tool-btn">╱</button><button class="tool-btn">━</button><button class="tool-btn">□</button><button class="tool-btn">T</button><button class="tool-btn">⌖</button><button class="tool-btn">◉</button><button class="tool-btn">⌫</button></aside>
+            <div class="chart-zone">
+              <div class="chart-header"><b>BTCUSDT · 15m</b><span>O 66,842</span><span>H 66,910</span><span>L 66,782</span><span class="green">C 66,879</span></div>
+              <div class="layer-legend"><button class="legend-btn" data-layer-toggle="user">— 用户图层</button><button class="legend-btn" data-layer-toggle="ai">-- AI 图层</button><button class="legend-btn" data-layer-toggle="standard">·· 策略标准</button></div>
+              <svg id="chartMain" class="chart-svg"></svg>
+              <svg class="annotation-layer" data-layer="user" viewBox="0 0 1000 570" preserveAspectRatio="none">
+                <path d="M80 440 L560 205" fill="none" stroke="#36c8f4" stroke-width="2"/>
+                <rect x="510" y="285" width="145" height="39" fill="rgba(54,200,244,.08)" stroke="#36c8f4" stroke-dasharray="5 4"/>
+                <text x="516" y="342" fill="#62d8fb" font-size="12">用户入场区</text>
+                <rect x="120" y="400" width="460" height="28" fill="rgba(54,200,244,.04)" stroke="#36c8f4"/>
+                <text x="590" y="422" fill="#62d8fb" font-size="11">用户支撑区</text>
+              </svg>
+              <svg class="annotation-layer" data-layer="ai" viewBox="0 0 1000 570" preserveAspectRatio="none">
+                <rect x="545" y="218" width="165" height="54" fill="rgba(155,124,255,.10)" stroke="#9b7cff"/>
+                <path class="ai-draw" d="M600 300 C650 245 675 280 735 170" fill="none" stroke="#9b7cff" stroke-width="2.5"/>
+                <line x1="540" y1="355" x2="710" y2="355" stroke="#9b7cff" stroke-width="1.5" stroke-dasharray="6 5"/>
+                <text x="550" y="210" fill="#b8a4ff" font-size="12">AI 回踩关注区</text>
+                <text x="585" y="372" fill="#b8a4ff" font-size="11">结构失效位</text>
+              </svg>
+              <svg class="annotation-layer" data-layer="standard" viewBox="0 0 1000 570" preserveAspectRatio="none" style="opacity:.35">
+                <line x1="215" y1="350" x2="760" y2="350" stroke="#e9a23b" stroke-width="1.5" stroke-dasharray="3 5"/>
+                <text x="760" y="345" fill="#efc675" font-size="10">策略关键位</text>
+              </svg>
+            </div>
+            <aside class="ai-dock">
+              <div class="dock-title"><strong>AI 共画教练</strong><span class="tag violet">半自动</span></div>
+              <div class="stage-tabs"><button class="stage-tab active">环境</button><button class="stage-tab">计划</button><button class="stage-tab">持仓</button><button class="stage-tab">退出</button></div>
+              <div class="ai-card" id="workAiCard">
+                <div class="ai-card-head"><span>AI 观察 · 待确认</span><span>4 条证据</span></div>
+                <p>你的上升结构判断成立，但候选入场区略高于策略模板的回踩关注区。请先确认你愿意在哪里承认判断失效。</p>
+                <div class="evidence-list">E-12 · 高点结构继续抬高<br>E-13 · 突破实体收在关键位外侧<br>E-14 · 回踩尚未形成反转确认<br>未知 · 下方流动性是否先被扫取</div>
+                <div class="ai-actions"><button class="btn small primary" id="acceptAi">接受</button><button class="btn small" id="modifyAi">修改</button><button class="btn small" id="askAi">追问</button></div>
+                <div class="followup" id="aiFollowup">如果价格先跌破 66,320，再重新收回关键位，你会继续使用原计划，还是把它视为一次新的交易机会？</div>
+              </div>
+              <div class="plan-card" id="planCard"><div class="dock-title"><strong>交易计划 · 必填</strong><span class="tag warning" id="planState">待提交</span></div><div class="plan-row"><span>入场理由</span><b>突破关键位后的首次回踩</b></div><div class="plan-row"><span>失效条件</span><b>15m 收于结构低点下方</b></div><div class="plan-row"><span>止损</span><b class="red mono">66,320</b></div><div class="plan-row"><span>目标</span><b class="green mono">68,300 · 2.4R</b></div><div class="plan-row"><span>风险</span><b class="mono">1.0% · 100 USDT</b></div><button class="btn primary" id="submitPlan" style="width:100%;margin-top:10px">提交计划并锁定</button></div>
+            </aside>
+            <div class="replay-bar"><button class="play-btn" id="playReplay">▶</button><button class="btn small" id="nextBar">下一根 K 线</button><span class="muted" style="font-size:8px">速度</span><button class="btn small primary">1×</button><button class="btn small">2×</button><button class="btn small">5×</button><div class="timeline"><span id="timelineProgress"></span></div><span class="mono muted" id="visibleTime" style="font-size:8px">10:45 / 23:59</span></div>
+            <div class="bottom-dock"><div class="dock-tabs"><span>订单 1</span><span>持仓 0</span><span>成交 0</span><span>P&amp;L</span><span>笔记 2</span><span>事件 4</span></div><table class="order-table"><thead><tr><th>状态</th><th>方向</th><th>品种</th><th>类型</th><th>入场</th><th>止损</th><th>目标</th><th>风险</th><th>R:R</th></tr></thead><tbody><tr><td class="blue">计划中</td><td class="green">做多</td><td>BTCUSDT</td><td>限价</td><td>66,900</td><td class="red">66,320</td><td class="green">68,300</td><td>1.00%</td><td>2.4</td></tr></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- 07 Complete -->
+        <section class="screen" data-screen="complete">
+          <div class="page complete-hero">
+            <div class="card complete-banner">
+              <div><span class="eyebrow">Session Complete · 14m 32s</span><h1 style="margin-top:9px">结果是盈利，过程还有一个漏洞。</h1><p>你正确识别了突破方向，也把风险控制在计划内；但入场比自己的确认规则提前了一根 K 线。</p><div class="actions"><button class="btn primary" data-go="review">查看完整证据复盘</button><button class="btn" data-go="setup">再练一次</button><button class="btn ghost" data-go="today">返回今日训练</button></div></div>
+              <div class="grade-cluster"><div class="grade"><span>计划质量</span><strong class="blue">B+</strong><small class="muted">失效清晰</small></div><div class="grade"><span>执行纪律</span><strong class="warning">76</strong><small class="muted">提前入场</small></div><div class="grade"><span>本次结果</span><strong class="green">+1.8R</strong><small class="muted">不计总分</small></div></div>
+            </div>
+            <div class="comparison-grid">
+              <div class="card summary-chart"><div class="rule-board-head"><strong>计划、执行与完整走势</strong><div><span class="tag blue">用户</span> <span class="tag violet">AI</span> <span class="tag warning">策略</span></div></div><svg id="chartComplete" class="chart-svg" style="height:280px"></svg></div>
+              <aside class="card takeaways"><h2>本次只带走三件事</h2><div class="takeaway"><i>✓</i><div><strong>做对：结构与方向</strong><span>你的趋势线和关键位与策略标准高度一致。</span></div></div><div class="takeaway"><i>!</i><div><strong>漏洞：等待确认</strong><span>计划要求出现拒绝 K 线，但你在它收盘前提交了订单。</span></div></div><div class="takeaway"><i>→</i><div><strong>下次动作</strong><span>连续完成 3 次“确认后入场”专项训练，纪律达到 80%。</span></div></div><button class="btn violet" style="width:100%;margin-top:8px" data-toast="已加入今日训练：等待确认 × 3">加入下一次训练</button></aside>
+            </div>
+          </div>
+        </section>
+
+        <!-- 08 Reviews -->
+        <section class="screen" data-screen="reviews">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Evidence Review</span><h1>复盘中心</h1><p>从重复出现的问题出发，而不是从盈亏排行榜出发。</p></div><div class="actions"><button class="btn">本周</button><button class="btn ghost">全部策略</button><button class="btn primary" data-go="review">打开最近复盘</button></div></div>
+            <div class="card review-layout">
+              <aside class="review-sidebar"><div class="review-filter"><input class="input" placeholder="搜索品种、策略或问题"></div><button class="review-item active" data-go="review"><strong>BTCUSDT · 突破回踩</strong><span>今天 09:12 · 纪律 76 · +1.8R</span></button><button class="review-item"><strong>ETHUSDT · 趋势回调</strong><span>昨天 21:18 · 纪律 82 · -0.9R</span></button><button class="review-item"><strong>BTCUSDT · 突破回踩</strong><span>07-28 · 纪律 61 · +0.4R</span></button><button class="review-item"><strong>ETHUSDT · 自由回放</strong><span>07-27 · 无策略评分 · +2.1R</span></button></aside>
+              <div class="review-overview"><div class="stats-row" style="margin-top:0"><div class="card stat-card"><span>计划内交易</span><strong>71%</strong><small class="green">+8% WoW</small></div><div class="card stat-card"><span>平均纪律</span><strong>76</strong><small class="muted">12 次样本</small></div><div class="card stat-card"><span>最大重复问题</span><strong style="font-size:14px">提前入场</strong><small class="red">出现 5 次</small></div><div class="card stat-card"><span>证据覆盖</span><strong>96%</strong><small class="blue">43 / 45 结论</small></div></div><div class="section-title"><h2>本周重复模式</h2><span class="tag warning">需要训练</span></div><div class="card"><div class="session-row"><div><strong>回踩确认前提前入场</strong><span class="muted">突破回踩 · 5 次样本</span></div><span class="red">纪律 -18</span><span>平均 MAE 0.72R</span><span>证据 12 条</span><button class="btn small" data-go="review">查看</button></div><div class="session-row"><div><strong>失效位与仓位反向适配</strong><span class="muted">多个策略 · 3 次样本</span></div><span class="warning">纪律 -9</span><span>平均风险 1.34%</span><span>证据 7 条</span><button class="btn small" data-go="review">查看</button></div></div><div class="section-title"><h2>最近一份复盘</h2></div><div class="card" style="padding:16px"><h2>结果是盈利，过程还有一个漏洞。</h2><p>入场方向正确，但没有等待计划中的确认 K 线收盘。点击进入证据视图，查看用户标注、AI 对照和完整走势。</p><button class="btn primary" data-go="review">打开证据复盘</button></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 09 Review detail -->
+        <section class="screen" data-screen="review">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">After Action Review · BTCUSDT</span><h1>突破回踩 · 2024-05-20</h1><p>完整走势已解锁。所有判断均可回跳到图表证据。</p></div><div class="actions"><button class="btn ghost" data-go="reviews">返回复盘中心</button><button class="btn violet" data-toast="已加入训练任务：等待确认 × 3">加入训练任务</button></div></div>
+            <div class="report-detail">
+              <div class="card evidence-chart"><div class="rule-board-head"><strong>证据图表 · 完整结果</strong><div><button class="legend-btn">用户图层</button> <button class="legend-btn">AI 图层</button> <button class="legend-btn">策略标准</button></div></div><div style="height:420px;position:relative"><svg id="chartReview" class="chart-svg"></svg><svg class="annotation-layer" viewBox="0 0 900 420" preserveAspectRatio="none"><path d="M65 330 L430 155" fill="none" stroke="#36c8f4" stroke-width="2"/><rect id="reviewEvidenceTarget" x="430" y="205" width="142" height="49" fill="rgba(155,124,255,.12)" stroke="#9b7cff" stroke-width="2"/><line x1="428" y1="280" x2="595" y2="280" stroke="#f2687d" stroke-dasharray="6 4"/><path d="M500 245 C560 205 610 165 705 95" fill="none" stroke="#25c792" stroke-width="2.5"/><text x="438" y="197" fill="#baa7ff" font-size="11">E-14 · 计划要求等待确认</text><text x="600" y="276" fill="#f58ba0" font-size="10">计划失效位</text></svg></div></div>
+              <aside class="card report-side"><div class="dock-title"><h2>能力证据</h2><span class="tag blue">6 次样本</span></div><svg class="radar" viewBox="0 0 200 200"><g transform="translate(100 100)" fill="none"><polygon points="0,-78 68,-39 68,39 0,78 -68,39 -68,-39" stroke="#2b3749"/><polygon points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26" stroke="#253044"/><polygon points="0,-26 23,-13 23,13 0,26 -23,13 -23,-13" stroke="#253044"/><line x1="0" y1="0" x2="0" y2="-78" stroke="#253044"/><line x1="0" y1="0" x2="68" y2="-39" stroke="#253044"/><line x1="0" y1="0" x2="68" y2="39" stroke="#253044"/><line x1="0" y1="0" x2="0" y2="78" stroke="#253044"/><line x1="0" y1="0" x2="-68" y2="39" stroke="#253044"/><line x1="0" y1="0" x2="-68" y2="-39" stroke="#253044"/><polygon points="0,-67 55,-32 42,24 0,61 -36,21 -58,-33" fill="rgba(59,130,246,.18)" stroke="#5a9afc" stroke-width="2"/></g></svg><button class="evidence-card" data-evidence="E-14"><b>E-14 · 提前一根入场</b><span>点击高亮计划确认区和实际下单时间。</span></button><button class="evidence-card" data-evidence="E-18"><b>E-18 · 失效位合理</b><span>止损位对应结构低点，而不是仓位倒推。</span></button><button class="evidence-card" data-evidence="E-22"><b>E-22 · 按计划退出</b><span>目标区分批退出，没有临时扩大风险。</span></button><div class="section-title"><h3>结论结构</h3></div><p><b class="green">做对：</b>环境和关键位识别。</p><p><b class="red">做错：</b>没有等待计划中的确认收盘。</p><p><b class="violet">运气：</b>提前入场没有先触发止损。</p></aside>
+            </div>
+          </div>
+        </section>
+
+        <!-- 10 Playbooks -->
+        <section class="screen" data-screen="playbooks">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Personal Playbook</span><h1>我的 Playbook</h1><p>每次修改创建新版本，历史会话始终绑定原始规则。</p></div><button class="btn primary" data-toast="已创建空白 Playbook 草稿">新建 Playbook</button></div>
+            <div class="card split-layout">
+              <aside class="list-pane"><div class="list-head"><strong>策略版本</strong><span class="tag blue">3</span></div><button class="list-item active"><strong>突破回踩 · 我的版本</strong><small>v2.1 · 使用中 · 12 次训练</small></button><button class="list-item"><strong>趋势回调 · 保守入场</strong><small>v1.4 · 使用中 · 8 次训练</small></button><button class="list-item"><strong>区间反转实验</strong><small>草稿 · 尚未训练</small></button></aside>
+              <div class="editor-pane"><div class="editor-head"><div><span class="eyebrow">PLAYBOOK v2.1</span><h2 style="margin-top:7px">突破回踩 · 我的版本</h2><p>基于官方策略 v1.3，增加“确认 K 线收盘后再入场”。</p></div><div class="actions"><button class="btn">查看历史版本</button><button class="btn primary" id="savePlaybook">保存为 v2.2</button></div></div><div class="field-row"><div class="field"><label>适用市场</label><input class="input" value="BTC / ETH 现货"></div><div class="field"><label>主周期</label><input class="input" value="15m"></div><div class="field"><label>最大风险</label><input class="input" value="1.0%"></div></div><div class="section-title"><h2>入场规则</h2><button class="btn small">+ 添加规则</button></div><div class="card rule-table"><div class="rule-row"><span class="drag">⋮⋮</span><b>高周期方向与突破方向一致</b><span class="tag green">系统检查</span><span class="green">必需</span></div><div class="rule-row"><span class="drag">⋮⋮</span><b>突破实体收于关键位外侧</b><span class="tag green">系统检查</span><span class="green">必需</span></div><div class="rule-row"><span class="drag">⋮⋮</span><b>等待首次回踩并出现拒绝确认</b><span class="tag violet">AI 共画</span><span class="green">必需</span></div><div class="rule-row"><span class="drag">⋮⋮</span><b>确认 K 线收盘后才允许提交订单</b><span class="tag green">系统检查</span><span class="red">硬门禁</span></div></div><div class="section-title"><h2>失效与退出</h2><button class="btn small">+ 添加规则</button></div><div class="card rule-table"><div class="rule-row"><span class="drag">⋮⋮</span><b>15m 收盘重新进入原区间</b><span class="tag violet">AI 共画</span><span class="green">必需</span></div><div class="rule-row"><span class="drag">⋮⋮</span><b>最低计划收益风险比 2R</b><span class="tag green">系统检查</span><span class="red">硬门禁</span></div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11 Sessions -->
+        <section class="screen" data-screen="sessions">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Training Sessions</span><h1>会话库</h1><p>继续未完成训练，或回到任何一份历史证据。</p></div><div class="actions"><button class="btn">筛选</button><button class="btn primary" data-go="setup">新建训练</button></div></div>
+            <div class="card table-card"><div class="table-row header"><span>会话</span><span>状态</span><span>策略</span><span>AI 模式</span><span>纪律</span><span>结果</span><span>操作</span></div><div class="table-row"><div><strong>BTCUSDT · 15m</strong><br><span class="muted">今天 08:42 · Visible 10:45</span></div><span class="tag warning">进行中</span><span>突破回踩 v1.3</span><span>半自动</span><span>—</span><span>—</span><button class="btn small primary" data-go="workbench">继续</button></div><div class="table-row"><div><strong>BTCUSDT · 15m</strong><br><span class="muted">今天 07:58 · 14m 32s</span></div><span class="tag green">已完成</span><span>突破回踩 v1.3</span><span>半自动</span><span class="warning">76</span><span class="green">+1.8R</span><button class="btn small" data-go="review">复盘</button></div><div class="table-row"><div><strong>ETHUSDT · 15m</strong><br><span class="muted">昨天 21:18 · 18m 06s</span></div><span class="tag green">已完成</span><span>趋势回调 v1.2</span><span>手动</span><span class="green">82</span><span class="red">-0.9R</span><button class="btn small" data-go="review">复盘</button></div><div class="table-row"><div><strong>BTCUSDT · 5m</strong><br><span class="muted">07-28 14:20 · 22m 44s</span></div><span class="tag">已停止</span><span>自由回放</span><span>全自动</span><span>不评分</span><span>+0.4R</span><button class="btn small" data-go="review">查看</button></div></div>
+          </div>
+        </section>
+
+        <!-- 12 Data -->
+        <section class="screen" data-screen="data">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Market Data</span><h1>数据中心</h1><p>先看缺口、时区和质量，再决定能否用于训练。</p></div><div class="actions"><button class="btn">导入 CSV</button><button class="btn primary" data-toast="已创建 Binance BTCUSDT 下载任务">下载公开行情</button></div></div>
+            <div class="card data-layout"><aside class="list-pane"><div class="list-head"><strong>不可变快照</strong><span class="tag blue">4</span></div><button class="list-item active"><strong>BTCUSDT · 1m</strong><small>2024-01 → 2026-07 · Binance · OK</small></button><button class="list-item"><strong>ETHUSDT · 1m</strong><small>2024-01 → 2026-07 · Binance · OK</small></button><button class="list-item"><strong>BTCUSDT Golden</strong><small>2025-01 · Fixture · LOCKED</small></button><button class="list-item"><strong>ETHUSDT · 1m</strong><small>2023-Q4 · CSV · 2 个缺口</small></button></aside><div class="dataset-inspector"><div class="editor-head"><div><span class="eyebrow">SNAPSHOT BTC-1M-202607</span><h2 style="margin-top:7px">BTCUSDT · Binance Spot</h2><p>不可变原始快照 · UTC · 由 1m 派生多周期。</p></div><span class="tag green">质量通过</span></div><div class="quality-grid"><div class="quality-cell"><span>覆盖</span><strong>943d</strong></div><div class="quality-cell"><span>总 K 线</span><strong>1.35M</strong></div><div class="quality-cell"><span>关键缺口</span><strong class="green">0</strong></div><div class="quality-cell"><span>重复 / 乱序</span><strong class="green">0 / 0</strong></div></div><div class="quality-box">✓ 可用于训练：时间连续、价格有效、快照 hash 已锁定。<br><span style="opacity:.7">派生周期：5m / 15m / 1h / 4h</span></div><div class="section-title"><h2>数据预览</h2><span class="mono muted" style="font-size:8px">UTC</span></div><table class="bar-preview"><thead><tr><th>OPEN TIME</th><th>OPEN</th><th>HIGH</th><th>LOW</th><th>CLOSE</th><th>VOLUME</th></tr></thead><tbody><tr><td>2026-07-30 00:00</td><td>66,842.1</td><td>66,910.7</td><td>66,782.3</td><td>66,879.4</td><td>238.19</td></tr><tr><td>2026-07-30 00:01</td><td>66,879.4</td><td>66,933.2</td><td>66,850.0</td><td>66,921.8</td><td>181.07</td></tr><tr><td>2026-07-30 00:02</td><td>66,921.8</td><td>66,944.6</td><td>66,870.2</td><td>66,888.1</td><td>155.44</td></tr></tbody></table></div></div>
+          </div>
+        </section>
+
+        <!-- 13 Settings -->
+        <section class="screen" data-screen="settings">
+          <div class="page content-max">
+            <div class="page-head"><div><span class="eyebrow">Preferences & Safety</span><h1>设置</h1><p>AI 失败不会阻塞确定性回放，隐私和证据保留由你控制。</p></div><button class="btn primary" data-toast="设置已保存">保存设置</button></div>
+            <div class="settings-layout"><aside class="card settings-menu"><button class="active">训练偏好</button><button>AI 教练</button><button>界面与图表</button><button>隐私与数据</button><button>额度与订阅</button></aside><div class="card settings-panel"><h2>训练偏好</h2><p>这些设置只影响新会话，不修改历史训练。</p><div class="setting-row"><div><strong>默认 AI 协作强度</strong><small>半自动：用户先画，AI 再对照。</small></div><select class="input" style="width:150px"><option>半自动</option><option>手动</option><option>全自动</option></select></div><div class="setting-row"><div><strong>下单前强制计划卡</strong><small>方向、失效、止损、目标和风险必须完整。</small></div><button class="switch on" aria-label="切换强制计划卡"></button></div><div class="setting-row"><div><strong>隐藏随机训练真实日期</strong><small>会话结束后才揭示品种日期和完整行情。</small></div><button class="switch on" aria-label="切换隐藏日期"></button></div><div class="setting-row"><div><strong>默认单笔风险</strong><small>策略可以设置更低上限，不能设置更高。</small></div><input class="input mono" style="width:150px" value="1.0%"></div><div class="setting-row"><div><strong>AI 模型状态</strong><small>结构化输出与图形指令测试通过。</small></div><div class="actions"><span class="tag green">可用</span><button class="btn small" data-toast="AI 自检通过 · 延迟 1.8s">重新检测</button></div></div><div class="setting-row"><div><strong>保留原始 AI 输出</strong><small>用于问题诊断；正式报告仍只接受通过 Schema 的内容。</small></div><button class="switch" aria-label="切换原始输出保留"></button></div></div></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="finishModal">
+    <div class="modal"><span class="eyebrow">END SESSION</span><h2 style="margin-top:8px">结束本次训练？</h2><p>结束后将揭示完整行情并进入事后复盘。当前会话不能再继续下单，但所有标注和计划都会保留。</p><div class="modal-actions"><button class="btn" id="cancelFinish">继续训练</button><button class="btn primary" id="confirmFinish">结束并生成复盘</button></div></div>
+  </div>
+
+  <script>
+    (() => {
+      const app = document.getElementById("app");
+      const screens = [...document.querySelectorAll("[data-screen]")];
+      const navButtons = [...document.querySelectorAll(".nav-btn")];
+      const switcher = document.getElementById("pageSwitcher");
+      const topContext = document.getElementById("topContext");
+      const toast = document.getElementById("toast");
+      const contexts = {
+        onboarding: "产品首次体验", today: "今日训练", academy: "策略学院", strategy: "官方策略 · 突破回踩",
+        setup: "新训练会话", workbench: "沉浸式回放训练", complete: "会话完成", reviews: "复盘中心",
+        review: "证据复盘", playbooks: "个人 Playbook", sessions: "会话库", data: "数据中心", settings: "设置"
+      };
+      let toastTimer;
+      let currentScreen = "onboarding";
+      let replayProgress = 46;
+      let replayPlaying = false;
+      let replayTimer;
+
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
+      }
+
+      function go(name, message) {
+        if (!contexts[name]) return;
+        currentScreen = name;
+        screens.forEach(screen => screen.classList.toggle("active", screen.dataset.screen === name));
+        navButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.go === name || (name === "review" && btn.dataset.go === "reviews")));
+        switcher.value = name;
+        topContext.textContent = contexts[name];
+        app.classList.toggle("workbench-mode", name === "workbench");
+        document.querySelector(".main").scrollTop = 0;
+        if (message) showToast(message);
+      }
+
+      document.addEventListener("click", event => {
+        const goTarget = event.target.closest("[data-go]");
+        if (goTarget) go(goTarget.dataset.go, goTarget.dataset.toast);
+        const toastTarget = event.target.closest("[data-toast]");
+        if (toastTarget && !goTarget) showToast(toastTarget.dataset.toast);
+      });
+      switcher.addEventListener("change", event => go(event.target.value));
+
+      document.querySelectorAll(".filter-chip").forEach(button => button.addEventListener("click", () => {
+        button.parentElement.querySelectorAll(".filter-chip").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        showToast(`已筛选：${button.textContent}`);
+      }));
+
+      document.querySelectorAll("#aiModeChoices .choice").forEach(button => button.addEventListener("click", () => {
+        document.querySelectorAll("#aiModeChoices .choice").forEach(item => item.classList.remove("selected"));
+        button.classList.add("selected");
+        document.getElementById("aiModeSummary").textContent = button.querySelector("strong").textContent + "协作";
+      }));
+
+      document.querySelectorAll(".choice-grid:not(#aiModeChoices) .choice").forEach(button => button.addEventListener("click", () => {
+        const parent = button.parentElement;
+        parent.querySelectorAll(".choice").forEach(item => item.classList.remove("selected"));
+        button.classList.add("selected");
+      }));
+
+      document.querySelectorAll("[data-layer-toggle]").forEach(button => button.addEventListener("click", () => {
+        const layer = button.dataset.layerToggle;
+        button.classList.toggle("off");
+        const target = document.querySelector(`[data-screen="workbench"] [data-layer="${layer}"]`);
+        if (target) target.style.display = button.classList.contains("off") ? "none" : "block";
+      }));
+
+      document.getElementById("acceptAi").addEventListener("click", () => {
+        document.getElementById("workAiCard").classList.add("accepted");
+        document.querySelector("#workAiCard .ai-card-head span").textContent = "AI 观察 · 已采纳";
+        showToast("已采纳 AI 标注，并保留为复盘证据");
+      });
+      document.getElementById("modifyAi").addEventListener("click", () => {
+        showToast("已进入修改模式：拖动紫色区域即可调整");
+        document.querySelector('[data-layer="ai"]').classList.add("evidence-pulse");
+        setTimeout(() => document.querySelector('[data-layer="ai"]').classList.remove("evidence-pulse"), 1500);
+      });
+      document.getElementById("askAi").addEventListener("click", () => {
+        document.getElementById("aiFollowup").classList.toggle("show");
+      });
+      document.getElementById("submitPlan").addEventListener("click", event => {
+        document.getElementById("planState").textContent = "已锁定";
+        document.getElementById("planState").className = "tag green";
+        event.target.textContent = "计划已锁定";
+        event.target.disabled = true;
+        showToast("交易计划已锁定，后续修改将记录为计划偏差");
+      });
+
+      function advanceReplay(amount = 4) {
+        replayProgress = Math.min(92, replayProgress + amount);
+        document.getElementById("timelineProgress").style.width = replayProgress + "%";
+        const minute = 45 + Math.round((replayProgress - 46) * 1.4);
+        const hour = 10 + Math.floor(minute / 60);
+        const min = minute % 60;
+        document.getElementById("visibleTime").textContent = `${String(hour).padStart(2,"0")}:${String(min).padStart(2,"0")} / 23:59`;
+        if (replayProgress >= 92) {
+          clearInterval(replayTimer);
+          replayPlaying = false;
+          document.getElementById("playReplay").textContent = "▶";
+          showToast("片段即将结束，可以提交退出理由或结束会话");
+        }
+      }
+      document.getElementById("nextBar").addEventListener("click", () => advanceReplay(3));
+      document.getElementById("playReplay").addEventListener("click", event => {
+        replayPlaying = !replayPlaying;
+        event.target.textContent = replayPlaying ? "Ⅱ" : "▶";
+        clearInterval(replayTimer);
+        if (replayPlaying) replayTimer = setInterval(() => advanceReplay(2), 850);
+      });
+
+      const finishModal = document.getElementById("finishModal");
+      document.getElementById("finishSession").addEventListener("click", () => finishModal.classList.add("show"));
+      document.getElementById("cancelFinish").addEventListener("click", () => finishModal.classList.remove("show"));
+      document.getElementById("confirmFinish").addEventListener("click", () => {
+        finishModal.classList.remove("show");
+        go("complete", "会话已完成，完整行情和事后指标已解锁");
+      });
+
+      document.querySelectorAll("[data-evidence]").forEach(button => button.addEventListener("click", () => {
+        const target = document.getElementById("reviewEvidenceTarget");
+        target.classList.remove("evidence-pulse");
+        void target.getBoundingClientRect();
+        target.classList.add("evidence-pulse");
+        showToast(`${button.dataset.evidence} 已在图表中高亮`);
+      }));
+
+      document.getElementById("savePlaybook").addEventListener("click", event => {
+        event.target.textContent = "已保存 v2.2";
+        event.target.disabled = true;
+        showToast("Playbook v2.2 已创建；历史会话继续引用原版本");
+      });
+      document.querySelectorAll(".switch").forEach(button => button.addEventListener("click", () => {
+        button.classList.toggle("on");
+        showToast("设置已更新，将从下一次训练生效");
+      }));
+
+      function seededRandom(seed) {
+        let value = seed % 2147483647;
+        return () => (value = value * 16807 % 2147483647) / 2147483647;
+      }
+      function buildChart(id, count, seed, visibleRatio = 1, shape = "trend") {
+        const svg = document.getElementById(id);
+        if (!svg) return;
+        const width = 1000, height = 520, top = 55, bottom = 70;
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.setAttribute("preserveAspectRatio", "none");
+        const rand = seededRandom(seed);
+        let price = shape === "range" ? 100 : 92;
+        const points = [];
+        for (let i = 0; i < count; i++) {
+          const drift = shape === "trend" ? .42 : shape === "breakout" && i > count * .55 ? .74 : .04;
+          const wave = Math.sin(i / 3.5) * .75;
+          const open = price;
+          const close = open + drift + wave * .22 + (rand() - .48) * 2.1;
+          const high = Math.max(open, close) + rand() * 1.45 + .35;
+          const low = Math.min(open, close) - rand() * 1.45 - .35;
+          points.push({ open, close, high, low, volume: .25 + rand() * .75 });
+          price = close;
+        }
+        const min = Math.min(...points.map(p => p.low));
+        const max = Math.max(...points.map(p => p.high));
+        const plotWidth = width - 100;
+        const visibleCount = Math.floor(count * visibleRatio);
+        const barW = plotWidth / count;
+        const y = value => top + (max - value) / (max - min) * (height - top - bottom);
+        let html = "";
+        for (let g = 0; g < 6; g++) {
+          const gy = top + g * (height - top - bottom) / 5;
+          html += `<line x1="45" y1="${gy}" x2="965" y2="${gy}" stroke="#182333" stroke-width="1"/>`;
+        }
+        for (let i = 0; i < visibleCount; i++) {
+          const p = points[i], x = 55 + i * barW + barW / 2;
+          const up = p.close >= p.open, color = up ? "#25c792" : "#f2687d";
+          const bodyY = Math.min(y(p.open), y(p.close));
+          const bodyH = Math.max(2, Math.abs(y(p.close) - y(p.open)));
+          html += `<line x1="${x}" y1="${y(p.high)}" x2="${x}" y2="${y(p.low)}" stroke="${color}" stroke-width="1"/>`;
+          html += `<rect x="${x - Math.max(1.5, barW * .29)}" y="${bodyY}" width="${Math.max(3, barW * .58)}" height="${bodyH}" fill="${color}"/>`;
+          const vh = p.volume * 38;
+          html += `<rect x="${x - Math.max(1.5, barW * .29)}" y="${height - 18 - vh}" width="${Math.max(3, barW * .58)}" height="${vh}" fill="${color}" opacity=".35"/>`;
+        }
+        if (visibleRatio < 1) {
+          const bx = 55 + visibleCount * barW;
+          html += `<line x1="${bx}" y1="0" x2="${bx}" y2="${height}" stroke="#3b82f6" stroke-width="2"/>`;
+          html += `<rect x="${bx - 43}" y="5" width="86" height="22" rx="3" fill="#2563c9"/><text x="${bx}" y="20" fill="white" font-size="10" text-anchor="middle">Visible to 10:45</text>`;
+          html += `<text x="${bx + 86}" y="${height/2}" fill="#58677b" font-size="13">未来数据不可见</text>`;
+        }
+        svg.innerHTML = html;
+      }
+
+      buildChart("chartOnboarding", 42, 7, .72, "trend");
+      buildChart("chartToday", 34, 15, 1, "breakout");
+      buildChart("chartStrategy", 48, 23, 1, "breakout");
+      buildChart("chartMain", 72, 31, .66, "trend");
+      buildChart("chartComplete", 58, 31, 1, "trend");
+      buildChart("chartReview", 64, 31, 1, "trend");
+      go("onboarding");
+    })();
+  </script>
+</body>
+</html>

@@ -1,33 +1,30 @@
 # ReplayTutor 原生 Coding Agent 绑定规范
 
-状态：Approved v1.0  
-更新时间：2026-07-19
+状态：Implemented for MVP 1A
+更新时间：2026-07-30
 
 ## 1. 目标
 
-AI Tutor 应能使用用户已经安装并登录的原生 Coding Agent，例如 Codex CLI、Claude Code 和 Kimi CLI，同时保持：
+MVP 的 AI Tutor 只实现 Codex CLI。当前产品、健康检查、设置页和运行时均不发现或调用其他 Agent。同时必须保持：
 
 - 相同的 Tutor 输入/输出契约。
-- Agent 可发现、可切换、可取消、可恢复。
+- Codex 可发现、可取消、可按 run ID 恢复。
 - 不暴露完整交易数据库和券商凭据。
 - Agent 失败不会影响回放、撮合与确定性分析。
-- 后续可以增加 API 模型、本地 Ollama 或其他 CLI，而无需修改 Tutor 产品逻辑。
 
 “原生绑定”指应用直接管理本机 Agent 进程和会话，而不是只把模型名称映射到另一个聊天 API。
 
 ## 2. 本机能力基线
 
-2026-07-19 当前机器探测结果：
+2026-07-30 当前机器验收结果：
 
 | Agent | 状态 | 已验证能力 |
 |---|---|---|
 | Codex CLI `0.139.0` | 已安装 | `codex exec`、JSONL 事件、JSON Schema 输出、工作目录、sandbox、临时会话 |
-| Claude Code `2.1.211` | 已安装 | `--print`、stream-json、JSON Schema、会话恢复、权限模式、MCP 配置 |
-| Kimi CLI | 未安装 | 通过通用 CLI 适配器预留；安装后重新探测真实命令能力 |
 
 版本只作为当前验证证据，运行时必须动态探测，不能写死为最低版本承诺。
 
-M0 隔离 Spike 的实测结论：Codex `prompt_only` 可用，但 `--sandbox read-only --cd <workspace>` 仍能读取工作区外的诱饵文件，因此不能作为“仅工作区可读”的隔离边界；Claude CLI 已安装，但本机组织策略禁用了 Claude Code 订阅访问，`prompt_only` 与 `workspace_read_only` 暂时标记为认证阻塞。两者的 `host_read_only` Adapter 均保持默认禁用。复现脚本与完整决策见 `scripts/agent-isolation-probe.py` 和 `docs/decisions/0002-agent-isolation-spike.md`。
+隔离 Spike 的实测结论：Codex `--sandbox read-only --cd <workspace>` 仍不能作为“仅工作区可读”的强隔离边界。因此运行时只写入物理裁剪的证据包，使用独立临时 `CODEX_HOME`、忽略用户配置与项目规则、禁用审批和工具写入；工作目录不含数据库、券商凭据或主目录链接。复现脚本与完整决策见 `scripts/agent-isolation-probe.py` 和 `docs/decisions/0002-agent-isolation-spike.md`。
 
 ## 3. 模块结构
 
@@ -41,9 +38,9 @@ flowchart LR
     R --> V["Response Validator"]
 
     P --> C1["Codex Adapter"]
-    P --> C2["Claude Adapter"]
-    P --> C3["Kimi Adapter"]
-    P --> C4["Generic Adapter"]
+    P -. Post-MVP .-> C2["Claude Adapter"]
+    P -. Post-MVP .-> C3["Kimi Adapter"]
+    P -. Post-MVP .-> C4["Generic Adapter"]
 ```
 
 外部接口只有：
@@ -216,7 +213,7 @@ codex exec
 
 连续会话可通过 Adapter 内部保存原生 session ID，并使用 Codex 的 resume 能力；若版本不支持可靠恢复，则退化为“摘要 + 最近对话”重新构造上下文。
 
-## 8. Claude Code Adapter
+## 8. Claude Code Adapter（Post-MVP 预留，不实施）
 
 已验证入口支持 `--print`、`--output-format stream-json` 和 `--json-schema`。建议模板：
 
@@ -238,7 +235,7 @@ claude
 - 若启用连续会话，保存 Claude session ID；否则使用 `--no-session-persistence`。
 - 用户明确选择 MCP 扩展时，应用生成一次性 `--mcp-config`，只暴露只读市场证据工具。
 
-## 9. Kimi Adapter
+## 9. Kimi Adapter（Post-MVP 预留，不实施）
 
 当前本机没有检测到 `kimi` 命令，因此 MVP 不假设具体 flags。Adapter 分两层：
 
@@ -364,6 +361,6 @@ MVP 优先文件证据包；MCP 放在第二阶段，避免一开始把运行链
 4. 实现 Codex Adapter，并随第一条确定性回放纵向切片交付。
 5. 实现事件标准化、取消、超时和审计。
 6. 接入右侧 Tutor 面板。
-7. 第一条切片通过门禁后实现 Claude Code Adapter。
-8. Kimi 安装并验证后实现正式 Adapter。
+7. MVP 到此停止扩展 Agent；只对 Codex Adapter 做版本漂移和失败矩阵硬化。
+8. Claude、Kimi 和通用 Adapter 进入 Post-MVP Backlog，重新立项时再验证实际 CLI 能力。
 9. 第二阶段增加只读 MCP 与连续会话。

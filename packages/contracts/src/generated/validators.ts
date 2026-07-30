@@ -1,0 +1,9961 @@
+// Generated from Pydantic. Do not edit.
+import Ajv from "ajv";
+import type { ValidateFunction } from "ajv";
+import addFormats from "ajv-formats";
+
+const schemas = {
+  "AgentCapability": {
+    "additionalProperties": false,
+    "properties": {
+      "agent_id": {
+        "const": "codex-local",
+        "default": "codex-local",
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "authentication": {
+        "enum": [
+          "unknown",
+          "verified",
+          "failed"
+        ],
+        "title": "Authentication",
+        "type": "string"
+      },
+      "available": {
+        "title": "Available",
+        "type": "boolean"
+      },
+      "diagnostics": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Diagnostics",
+        "type": "array"
+      },
+      "executable": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Executable"
+      },
+      "installed": {
+        "title": "Installed",
+        "type": "boolean"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "version": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Version"
+      }
+    },
+    "required": [
+      "installed",
+      "available",
+      "authentication"
+    ],
+    "title": "AgentCapability",
+    "type": "object"
+  },
+  "AnnotationPoint": {
+    "additionalProperties": false,
+    "properties": {
+      "price": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Price",
+        "type": "string"
+      },
+      "time": {
+        "format": "date-time",
+        "title": "Time",
+        "type": "string"
+      }
+    },
+    "required": [
+      "time",
+      "price"
+    ],
+    "title": "AnnotationPoint",
+    "type": "object"
+  },
+  "Bar": {
+    "$defs": {
+      "PriceValues": {
+        "additionalProperties": false,
+        "properties": {
+          "close": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Close",
+            "type": "string"
+          },
+          "high": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Low",
+            "type": "string"
+          },
+          "open": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open",
+            "type": "string"
+          },
+          "volume": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Volume",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "PriceValues",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "adjusted": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PriceValues"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "bar_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Bar Id",
+        "type": "string"
+      },
+      "close_time": {
+        "format": "date-time",
+        "title": "Close Time",
+        "type": "string"
+      },
+      "instrument_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Instrument Id",
+        "type": "string"
+      },
+      "open_time": {
+        "format": "date-time",
+        "title": "Open Time",
+        "type": "string"
+      },
+      "quality_flags": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Quality Flags",
+        "type": "array"
+      },
+      "raw": {
+        "$ref": "#/$defs/PriceValues"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "timeframe": {
+        "enum": [
+          "1m",
+          "5m",
+          "15m",
+          "1h",
+          "2h",
+          "4h",
+          "1d"
+        ],
+        "title": "Timeframe",
+        "type": "string"
+      }
+    },
+    "required": [
+      "bar_id",
+      "instrument_id",
+      "timeframe",
+      "open_time",
+      "close_time",
+      "raw"
+    ],
+    "title": "Bar",
+    "type": "object"
+  },
+  "BarListResponse": {
+    "$defs": {
+      "Bar": {
+        "additionalProperties": false,
+        "properties": {
+          "adjusted": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PriceValues"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "bar_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Bar Id",
+            "type": "string"
+          },
+          "close_time": {
+            "format": "date-time",
+            "title": "Close Time",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "open_time": {
+            "format": "date-time",
+            "title": "Open Time",
+            "type": "string"
+          },
+          "quality_flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quality Flags",
+            "type": "array"
+          },
+          "raw": {
+            "$ref": "#/$defs/PriceValues"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bar_id",
+          "instrument_id",
+          "timeframe",
+          "open_time",
+          "close_time",
+          "raw"
+        ],
+        "title": "Bar",
+        "type": "object"
+      },
+      "PriceValues": {
+        "additionalProperties": false,
+        "properties": {
+          "close": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Close",
+            "type": "string"
+          },
+          "high": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Low",
+            "type": "string"
+          },
+          "open": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open",
+            "type": "string"
+          },
+          "volume": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Volume",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "PriceValues",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "bars": {
+        "items": {
+          "$ref": "#/$defs/Bar"
+        },
+        "title": "Bars",
+        "type": "array"
+      },
+      "has_more": {
+        "title": "Has More",
+        "type": "boolean"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "snapshot_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Snapshot Id",
+        "type": "string"
+      },
+      "timeframe": {
+        "enum": [
+          "1m",
+          "5m",
+          "15m",
+          "1h",
+          "2h",
+          "4h",
+          "1d"
+        ],
+        "title": "Timeframe",
+        "type": "string"
+      }
+    },
+    "required": [
+      "snapshot_id",
+      "timeframe",
+      "bars",
+      "has_more"
+    ],
+    "title": "BarListResponse",
+    "type": "object"
+  },
+  "BinanceConnectionStatus": {
+    "additionalProperties": false,
+    "properties": {
+      "diagnostics": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Diagnostics",
+        "type": "array"
+      },
+      "futures_trade_enabled": {
+        "title": "Futures Trade Enabled",
+        "type": "boolean"
+      },
+      "ip_restricted": {
+        "title": "Ip Restricted",
+        "type": "boolean"
+      },
+      "mainnet": {
+        "title": "Mainnet",
+        "type": "boolean"
+      },
+      "read_enabled": {
+        "title": "Read Enabled",
+        "type": "boolean"
+      },
+      "readable": {
+        "title": "Readable",
+        "type": "boolean"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "withdrawals_enabled": {
+        "title": "Withdrawals Enabled",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "readable",
+      "mainnet",
+      "read_enabled",
+      "futures_trade_enabled",
+      "withdrawals_enabled",
+      "ip_restricted"
+    ],
+    "title": "BinanceConnectionStatus",
+    "type": "object"
+  },
+  "BinanceDownloadRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "end_time": {
+        "format": "date-time",
+        "title": "End Time",
+        "type": "string"
+      },
+      "start_time": {
+        "format": "date-time",
+        "title": "Start Time",
+        "type": "string"
+      },
+      "symbol": {
+        "pattern": "^[A-Z0-9]{5,20}$",
+        "title": "Symbol",
+        "type": "string"
+      },
+      "timeframe": {
+        "const": "1m",
+        "default": "1m",
+        "title": "Timeframe",
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "start_time",
+      "end_time"
+    ],
+    "title": "BinanceDownloadRequest",
+    "type": "object"
+  },
+  "CancelOrderRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      },
+      "order_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Order Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision",
+      "order_id"
+    ],
+    "title": "CancelOrderRequest",
+    "type": "object"
+  },
+  "CapabilityDimension": {
+    "additionalProperties": false,
+    "properties": {
+      "key": {
+        "enum": [
+          "environment",
+          "plan",
+          "risk",
+          "execution",
+          "management"
+        ],
+        "title": "Key",
+        "type": "string"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "sample_count": {
+        "minimum": 0,
+        "title": "Sample Count",
+        "type": "integer"
+      },
+      "score": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Score"
+      },
+      "status": {
+        "enum": [
+          "insufficient",
+          "ready"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "key",
+      "label",
+      "sample_count",
+      "status"
+    ],
+    "title": "CapabilityDimension",
+    "type": "object"
+  },
+  "ChartAnnotation": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "annotation_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Annotation Id",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Frame Id",
+        "type": "string"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "layer": {
+        "enum": [
+          "user",
+          "ai"
+        ],
+        "title": "Layer",
+        "type": "string"
+      },
+      "points": {
+        "items": {
+          "$ref": "#/$defs/AnnotationPoint"
+        },
+        "maxItems": 4,
+        "minItems": 1,
+        "title": "Points",
+        "type": "array"
+      },
+      "provenance_run_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Provenance Run Id"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "shape": {
+        "enum": [
+          "line",
+          "zone",
+          "marker",
+          "label"
+        ],
+        "title": "Shape",
+        "type": "string"
+      }
+    },
+    "required": [
+      "annotation_id",
+      "session_id",
+      "frame_id",
+      "layer",
+      "shape",
+      "label",
+      "points",
+      "created_at"
+    ],
+    "title": "ChartAnnotation",
+    "type": "object"
+  },
+  "CommitImportRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "adjustment": {
+        "enum": [
+          "raw",
+          "forward",
+          "backward"
+        ],
+        "title": "Adjustment",
+        "type": "string"
+      },
+      "lot_size": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Lot Size",
+        "type": "string"
+      },
+      "market": {
+        "enum": [
+          "CRYPTO",
+          "CN"
+        ],
+        "title": "Market",
+        "type": "string"
+      },
+      "quote_currency": {
+        "title": "Quote Currency",
+        "type": "string"
+      },
+      "symbol": {
+        "title": "Symbol",
+        "type": "string"
+      },
+      "tick_size": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Tick Size",
+        "type": "string"
+      },
+      "timezone": {
+        "title": "Timezone",
+        "type": "string"
+      },
+      "venue": {
+        "title": "Venue",
+        "type": "string"
+      }
+    },
+    "required": [
+      "symbol",
+      "market",
+      "venue",
+      "timezone",
+      "quote_currency",
+      "adjustment",
+      "tick_size",
+      "lot_size"
+    ],
+    "title": "CommitImportRequest",
+    "type": "object"
+  },
+  "CompletedSession": {
+    "$defs": {
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "finished_at": {
+        "format": "date-time",
+        "title": "Finished At",
+        "type": "string"
+      },
+      "idempotent_replay": {
+        "default": false,
+        "title": "Idempotent Replay",
+        "type": "boolean"
+      },
+      "revealed_coverage_end": {
+        "format": "date-time",
+        "title": "Revealed Coverage End",
+        "type": "string"
+      },
+      "revealed_coverage_start": {
+        "format": "date-time",
+        "title": "Revealed Coverage Start",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session": {
+        "$ref": "#/$defs/ReplaySession"
+      }
+    },
+    "required": [
+      "session",
+      "finished_at",
+      "revealed_coverage_start",
+      "revealed_coverage_end"
+    ],
+    "title": "CompletedSession",
+    "type": "object"
+  },
+  "CreateAnnotationRequest": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      },
+      "label": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Label",
+        "type": "string"
+      },
+      "points": {
+        "items": {
+          "$ref": "#/$defs/AnnotationPoint"
+        },
+        "maxItems": 4,
+        "minItems": 1,
+        "title": "Points",
+        "type": "array"
+      },
+      "shape": {
+        "enum": [
+          "line",
+          "zone",
+          "marker",
+          "label"
+        ],
+        "title": "Shape",
+        "type": "string"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision",
+      "shape",
+      "label",
+      "points"
+    ],
+    "title": "CreateAnnotationRequest",
+    "type": "object"
+  },
+  "CreatePlaybookRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "description": {
+        "maxLength": 1000,
+        "title": "Description",
+        "type": "string"
+      },
+      "name": {
+        "maxLength": 100,
+        "minLength": 2,
+        "title": "Name",
+        "type": "string"
+      },
+      "rules": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 30,
+        "minItems": 1,
+        "title": "Rules",
+        "type": "array"
+      },
+      "slug": {
+        "pattern": "^[a-z0-9-]{3,64}$",
+        "title": "Slug",
+        "type": "string"
+      }
+    },
+    "required": [
+      "slug",
+      "name",
+      "description",
+      "rules"
+    ],
+    "title": "CreatePlaybookRequest",
+    "type": "object"
+  },
+  "CreateSessionSpec": {
+    "additionalProperties": false,
+    "properties": {
+      "hidden_real_date": {
+        "default": true,
+        "title": "Hidden Real Date",
+        "type": "boolean"
+      },
+      "initial_cash": {
+        "default": "100000",
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Initial Cash",
+        "type": "string"
+      },
+      "playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Playbook Id"
+      },
+      "seed": {
+        "default": 1,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "title": "Seed",
+        "type": "integer"
+      },
+      "snapshot_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Snapshot Id",
+        "type": "string"
+      },
+      "start_mode": {
+        "default": "beginning",
+        "enum": [
+          "beginning",
+          "random"
+        ],
+        "title": "Start Mode",
+        "type": "string"
+      },
+      "warmup_bars": {
+        "default": 120,
+        "maximum": 500,
+        "minimum": 20,
+        "title": "Warmup Bars",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "snapshot_id"
+    ],
+    "title": "CreateSessionSpec",
+    "type": "object"
+  },
+  "DataQuality": {
+    "additionalProperties": false,
+    "properties": {
+      "duplicate_count": {
+        "minimum": 0,
+        "title": "Duplicate Count",
+        "type": "integer"
+      },
+      "flags": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Flags",
+        "type": "array"
+      },
+      "gap_count": {
+        "minimum": 0,
+        "title": "Gap Count",
+        "type": "integer"
+      },
+      "invalid_ohlc_count": {
+        "minimum": 0,
+        "title": "Invalid Ohlc Count",
+        "type": "integer"
+      },
+      "row_count": {
+        "minimum": 0,
+        "title": "Row Count",
+        "type": "integer"
+      },
+      "status": {
+        "enum": [
+          "passed",
+          "warning",
+          "failed"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "row_count",
+      "duplicate_count",
+      "gap_count",
+      "invalid_ohlc_count"
+    ],
+    "title": "DataQuality",
+    "type": "object"
+  },
+  "DataSnapshot": {
+    "$defs": {
+      "DataQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate_count": {
+            "minimum": 0,
+            "title": "Duplicate Count",
+            "type": "integer"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "gap_count": {
+            "minimum": 0,
+            "title": "Gap Count",
+            "type": "integer"
+          },
+          "invalid_ohlc_count": {
+            "minimum": 0,
+            "title": "Invalid Ohlc Count",
+            "type": "integer"
+          },
+          "row_count": {
+            "minimum": 0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "warning",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "row_count",
+          "duplicate_count",
+          "gap_count",
+          "invalid_ohlc_count"
+        ],
+        "title": "DataQuality",
+        "type": "object"
+      },
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "content_hash": {
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "coverage_end": {
+        "format": "date-time",
+        "title": "Coverage End",
+        "type": "string"
+      },
+      "coverage_start": {
+        "format": "date-time",
+        "title": "Coverage Start",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "derived_timeframes": {
+        "items": {
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "type": "string"
+        },
+        "title": "Derived Timeframes",
+        "type": "array"
+      },
+      "immutable": {
+        "const": true,
+        "default": true,
+        "title": "Immutable",
+        "type": "boolean"
+      },
+      "instrument": {
+        "$ref": "#/$defs/Instrument"
+      },
+      "manifest_hash": {
+        "title": "Manifest Hash",
+        "type": "string"
+      },
+      "quality": {
+        "$ref": "#/$defs/DataQuality"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "snapshot_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Snapshot Id",
+        "type": "string"
+      },
+      "source_id": {
+        "title": "Source Id",
+        "type": "string"
+      },
+      "source_kind": {
+        "enum": [
+          "golden",
+          "binance_public",
+          "binance_usdm",
+          "file_import"
+        ],
+        "title": "Source Kind",
+        "type": "string"
+      },
+      "timeframe": {
+        "enum": [
+          "1m",
+          "5m",
+          "15m",
+          "1h",
+          "2h",
+          "4h",
+          "1d"
+        ],
+        "title": "Timeframe",
+        "type": "string"
+      }
+    },
+    "required": [
+      "snapshot_id",
+      "instrument",
+      "timeframe",
+      "source_id",
+      "source_kind",
+      "coverage_start",
+      "coverage_end",
+      "created_at",
+      "content_hash",
+      "manifest_hash",
+      "quality"
+    ],
+    "title": "DataSnapshot",
+    "type": "object"
+  },
+  "DatasetListResponse": {
+    "$defs": {
+      "DataQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate_count": {
+            "minimum": 0,
+            "title": "Duplicate Count",
+            "type": "integer"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "gap_count": {
+            "minimum": 0,
+            "title": "Gap Count",
+            "type": "integer"
+          },
+          "invalid_ohlc_count": {
+            "minimum": 0,
+            "title": "Invalid Ohlc Count",
+            "type": "integer"
+          },
+          "row_count": {
+            "minimum": 0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "warning",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "row_count",
+          "duplicate_count",
+          "gap_count",
+          "invalid_ohlc_count"
+        ],
+        "title": "DataQuality",
+        "type": "object"
+      },
+      "DataSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "coverage_end": {
+            "format": "date-time",
+            "title": "Coverage End",
+            "type": "string"
+          },
+          "coverage_start": {
+            "format": "date-time",
+            "title": "Coverage Start",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "derived_timeframes": {
+            "items": {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "type": "string"
+            },
+            "title": "Derived Timeframes",
+            "type": "array"
+          },
+          "immutable": {
+            "const": true,
+            "default": true,
+            "title": "Immutable",
+            "type": "boolean"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/$defs/DataQuality"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "golden",
+              "binance_public",
+              "binance_usdm",
+              "file_import"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "instrument",
+          "timeframe",
+          "source_id",
+          "source_kind",
+          "coverage_start",
+          "coverage_end",
+          "created_at",
+          "content_hash",
+          "manifest_hash",
+          "quality"
+        ],
+        "title": "DataSnapshot",
+        "type": "object"
+      },
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "datasets": {
+        "items": {
+          "$ref": "#/$defs/DataSnapshot"
+        },
+        "title": "Datasets",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "datasets"
+    ],
+    "title": "DatasetListResponse",
+    "type": "object"
+  },
+  "EpisodeReview": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "PriceActionAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "annotation_id": {
+            "title": "Annotation Id",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "perspective": {
+            "enum": [
+              "decision_time",
+              "after_action"
+            ],
+            "title": "Perspective",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label",
+              "path"
+            ],
+            "title": "Shape",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "neutral",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotation_id",
+          "timeframe",
+          "layer",
+          "shape",
+          "label",
+          "evidence",
+          "rule_id",
+          "confidence",
+          "perspective",
+          "points",
+          "verdict"
+        ],
+        "title": "PriceActionAnnotation",
+        "type": "object"
+      },
+      "ReviewDimension": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management",
+              "outcome"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "verdict",
+          "title",
+          "evidence"
+        ],
+        "title": "ReviewDimension",
+        "type": "object"
+      },
+      "TradeEpisode": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "commission": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Commission",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Entry Price",
+            "type": "string"
+          },
+          "episode_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Episode Id",
+            "type": "string"
+          },
+          "exit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Price"
+          },
+          "fill_count": {
+            "minimum": 1,
+            "title": "Fill Count",
+            "type": "integer"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "peak_qty": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Peak Qty",
+            "type": "string"
+          },
+          "position_side": {
+            "enum": [
+              "BOTH",
+              "LONG",
+              "SHORT"
+            ],
+            "title": "Position Side",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode_id",
+          "symbol",
+          "direction",
+          "position_side",
+          "status",
+          "opened_at",
+          "closed_at",
+          "entry_price",
+          "exit_price",
+          "peak_qty",
+          "realized_pnl",
+          "commission",
+          "fill_count"
+        ],
+        "title": "TradeEpisode",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "annotations": {
+        "items": {
+          "$ref": "#/$defs/PriceActionAnnotation"
+        },
+        "title": "Annotations",
+        "type": "array"
+      },
+      "dimensions": {
+        "items": {
+          "$ref": "#/$defs/ReviewDimension"
+        },
+        "title": "Dimensions",
+        "type": "array"
+      },
+      "episode": {
+        "$ref": "#/$defs/TradeEpisode"
+      },
+      "improvements": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Improvements",
+        "type": "array"
+      },
+      "missing_context": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Missing Context",
+        "type": "array"
+      },
+      "positives": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Positives",
+        "type": "array"
+      },
+      "process_outcome": {
+        "enum": [
+          "good_trade_profit",
+          "good_trade_loss",
+          "bad_trade_profit",
+          "bad_trade_loss",
+          "insufficient_evidence",
+          "open_trade"
+        ],
+        "title": "Process Outcome",
+        "type": "string"
+      }
+    },
+    "required": [
+      "episode",
+      "process_outcome",
+      "dimensions",
+      "annotations",
+      "positives",
+      "improvements",
+      "missing_context"
+    ],
+    "title": "EpisodeReview",
+    "type": "object"
+  },
+  "ErrorEnvelope": {
+    "$defs": {
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "error": {
+        "$ref": "#/$defs/ErrorDetail"
+      }
+    },
+    "required": [
+      "error"
+    ],
+    "title": "ErrorEnvelope",
+    "type": "object"
+  },
+  "EvidenceRef": {
+    "additionalProperties": false,
+    "properties": {
+      "evidence_id": {
+        "title": "Evidence Id",
+        "type": "string"
+      },
+      "frame_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Frame Id"
+      },
+      "kind": {
+        "enum": [
+          "plan",
+          "order",
+          "fill",
+          "bar",
+          "metric"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "occurred_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Occurred At"
+      },
+      "price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Price"
+      },
+      "summary": {
+        "title": "Summary",
+        "type": "string"
+      }
+    },
+    "required": [
+      "evidence_id",
+      "kind",
+      "summary"
+    ],
+    "title": "EvidenceRef",
+    "type": "object"
+  },
+  "ExecutionFill": {
+    "additionalProperties": false,
+    "properties": {
+      "commission": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Commission",
+        "type": "string"
+      },
+      "commission_asset": {
+        "title": "Commission Asset",
+        "type": "string"
+      },
+      "executed_at": {
+        "format": "date-time",
+        "title": "Executed At",
+        "type": "string"
+      },
+      "fill_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Fill Id",
+        "type": "string"
+      },
+      "is_maker": {
+        "title": "Is Maker",
+        "type": "boolean"
+      },
+      "order_id": {
+        "title": "Order Id",
+        "type": "string"
+      },
+      "position_side": {
+        "enum": [
+          "BOTH",
+          "LONG",
+          "SHORT"
+        ],
+        "title": "Position Side",
+        "type": "string"
+      },
+      "price": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Price",
+        "type": "string"
+      },
+      "qty": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Qty",
+        "type": "string"
+      },
+      "quote_qty": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Quote Qty",
+        "type": "string"
+      },
+      "realized_pnl": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Realized Pnl",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "symbol": {
+        "title": "Symbol",
+        "type": "string"
+      },
+      "trade_id": {
+        "title": "Trade Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "fill_id",
+      "symbol",
+      "trade_id",
+      "order_id",
+      "side",
+      "position_side",
+      "price",
+      "qty",
+      "quote_qty",
+      "commission",
+      "commission_asset",
+      "realized_pnl",
+      "executed_at",
+      "is_maker"
+    ],
+    "title": "ExecutionFill",
+    "type": "object"
+  },
+  "ExecutionSnapshot": {
+    "$defs": {
+      "PaperFill": {
+        "additionalProperties": false,
+        "properties": {
+          "executed_at": {
+            "format": "date-time",
+            "title": "Executed At",
+            "type": "string"
+          },
+          "fee": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fee",
+            "type": "string"
+          },
+          "fill_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "quote_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quote Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fill_id",
+          "order_id",
+          "session_id",
+          "frame_id",
+          "side",
+          "price",
+          "quantity",
+          "quote_amount",
+          "fee",
+          "executed_at"
+        ],
+        "title": "PaperFill",
+        "type": "object"
+      },
+      "PaperOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "activate_index": {
+            "minimum": 0,
+            "title": "Activate Index",
+            "type": "integer"
+          },
+          "filled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Filled At"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit Price"
+          },
+          "oco_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Oco Group Id"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "order_type": {
+            "enum": [
+              "MARKET",
+              "LIMIT",
+              "STOP_MARKET"
+            ],
+            "title": "Order Type",
+            "type": "string"
+          },
+          "parent_order_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Order Id"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FILLED",
+              "CANCELLED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Submitted Frame Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "session_id",
+          "plan_id",
+          "submitted_frame_id",
+          "side",
+          "order_type",
+          "status",
+          "quantity",
+          "activate_index",
+          "submitted_at"
+        ],
+        "title": "PaperOrder",
+        "type": "object"
+      },
+      "PortfolioState": {
+        "additionalProperties": false,
+        "properties": {
+          "average_entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Average Entry Price",
+            "type": "string"
+          },
+          "cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Cash",
+            "type": "string"
+          },
+          "fees_paid": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fees Paid",
+            "type": "string"
+          },
+          "position_quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Position Quantity",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cash",
+          "position_quantity",
+          "average_entry_price",
+          "realized_pnl",
+          "fees_paid"
+        ],
+        "title": "PortfolioState",
+        "type": "object"
+      },
+      "TradePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entry Price"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "invalidation": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Invalidation",
+            "type": "string"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "risk_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Risk Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "const": "locked",
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Price"
+          },
+          "thesis": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Thesis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "session_id",
+          "frame_id",
+          "status",
+          "side",
+          "thesis",
+          "invalidation",
+          "risk_amount",
+          "created_at"
+        ],
+        "title": "TradePlan",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "fills": {
+        "items": {
+          "$ref": "#/$defs/PaperFill"
+        },
+        "title": "Fills",
+        "type": "array"
+      },
+      "orders": {
+        "items": {
+          "$ref": "#/$defs/PaperOrder"
+        },
+        "title": "Orders",
+        "type": "array"
+      },
+      "plan": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TradePlan"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "portfolio": {
+        "$ref": "#/$defs/PortfolioState"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "portfolio"
+    ],
+    "title": "ExecutionSnapshot",
+    "type": "object"
+  },
+  "FinishSessionRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision"
+    ],
+    "title": "FinishSessionRequest",
+    "type": "object"
+  },
+  "GoldenDatasetRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "dataset_id": {
+        "const": "btcusdt-1m-2025-01",
+        "default": "btcusdt-1m-2025-01",
+        "title": "Dataset Id",
+        "type": "string"
+      }
+    },
+    "title": "GoldenDatasetRequest",
+    "type": "object"
+  },
+  "HealthResponse": {
+    "$defs": {
+      "AgentExecutableHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "const": "codex-local",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "authentication": {
+            "const": "not_checked",
+            "default": "not_checked",
+            "title": "Authentication",
+            "type": "string"
+          },
+          "executable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executable"
+          },
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent_id",
+          "installed",
+          "executable"
+        ],
+        "title": "AgentExecutableHealth",
+        "type": "object"
+      },
+      "DataHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Version"
+          },
+          "writable": {
+            "title": "Writable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "path",
+          "writable"
+        ],
+        "title": "DataHealth",
+        "type": "object"
+      },
+      "DatabaseHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "foreign_keys": {
+            "title": "Foreign Keys",
+            "type": "boolean"
+          },
+          "journal_mode": {
+            "title": "Journal Mode",
+            "type": "string"
+          },
+          "migration_current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Current"
+          },
+          "migration_head": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Head"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Version"
+          }
+        },
+        "required": [
+          "status",
+          "path",
+          "journal_mode",
+          "foreign_keys",
+          "migration_current",
+          "migration_head"
+        ],
+        "title": "DatabaseHealth",
+        "type": "object"
+      },
+      "HealthService": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Version"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthService",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "agents": {
+        "items": {
+          "$ref": "#/$defs/AgentExecutableHealth"
+        },
+        "title": "Agents",
+        "type": "array"
+      },
+      "api": {
+        "$ref": "#/$defs/HealthService"
+      },
+      "data": {
+        "$ref": "#/$defs/DataHealth"
+      },
+      "database": {
+        "$ref": "#/$defs/DatabaseHealth"
+      },
+      "request_id": {
+        "title": "Request Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "healthy",
+          "degraded"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "request_id",
+      "api",
+      "database",
+      "data",
+      "agents"
+    ],
+    "title": "HealthResponse",
+    "type": "object"
+  },
+  "ImportPreview": {
+    "$defs": {
+      "DataQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate_count": {
+            "minimum": 0,
+            "title": "Duplicate Count",
+            "type": "integer"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "gap_count": {
+            "minimum": 0,
+            "title": "Gap Count",
+            "type": "integer"
+          },
+          "invalid_ohlc_count": {
+            "minimum": 0,
+            "title": "Invalid Ohlc Count",
+            "type": "integer"
+          },
+          "row_count": {
+            "minimum": 0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "warning",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "row_count",
+          "duplicate_count",
+          "gap_count",
+          "invalid_ohlc_count"
+        ],
+        "title": "DataQuality",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "detected_columns": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "title": "Detected Columns",
+        "type": "object"
+      },
+      "error": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Error"
+      },
+      "filename": {
+        "title": "Filename",
+        "type": "string"
+      },
+      "import_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Import Id",
+        "type": "string"
+      },
+      "quality": {
+        "$ref": "#/$defs/DataQuality"
+      },
+      "sample_rows": {
+        "items": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "title": "Sample Rows",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "preview_ready",
+          "failed",
+          "committed"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "import_id",
+      "filename",
+      "status",
+      "detected_columns",
+      "sample_rows",
+      "quality"
+    ],
+    "title": "ImportPreview",
+    "type": "object"
+  },
+  "Instrument": {
+    "additionalProperties": false,
+    "properties": {
+      "asset_class": {
+        "enum": [
+          "crypto_spot",
+          "crypto_perpetual",
+          "equity"
+        ],
+        "title": "Asset Class",
+        "type": "string"
+      },
+      "base_currency": {
+        "title": "Base Currency",
+        "type": "string"
+      },
+      "canonical_symbol": {
+        "title": "Canonical Symbol",
+        "type": "string"
+      },
+      "display_name": {
+        "title": "Display Name",
+        "type": "string"
+      },
+      "instrument_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Instrument Id",
+        "type": "string"
+      },
+      "lot_size": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Lot Size",
+        "type": "string"
+      },
+      "market": {
+        "enum": [
+          "CRYPTO",
+          "CN"
+        ],
+        "title": "Market",
+        "type": "string"
+      },
+      "market_rule_set_id": {
+        "title": "Market Rule Set Id",
+        "type": "string"
+      },
+      "price_scale": {
+        "maximum": 18,
+        "minimum": 0,
+        "title": "Price Scale",
+        "type": "integer"
+      },
+      "quote_currency": {
+        "title": "Quote Currency",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "tick_size": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Tick Size",
+        "type": "string"
+      },
+      "timezone": {
+        "title": "Timezone",
+        "type": "string"
+      },
+      "venue": {
+        "title": "Venue",
+        "type": "string"
+      }
+    },
+    "required": [
+      "instrument_id",
+      "asset_class",
+      "market",
+      "venue",
+      "canonical_symbol",
+      "display_name",
+      "base_currency",
+      "quote_currency",
+      "timezone",
+      "tick_size",
+      "lot_size",
+      "price_scale",
+      "market_rule_set_id"
+    ],
+    "title": "Instrument",
+    "type": "object"
+  },
+  "LockTradePlanRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "entry_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Entry Price"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      },
+      "invalidation": {
+        "maxLength": 1000,
+        "minLength": 3,
+        "title": "Invalidation",
+        "type": "string"
+      },
+      "risk_amount": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Risk Amount",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "stop_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Stop Price"
+      },
+      "target_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Target Price"
+      },
+      "thesis": {
+        "maxLength": 1000,
+        "minLength": 3,
+        "title": "Thesis",
+        "type": "string"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision",
+      "side",
+      "thesis",
+      "invalidation",
+      "risk_amount"
+    ],
+    "title": "LockTradePlanRequest",
+    "type": "object"
+  },
+  "OrderResult": {
+    "$defs": {
+      "ExecutionSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "fills": {
+            "items": {
+              "$ref": "#/$defs/PaperFill"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/$defs/PaperOrder"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TradePlan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "portfolio": {
+            "$ref": "#/$defs/PortfolioState"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio"
+        ],
+        "title": "ExecutionSnapshot",
+        "type": "object"
+      },
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "PaperFill": {
+        "additionalProperties": false,
+        "properties": {
+          "executed_at": {
+            "format": "date-time",
+            "title": "Executed At",
+            "type": "string"
+          },
+          "fee": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fee",
+            "type": "string"
+          },
+          "fill_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "quote_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quote Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fill_id",
+          "order_id",
+          "session_id",
+          "frame_id",
+          "side",
+          "price",
+          "quantity",
+          "quote_amount",
+          "fee",
+          "executed_at"
+        ],
+        "title": "PaperFill",
+        "type": "object"
+      },
+      "PaperOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "activate_index": {
+            "minimum": 0,
+            "title": "Activate Index",
+            "type": "integer"
+          },
+          "filled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Filled At"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit Price"
+          },
+          "oco_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Oco Group Id"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "order_type": {
+            "enum": [
+              "MARKET",
+              "LIMIT",
+              "STOP_MARKET"
+            ],
+            "title": "Order Type",
+            "type": "string"
+          },
+          "parent_order_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Order Id"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FILLED",
+              "CANCELLED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Submitted Frame Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "session_id",
+          "plan_id",
+          "submitted_frame_id",
+          "side",
+          "order_type",
+          "status",
+          "quantity",
+          "activate_index",
+          "submitted_at"
+        ],
+        "title": "PaperOrder",
+        "type": "object"
+      },
+      "PortfolioState": {
+        "additionalProperties": false,
+        "properties": {
+          "average_entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Average Entry Price",
+            "type": "string"
+          },
+          "cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Cash",
+            "type": "string"
+          },
+          "fees_paid": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fees Paid",
+            "type": "string"
+          },
+          "position_quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Position Quantity",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cash",
+          "position_quantity",
+          "average_entry_price",
+          "realized_pnl",
+          "fees_paid"
+        ],
+        "title": "PortfolioState",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      },
+      "TradePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entry Price"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "invalidation": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Invalidation",
+            "type": "string"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "risk_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Risk Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "const": "locked",
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Price"
+          },
+          "thesis": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Thesis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "session_id",
+          "frame_id",
+          "status",
+          "side",
+          "thesis",
+          "invalidation",
+          "risk_amount",
+          "created_at"
+        ],
+        "title": "TradePlan",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "execution": {
+        "$ref": "#/$defs/ExecutionSnapshot"
+      },
+      "idempotent_replay": {
+        "default": false,
+        "title": "Idempotent Replay",
+        "type": "boolean"
+      },
+      "order": {
+        "$ref": "#/$defs/PaperOrder"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session": {
+        "$ref": "#/$defs/ReplaySession"
+      }
+    },
+    "required": [
+      "session",
+      "order",
+      "execution"
+    ],
+    "title": "OrderResult",
+    "type": "object"
+  },
+  "PaperFill": {
+    "additionalProperties": false,
+    "properties": {
+      "executed_at": {
+        "format": "date-time",
+        "title": "Executed At",
+        "type": "string"
+      },
+      "fee": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Fee",
+        "type": "string"
+      },
+      "fill_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Fill Id",
+        "type": "string"
+      },
+      "frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Frame Id",
+        "type": "string"
+      },
+      "order_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Order Id",
+        "type": "string"
+      },
+      "price": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Price",
+        "type": "string"
+      },
+      "quantity": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Quantity",
+        "type": "string"
+      },
+      "quote_amount": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Quote Amount",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      }
+    },
+    "required": [
+      "fill_id",
+      "order_id",
+      "session_id",
+      "frame_id",
+      "side",
+      "price",
+      "quantity",
+      "quote_amount",
+      "fee",
+      "executed_at"
+    ],
+    "title": "PaperFill",
+    "type": "object"
+  },
+  "PaperOrder": {
+    "additionalProperties": false,
+    "properties": {
+      "activate_index": {
+        "minimum": 0,
+        "title": "Activate Index",
+        "type": "integer"
+      },
+      "filled_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Filled At"
+      },
+      "limit_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Limit Price"
+      },
+      "oco_group_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Oco Group Id"
+      },
+      "order_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Order Id",
+        "type": "string"
+      },
+      "order_type": {
+        "enum": [
+          "MARKET",
+          "LIMIT",
+          "STOP_MARKET"
+        ],
+        "title": "Order Type",
+        "type": "string"
+      },
+      "parent_order_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Parent Order Id"
+      },
+      "plan_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Plan Id",
+        "type": "string"
+      },
+      "quantity": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Quantity",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "PENDING",
+          "FILLED",
+          "CANCELLED",
+          "REJECTED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "stop_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Stop Price"
+      },
+      "submitted_at": {
+        "format": "date-time",
+        "title": "Submitted At",
+        "type": "string"
+      },
+      "submitted_frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Submitted Frame Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "order_id",
+      "session_id",
+      "plan_id",
+      "submitted_frame_id",
+      "side",
+      "order_type",
+      "status",
+      "quantity",
+      "activate_index",
+      "submitted_at"
+    ],
+    "title": "PaperOrder",
+    "type": "object"
+  },
+  "PlaybookListResponse": {
+    "$defs": {
+      "PlaybookVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "official": {
+            "default": false,
+            "title": "Official",
+            "type": "boolean"
+          },
+          "playbook_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Playbook Id",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Rules",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9-]{3,64}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "playbook_id",
+          "slug",
+          "name",
+          "version",
+          "description",
+          "rules",
+          "created_at"
+        ],
+        "title": "PlaybookVersion",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "playbooks": {
+        "items": {
+          "$ref": "#/$defs/PlaybookVersion"
+        },
+        "title": "Playbooks",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "playbooks"
+    ],
+    "title": "PlaybookListResponse",
+    "type": "object"
+  },
+  "PlaybookVersion": {
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "name": {
+        "maxLength": 100,
+        "minLength": 2,
+        "title": "Name",
+        "type": "string"
+      },
+      "official": {
+        "default": false,
+        "title": "Official",
+        "type": "boolean"
+      },
+      "playbook_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Playbook Id",
+        "type": "string"
+      },
+      "rules": {
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Rules",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "slug": {
+        "pattern": "^[a-z0-9-]{3,64}$",
+        "title": "Slug",
+        "type": "string"
+      },
+      "version": {
+        "minimum": 1,
+        "title": "Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "playbook_id",
+      "slug",
+      "name",
+      "version",
+      "description",
+      "rules",
+      "created_at"
+    ],
+    "title": "PlaybookVersion",
+    "type": "object"
+  },
+  "PortfolioState": {
+    "additionalProperties": false,
+    "properties": {
+      "average_entry_price": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Average Entry Price",
+        "type": "string"
+      },
+      "cash": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Cash",
+        "type": "string"
+      },
+      "fees_paid": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Fees Paid",
+        "type": "string"
+      },
+      "position_quantity": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Position Quantity",
+        "type": "string"
+      },
+      "realized_pnl": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Realized Pnl",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "cash",
+      "position_quantity",
+      "average_entry_price",
+      "realized_pnl",
+      "fees_paid"
+    ],
+    "title": "PortfolioState",
+    "type": "object"
+  },
+  "PriceActionAnnotation": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "annotation_id": {
+        "title": "Annotation Id",
+        "type": "string"
+      },
+      "confidence": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Confidence",
+        "type": "number"
+      },
+      "evidence": {
+        "title": "Evidence",
+        "type": "string"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "layer": {
+        "enum": [
+          "background",
+          "location",
+          "setup",
+          "trigger",
+          "execution",
+          "management"
+        ],
+        "title": "Layer",
+        "type": "string"
+      },
+      "perspective": {
+        "enum": [
+          "decision_time",
+          "after_action"
+        ],
+        "title": "Perspective",
+        "type": "string"
+      },
+      "points": {
+        "items": {
+          "$ref": "#/$defs/AnnotationPoint"
+        },
+        "title": "Points",
+        "type": "array"
+      },
+      "rule_id": {
+        "title": "Rule Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "shape": {
+        "enum": [
+          "line",
+          "zone",
+          "marker",
+          "label",
+          "path"
+        ],
+        "title": "Shape",
+        "type": "string"
+      },
+      "timeframe": {
+        "enum": [
+          "1m",
+          "5m",
+          "15m",
+          "1h",
+          "2h",
+          "4h",
+          "1d"
+        ],
+        "title": "Timeframe",
+        "type": "string"
+      },
+      "verdict": {
+        "enum": [
+          "correct",
+          "improve",
+          "neutral",
+          "unknown"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      }
+    },
+    "required": [
+      "annotation_id",
+      "timeframe",
+      "layer",
+      "shape",
+      "label",
+      "evidence",
+      "rule_id",
+      "confidence",
+      "perspective",
+      "points",
+      "verdict"
+    ],
+    "title": "PriceActionAnnotation",
+    "type": "object"
+  },
+  "PriceValues": {
+    "additionalProperties": false,
+    "properties": {
+      "close": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Close",
+        "type": "string"
+      },
+      "high": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "High",
+        "type": "string"
+      },
+      "low": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Low",
+        "type": "string"
+      },
+      "open": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Open",
+        "type": "string"
+      },
+      "volume": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Volume",
+        "type": "string"
+      }
+    },
+    "required": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "title": "PriceValues",
+    "type": "object"
+  },
+  "ReplayFrame": {
+    "additionalProperties": false,
+    "properties": {
+      "current_index": {
+        "minimum": 0,
+        "title": "Current Index",
+        "type": "integer"
+      },
+      "frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Frame Id",
+        "type": "string"
+      },
+      "progress": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Progress",
+        "type": "number"
+      },
+      "revision": {
+        "minimum": 0,
+        "title": "Revision",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "total_bars": {
+        "minimum": 1,
+        "title": "Total Bars",
+        "type": "integer"
+      },
+      "visible_at": {
+        "format": "date-time",
+        "title": "Visible At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frame_id",
+      "session_id",
+      "revision",
+      "current_index",
+      "total_bars",
+      "visible_at",
+      "progress"
+    ],
+    "title": "ReplayFrame",
+    "type": "object"
+  },
+  "ReplaySession": {
+    "$defs": {
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "fingerprint": {
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Fingerprint",
+        "type": "string"
+      },
+      "frame": {
+        "$ref": "#/$defs/ReplayFrame"
+      },
+      "hidden_real_date": {
+        "title": "Hidden Real Date",
+        "type": "boolean"
+      },
+      "initial_cash": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Initial Cash",
+        "type": "string"
+      },
+      "instrument": {
+        "$ref": "#/$defs/Instrument"
+      },
+      "playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Playbook Id"
+      },
+      "revision": {
+        "minimum": 0,
+        "title": "Revision",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "seed": {
+        "minimum": 0,
+        "title": "Seed",
+        "type": "integer"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "snapshot_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Snapshot Id",
+        "type": "string"
+      },
+      "start_index": {
+        "minimum": 0,
+        "title": "Start Index",
+        "type": "integer"
+      },
+      "status": {
+        "enum": [
+          "ready",
+          "paused",
+          "completed",
+          "stopped"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "timeframe": {
+        "const": "1m",
+        "default": "1m",
+        "title": "Timeframe",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "date-time",
+        "title": "Updated At",
+        "type": "string"
+      },
+      "warmup_bars": {
+        "maximum": 500,
+        "minimum": 20,
+        "title": "Warmup Bars",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "session_id",
+      "snapshot_id",
+      "instrument",
+      "status",
+      "revision",
+      "frame",
+      "start_index",
+      "warmup_bars",
+      "seed",
+      "initial_cash",
+      "hidden_real_date",
+      "fingerprint",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "ReplaySession",
+    "type": "object"
+  },
+  "ReviewArtifact": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "EpisodeReview": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "items": {
+              "$ref": "#/$defs/PriceActionAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/$defs/ReviewDimension"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "episode": {
+            "$ref": "#/$defs/TradeEpisode"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Improvements",
+            "type": "array"
+          },
+          "missing_context": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Context",
+            "type": "array"
+          },
+          "positives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Positives",
+            "type": "array"
+          },
+          "process_outcome": {
+            "enum": [
+              "good_trade_profit",
+              "good_trade_loss",
+              "bad_trade_profit",
+              "bad_trade_loss",
+              "insufficient_evidence",
+              "open_trade"
+            ],
+            "title": "Process Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode",
+          "process_outcome",
+          "dimensions",
+          "annotations",
+          "positives",
+          "improvements",
+          "missing_context"
+        ],
+        "title": "EpisodeReview",
+        "type": "object"
+      },
+      "PriceActionAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "annotation_id": {
+            "title": "Annotation Id",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "perspective": {
+            "enum": [
+              "decision_time",
+              "after_action"
+            ],
+            "title": "Perspective",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label",
+              "path"
+            ],
+            "title": "Shape",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "neutral",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotation_id",
+          "timeframe",
+          "layer",
+          "shape",
+          "label",
+          "evidence",
+          "rule_id",
+          "confidence",
+          "perspective",
+          "points",
+          "verdict"
+        ],
+        "title": "PriceActionAnnotation",
+        "type": "object"
+      },
+      "ReviewDimension": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management",
+              "outcome"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "verdict",
+          "title",
+          "evidence"
+        ],
+        "title": "ReviewDimension",
+        "type": "object"
+      },
+      "TradeEpisode": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "commission": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Commission",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Entry Price",
+            "type": "string"
+          },
+          "episode_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Episode Id",
+            "type": "string"
+          },
+          "exit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Price"
+          },
+          "fill_count": {
+            "minimum": 1,
+            "title": "Fill Count",
+            "type": "integer"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "peak_qty": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Peak Qty",
+            "type": "string"
+          },
+          "position_side": {
+            "enum": [
+              "BOTH",
+              "LONG",
+              "SHORT"
+            ],
+            "title": "Position Side",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode_id",
+          "symbol",
+          "direction",
+          "position_side",
+          "status",
+          "opened_at",
+          "closed_at",
+          "entry_price",
+          "exit_price",
+          "peak_qty",
+          "realized_pnl",
+          "commission",
+          "fill_count"
+        ],
+        "title": "TradeEpisode",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "episode_count": {
+        "minimum": 0,
+        "title": "Episode Count",
+        "type": "integer"
+      },
+      "recurring_patterns": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Recurring Patterns",
+        "type": "array"
+      },
+      "report_url": {
+        "title": "Report Url",
+        "type": "string"
+      },
+      "review_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Review Id",
+        "type": "string"
+      },
+      "reviews": {
+        "items": {
+          "$ref": "#/$defs/EpisodeReview"
+        },
+        "title": "Reviews",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "scope_kind": {
+        "enum": [
+          "today",
+          "recent",
+          "trade"
+        ],
+        "title": "Scope Kind",
+        "type": "string"
+      },
+      "scope_value": {
+        "title": "Scope Value",
+        "type": "string"
+      },
+      "top_improvements": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Top Improvements",
+        "type": "array"
+      },
+      "top_positives": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Top Positives",
+        "type": "array"
+      },
+      "total_commission": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Total Commission",
+        "type": "string"
+      },
+      "total_realized_pnl": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Total Realized Pnl",
+        "type": "string"
+      }
+    },
+    "required": [
+      "review_id",
+      "scope_kind",
+      "scope_value",
+      "created_at",
+      "episode_count",
+      "total_realized_pnl",
+      "total_commission",
+      "reviews",
+      "top_positives",
+      "top_improvements",
+      "recurring_patterns",
+      "report_url"
+    ],
+    "title": "ReviewArtifact",
+    "type": "object"
+  },
+  "ReviewDimension": {
+    "additionalProperties": false,
+    "properties": {
+      "dimension": {
+        "enum": [
+          "background",
+          "location",
+          "setup",
+          "trigger",
+          "execution",
+          "management",
+          "outcome"
+        ],
+        "title": "Dimension",
+        "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Evidence",
+        "type": "array"
+      },
+      "title": {
+        "title": "Title",
+        "type": "string"
+      },
+      "verdict": {
+        "enum": [
+          "correct",
+          "improve",
+          "unknown"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      }
+    },
+    "required": [
+      "dimension",
+      "verdict",
+      "title",
+      "evidence"
+    ],
+    "title": "ReviewDimension",
+    "type": "object"
+  },
+  "ReviewListResponse": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "EpisodeReview": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "items": {
+              "$ref": "#/$defs/PriceActionAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/$defs/ReviewDimension"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "episode": {
+            "$ref": "#/$defs/TradeEpisode"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Improvements",
+            "type": "array"
+          },
+          "missing_context": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Context",
+            "type": "array"
+          },
+          "positives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Positives",
+            "type": "array"
+          },
+          "process_outcome": {
+            "enum": [
+              "good_trade_profit",
+              "good_trade_loss",
+              "bad_trade_profit",
+              "bad_trade_loss",
+              "insufficient_evidence",
+              "open_trade"
+            ],
+            "title": "Process Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode",
+          "process_outcome",
+          "dimensions",
+          "annotations",
+          "positives",
+          "improvements",
+          "missing_context"
+        ],
+        "title": "EpisodeReview",
+        "type": "object"
+      },
+      "PriceActionAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "annotation_id": {
+            "title": "Annotation Id",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "perspective": {
+            "enum": [
+              "decision_time",
+              "after_action"
+            ],
+            "title": "Perspective",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label",
+              "path"
+            ],
+            "title": "Shape",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "neutral",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotation_id",
+          "timeframe",
+          "layer",
+          "shape",
+          "label",
+          "evidence",
+          "rule_id",
+          "confidence",
+          "perspective",
+          "points",
+          "verdict"
+        ],
+        "title": "PriceActionAnnotation",
+        "type": "object"
+      },
+      "ReviewArtifact": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "episode_count": {
+            "minimum": 0,
+            "title": "Episode Count",
+            "type": "integer"
+          },
+          "recurring_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recurring Patterns",
+            "type": "array"
+          },
+          "report_url": {
+            "title": "Report Url",
+            "type": "string"
+          },
+          "review_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Review Id",
+            "type": "string"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/$defs/EpisodeReview"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope_kind": {
+            "enum": [
+              "today",
+              "recent",
+              "trade"
+            ],
+            "title": "Scope Kind",
+            "type": "string"
+          },
+          "scope_value": {
+            "title": "Scope Value",
+            "type": "string"
+          },
+          "top_improvements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Improvements",
+            "type": "array"
+          },
+          "top_positives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Positives",
+            "type": "array"
+          },
+          "total_commission": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Total Commission",
+            "type": "string"
+          },
+          "total_realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Total Realized Pnl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_id",
+          "scope_kind",
+          "scope_value",
+          "created_at",
+          "episode_count",
+          "total_realized_pnl",
+          "total_commission",
+          "reviews",
+          "top_positives",
+          "top_improvements",
+          "recurring_patterns",
+          "report_url"
+        ],
+        "title": "ReviewArtifact",
+        "type": "object"
+      },
+      "ReviewDimension": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "enum": [
+              "background",
+              "location",
+              "setup",
+              "trigger",
+              "execution",
+              "management",
+              "outcome"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "correct",
+              "improve",
+              "unknown"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "verdict",
+          "title",
+          "evidence"
+        ],
+        "title": "ReviewDimension",
+        "type": "object"
+      },
+      "TradeEpisode": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "commission": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Commission",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Entry Price",
+            "type": "string"
+          },
+          "episode_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Episode Id",
+            "type": "string"
+          },
+          "exit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Price"
+          },
+          "fill_count": {
+            "minimum": 1,
+            "title": "Fill Count",
+            "type": "integer"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "peak_qty": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Peak Qty",
+            "type": "string"
+          },
+          "position_side": {
+            "enum": [
+              "BOTH",
+              "LONG",
+              "SHORT"
+            ],
+            "title": "Position Side",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode_id",
+          "symbol",
+          "direction",
+          "position_side",
+          "status",
+          "opened_at",
+          "closed_at",
+          "entry_price",
+          "exit_price",
+          "peak_qty",
+          "realized_pnl",
+          "commission",
+          "fill_count"
+        ],
+        "title": "TradeEpisode",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "reviews": {
+        "items": {
+          "$ref": "#/$defs/ReviewArtifact"
+        },
+        "title": "Reviews",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "reviews"
+    ],
+    "title": "ReviewListResponse",
+    "type": "object"
+  },
+  "ReviewMetric": {
+    "additionalProperties": false,
+    "properties": {
+      "key": {
+        "enum": [
+          "net_pnl",
+          "realized_pnl",
+          "fees",
+          "ending_equity",
+          "trade_count",
+          "win_rate",
+          "mfe",
+          "mae",
+          "r_multiple",
+          "max_drawdown",
+          "exit_efficiency"
+        ],
+        "title": "Key",
+        "type": "string"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "unit": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Unit"
+      },
+      "value": {
+        "title": "Value",
+        "type": "string"
+      }
+    },
+    "required": [
+      "key",
+      "label",
+      "value"
+    ],
+    "title": "ReviewMetric",
+    "type": "object"
+  },
+  "ReviewRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "count": {
+        "default": 10,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Count",
+        "type": "integer"
+      },
+      "direction": {
+        "anyOf": [
+          {
+            "enum": [
+              "long",
+              "short"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Direction"
+      },
+      "episode_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Episode Id"
+      },
+      "scope_kind": {
+        "enum": [
+          "today",
+          "recent",
+          "trade"
+        ],
+        "title": "Scope Kind",
+        "type": "string"
+      },
+      "symbol": {
+        "anyOf": [
+          {
+            "pattern": "^[A-Z0-9]{5,20}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Symbol"
+      },
+      "sync_first": {
+        "default": true,
+        "title": "Sync First",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "scope_kind"
+    ],
+    "title": "ReviewRequest",
+    "type": "object"
+  },
+  "SessionCommand": {
+    "additionalProperties": false,
+    "properties": {
+      "bars": {
+        "default": 1,
+        "maximum": 500,
+        "minimum": 1,
+        "title": "Bars",
+        "type": "integer"
+      },
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      },
+      "kind": {
+        "const": "advance",
+        "title": "Kind",
+        "type": "string"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision",
+      "kind"
+    ],
+    "title": "SessionCommand",
+    "type": "object"
+  },
+  "SessionDelta": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "Bar": {
+        "additionalProperties": false,
+        "properties": {
+          "adjusted": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PriceValues"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "bar_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Bar Id",
+            "type": "string"
+          },
+          "close_time": {
+            "format": "date-time",
+            "title": "Close Time",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "open_time": {
+            "format": "date-time",
+            "title": "Open Time",
+            "type": "string"
+          },
+          "quality_flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quality Flags",
+            "type": "array"
+          },
+          "raw": {
+            "$ref": "#/$defs/PriceValues"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "2h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bar_id",
+          "instrument_id",
+          "timeframe",
+          "open_time",
+          "close_time",
+          "raw"
+        ],
+        "title": "Bar",
+        "type": "object"
+      },
+      "ChartAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "annotation_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Annotation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "provenance_run_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provenance Run Id"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label"
+            ],
+            "title": "Shape",
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotation_id",
+          "session_id",
+          "frame_id",
+          "layer",
+          "shape",
+          "label",
+          "points",
+          "created_at"
+        ],
+        "title": "ChartAnnotation",
+        "type": "object"
+      },
+      "ExecutionSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "fills": {
+            "items": {
+              "$ref": "#/$defs/PaperFill"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/$defs/PaperOrder"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TradePlan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "portfolio": {
+            "$ref": "#/$defs/PortfolioState"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio"
+        ],
+        "title": "ExecutionSnapshot",
+        "type": "object"
+      },
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "PaperFill": {
+        "additionalProperties": false,
+        "properties": {
+          "executed_at": {
+            "format": "date-time",
+            "title": "Executed At",
+            "type": "string"
+          },
+          "fee": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fee",
+            "type": "string"
+          },
+          "fill_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "quote_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quote Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fill_id",
+          "order_id",
+          "session_id",
+          "frame_id",
+          "side",
+          "price",
+          "quantity",
+          "quote_amount",
+          "fee",
+          "executed_at"
+        ],
+        "title": "PaperFill",
+        "type": "object"
+      },
+      "PaperOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "activate_index": {
+            "minimum": 0,
+            "title": "Activate Index",
+            "type": "integer"
+          },
+          "filled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Filled At"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit Price"
+          },
+          "oco_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Oco Group Id"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "order_type": {
+            "enum": [
+              "MARKET",
+              "LIMIT",
+              "STOP_MARKET"
+            ],
+            "title": "Order Type",
+            "type": "string"
+          },
+          "parent_order_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Order Id"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FILLED",
+              "CANCELLED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Submitted Frame Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "session_id",
+          "plan_id",
+          "submitted_frame_id",
+          "side",
+          "order_type",
+          "status",
+          "quantity",
+          "activate_index",
+          "submitted_at"
+        ],
+        "title": "PaperOrder",
+        "type": "object"
+      },
+      "PortfolioState": {
+        "additionalProperties": false,
+        "properties": {
+          "average_entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Average Entry Price",
+            "type": "string"
+          },
+          "cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Cash",
+            "type": "string"
+          },
+          "fees_paid": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fees Paid",
+            "type": "string"
+          },
+          "position_quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Position Quantity",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cash",
+          "position_quantity",
+          "average_entry_price",
+          "realized_pnl",
+          "fees_paid"
+        ],
+        "title": "PortfolioState",
+        "type": "object"
+      },
+      "PriceValues": {
+        "additionalProperties": false,
+        "properties": {
+          "close": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Close",
+            "type": "string"
+          },
+          "high": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Low",
+            "type": "string"
+          },
+          "open": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open",
+            "type": "string"
+          },
+          "volume": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Volume",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "PriceValues",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      },
+      "SessionEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "enum": [
+              "session_created",
+              "replay_advanced",
+              "session_completed"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "session_id",
+          "sequence",
+          "revision",
+          "event_type",
+          "occurred_at"
+        ],
+        "title": "SessionEvent",
+        "type": "object"
+      },
+      "TradePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entry Price"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "invalidation": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Invalidation",
+            "type": "string"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "risk_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Risk Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "const": "locked",
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Price"
+          },
+          "thesis": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Thesis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "session_id",
+          "frame_id",
+          "status",
+          "side",
+          "thesis",
+          "invalidation",
+          "risk_amount",
+          "created_at"
+        ],
+        "title": "TradePlan",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "annotations": {
+        "items": {
+          "$ref": "#/$defs/ChartAnnotation"
+        },
+        "title": "Annotations",
+        "type": "array"
+      },
+      "bars": {
+        "items": {
+          "$ref": "#/$defs/Bar"
+        },
+        "title": "Bars",
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "$ref": "#/$defs/SessionEvent"
+        },
+        "title": "Events",
+        "type": "array"
+      },
+      "execution": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ExecutionSnapshot"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "idempotent_replay": {
+        "default": false,
+        "title": "Idempotent Replay",
+        "type": "boolean"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session": {
+        "$ref": "#/$defs/ReplaySession"
+      }
+    },
+    "required": [
+      "session",
+      "bars",
+      "events"
+    ],
+    "title": "SessionDelta",
+    "type": "object"
+  },
+  "SessionEvent": {
+    "additionalProperties": false,
+    "properties": {
+      "event_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event_type": {
+        "enum": [
+          "session_created",
+          "replay_advanced",
+          "session_completed"
+        ],
+        "title": "Event Type",
+        "type": "string"
+      },
+      "occurred_at": {
+        "format": "date-time",
+        "title": "Occurred At",
+        "type": "string"
+      },
+      "payload": {
+        "additionalProperties": true,
+        "title": "Payload",
+        "type": "object"
+      },
+      "revision": {
+        "minimum": 0,
+        "title": "Revision",
+        "type": "integer"
+      },
+      "sequence": {
+        "minimum": 1,
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "event_id",
+      "session_id",
+      "sequence",
+      "revision",
+      "event_type",
+      "occurred_at"
+    ],
+    "title": "SessionEvent",
+    "type": "object"
+  },
+  "SessionListResponse": {
+    "$defs": {
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "sessions": {
+        "items": {
+          "$ref": "#/$defs/ReplaySession"
+        },
+        "title": "Sessions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "sessions"
+    ],
+    "title": "SessionListResponse",
+    "type": "object"
+  },
+  "SubmitOrderRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "command_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "expected_revision": {
+        "minimum": 0,
+        "title": "Expected Revision",
+        "type": "integer"
+      },
+      "limit_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Limit Price"
+      },
+      "order_type": {
+        "enum": [
+          "MARKET",
+          "LIMIT",
+          "STOP_MARKET"
+        ],
+        "title": "Order Type",
+        "type": "string"
+      },
+      "protective_stop_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Protective Stop Price"
+      },
+      "quantity": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Quantity",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "stop_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Stop Price"
+      },
+      "take_profit_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Take Profit Price"
+      }
+    },
+    "required": [
+      "command_id",
+      "expected_revision",
+      "side",
+      "order_type",
+      "quantity"
+    ],
+    "title": "SubmitOrderRequest",
+    "type": "object"
+  },
+  "TradeEpisode": {
+    "additionalProperties": false,
+    "properties": {
+      "closed_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Closed At"
+      },
+      "commission": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Commission",
+        "type": "string"
+      },
+      "direction": {
+        "enum": [
+          "long",
+          "short"
+        ],
+        "title": "Direction",
+        "type": "string"
+      },
+      "entry_price": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Entry Price",
+        "type": "string"
+      },
+      "episode_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Episode Id",
+        "type": "string"
+      },
+      "exit_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Exit Price"
+      },
+      "fill_count": {
+        "minimum": 1,
+        "title": "Fill Count",
+        "type": "integer"
+      },
+      "opened_at": {
+        "format": "date-time",
+        "title": "Opened At",
+        "type": "string"
+      },
+      "peak_qty": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Peak Qty",
+        "type": "string"
+      },
+      "position_side": {
+        "enum": [
+          "BOTH",
+          "LONG",
+          "SHORT"
+        ],
+        "title": "Position Side",
+        "type": "string"
+      },
+      "realized_pnl": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Realized Pnl",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "open",
+          "closed"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "symbol": {
+        "title": "Symbol",
+        "type": "string"
+      }
+    },
+    "required": [
+      "episode_id",
+      "symbol",
+      "direction",
+      "position_side",
+      "status",
+      "opened_at",
+      "closed_at",
+      "entry_price",
+      "exit_price",
+      "peak_qty",
+      "realized_pnl",
+      "commission",
+      "fill_count"
+    ],
+    "title": "TradeEpisode",
+    "type": "object"
+  },
+  "TradePlan": {
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "entry_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Entry Price"
+      },
+      "frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Frame Id",
+        "type": "string"
+      },
+      "invalidation": {
+        "maxLength": 1000,
+        "minLength": 3,
+        "title": "Invalidation",
+        "type": "string"
+      },
+      "plan_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Plan Id",
+        "type": "string"
+      },
+      "risk_amount": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Risk Amount",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "side": {
+        "enum": [
+          "BUY",
+          "SELL"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "status": {
+        "const": "locked",
+        "title": "Status",
+        "type": "string"
+      },
+      "stop_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Stop Price"
+      },
+      "target_price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Target Price"
+      },
+      "thesis": {
+        "maxLength": 1000,
+        "minLength": 3,
+        "title": "Thesis",
+        "type": "string"
+      }
+    },
+    "required": [
+      "plan_id",
+      "session_id",
+      "frame_id",
+      "status",
+      "side",
+      "thesis",
+      "invalidation",
+      "risk_amount",
+      "created_at"
+    ],
+    "title": "TradePlan",
+    "type": "object"
+  },
+  "TradePlanResult": {
+    "$defs": {
+      "ExecutionSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "fills": {
+            "items": {
+              "$ref": "#/$defs/PaperFill"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/$defs/PaperOrder"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TradePlan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "portfolio": {
+            "$ref": "#/$defs/PortfolioState"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portfolio"
+        ],
+        "title": "ExecutionSnapshot",
+        "type": "object"
+      },
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "PaperFill": {
+        "additionalProperties": false,
+        "properties": {
+          "executed_at": {
+            "format": "date-time",
+            "title": "Executed At",
+            "type": "string"
+          },
+          "fee": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fee",
+            "type": "string"
+          },
+          "fill_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Fill Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "quote_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quote Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fill_id",
+          "order_id",
+          "session_id",
+          "frame_id",
+          "side",
+          "price",
+          "quantity",
+          "quote_amount",
+          "fee",
+          "executed_at"
+        ],
+        "title": "PaperFill",
+        "type": "object"
+      },
+      "PaperOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "activate_index": {
+            "minimum": 0,
+            "title": "Activate Index",
+            "type": "integer"
+          },
+          "filled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Filled At"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Limit Price"
+          },
+          "oco_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Oco Group Id"
+          },
+          "order_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Order Id",
+            "type": "string"
+          },
+          "order_type": {
+            "enum": [
+              "MARKET",
+              "LIMIT",
+              "STOP_MARKET"
+            ],
+            "title": "Order Type",
+            "type": "string"
+          },
+          "parent_order_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Order Id"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "FILLED",
+              "CANCELLED",
+              "REJECTED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Submitted Frame Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "session_id",
+          "plan_id",
+          "submitted_frame_id",
+          "side",
+          "order_type",
+          "status",
+          "quantity",
+          "activate_index",
+          "submitted_at"
+        ],
+        "title": "PaperOrder",
+        "type": "object"
+      },
+      "PortfolioState": {
+        "additionalProperties": false,
+        "properties": {
+          "average_entry_price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Average Entry Price",
+            "type": "string"
+          },
+          "cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Cash",
+            "type": "string"
+          },
+          "fees_paid": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Fees Paid",
+            "type": "string"
+          },
+          "position_quantity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Position Quantity",
+            "type": "string"
+          },
+          "realized_pnl": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Realized Pnl",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cash",
+          "position_quantity",
+          "average_entry_price",
+          "realized_pnl",
+          "fees_paid"
+        ],
+        "title": "PortfolioState",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      },
+      "TradePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Entry Price"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "invalidation": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Invalidation",
+            "type": "string"
+          },
+          "plan_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "risk_amount": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Risk Amount",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "const": "locked",
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stop Price"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Price"
+          },
+          "thesis": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Thesis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "session_id",
+          "frame_id",
+          "status",
+          "side",
+          "thesis",
+          "invalidation",
+          "risk_amount",
+          "created_at"
+        ],
+        "title": "TradePlan",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "execution": {
+        "$ref": "#/$defs/ExecutionSnapshot"
+      },
+      "idempotent_replay": {
+        "default": false,
+        "title": "Idempotent Replay",
+        "type": "boolean"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session": {
+        "$ref": "#/$defs/ReplaySession"
+      }
+    },
+    "required": [
+      "session",
+      "execution"
+    ],
+    "title": "TradePlanResult",
+    "type": "object"
+  },
+  "TradeSyncResult": {
+    "additionalProperties": false,
+    "properties": {
+      "coverage_end": {
+        "format": "date-time",
+        "title": "Coverage End",
+        "type": "string"
+      },
+      "coverage_start": {
+        "format": "date-time",
+        "title": "Coverage Start",
+        "type": "string"
+      },
+      "coverage_status": {
+        "enum": [
+          "complete",
+          "partial",
+          "quota_blocked",
+          "failed"
+        ],
+        "title": "Coverage Status",
+        "type": "string"
+      },
+      "diagnostics": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Diagnostics",
+        "type": "array"
+      },
+      "episode_count": {
+        "minimum": 0,
+        "title": "Episode Count",
+        "type": "integer"
+      },
+      "fill_count": {
+        "minimum": 0,
+        "title": "Fill Count",
+        "type": "integer"
+      },
+      "income_count": {
+        "minimum": 0,
+        "title": "Income Count",
+        "type": "integer"
+      },
+      "order_count": {
+        "minimum": 0,
+        "title": "Order Count",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "sync_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Sync Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "sync_id",
+      "coverage_start",
+      "coverage_end",
+      "coverage_status",
+      "fill_count",
+      "order_count",
+      "income_count",
+      "episode_count"
+    ],
+    "title": "TradeSyncResult",
+    "type": "object"
+  },
+  "TrainingReview": {
+    "$defs": {
+      "EvidenceRef": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Frame Id"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "order",
+              "fill",
+              "bar",
+              "metric"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Occurred At"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Price"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "summary"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "ReviewMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "enum": [
+              "net_pnl",
+              "realized_pnl",
+              "fees",
+              "ending_equity",
+              "trade_count",
+              "win_rate",
+              "mfe",
+              "mae",
+              "r_multiple",
+              "max_drawdown",
+              "exit_efficiency"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unit"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "ReviewMetric",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "evidence": {
+        "items": {
+          "$ref": "#/$defs/EvidenceRef"
+        },
+        "title": "Evidence",
+        "type": "array"
+      },
+      "findings": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Findings",
+        "type": "array"
+      },
+      "metrics": {
+        "items": {
+          "$ref": "#/$defs/ReviewMetric"
+        },
+        "title": "Metrics",
+        "type": "array"
+      },
+      "process_outcome": {
+        "enum": [
+          "good_process_profit",
+          "good_process_loss",
+          "bad_process_profit",
+          "bad_process_loss",
+          "insufficient_evidence"
+        ],
+        "title": "Process Outcome",
+        "type": "string"
+      },
+      "review_hash": {
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Review Hash",
+        "type": "string"
+      },
+      "review_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Review Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "review_id",
+      "session_id",
+      "review_hash",
+      "process_outcome",
+      "metrics",
+      "evidence",
+      "findings",
+      "created_at"
+    ],
+    "title": "TrainingReview",
+    "type": "object"
+  },
+  "TrainingReviewListResponse": {
+    "$defs": {
+      "CapabilityDimension": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "enum": [
+              "environment",
+              "plan",
+              "risk",
+              "execution",
+              "management"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "sample_count": {
+            "minimum": 0,
+            "title": "Sample Count",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Score"
+          },
+          "status": {
+            "enum": [
+              "insufficient",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "sample_count",
+          "status"
+        ],
+        "title": "CapabilityDimension",
+        "type": "object"
+      },
+      "EvidenceRef": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "frame_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Frame Id"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "order",
+              "fill",
+              "bar",
+              "metric"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Occurred At"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Price"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "summary"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "ReviewMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "enum": [
+              "net_pnl",
+              "realized_pnl",
+              "fees",
+              "ending_equity",
+              "trade_count",
+              "win_rate",
+              "mfe",
+              "mae",
+              "r_multiple",
+              "max_drawdown",
+              "exit_efficiency"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unit"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "ReviewMetric",
+        "type": "object"
+      },
+      "TrainingReview": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/$defs/EvidenceRef"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/$defs/ReviewMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "process_outcome": {
+            "enum": [
+              "good_process_profit",
+              "good_process_loss",
+              "bad_process_profit",
+              "bad_process_loss",
+              "insufficient_evidence"
+            ],
+            "title": "Process Outcome",
+            "type": "string"
+          },
+          "review_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Review Hash",
+            "type": "string"
+          },
+          "review_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Review Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_id",
+          "session_id",
+          "review_hash",
+          "process_outcome",
+          "metrics",
+          "evidence",
+          "findings",
+          "created_at"
+        ],
+        "title": "TrainingReview",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "dimensions": {
+        "items": {
+          "$ref": "#/$defs/CapabilityDimension"
+        },
+        "title": "Dimensions",
+        "type": "array"
+      },
+      "reviews": {
+        "items": {
+          "$ref": "#/$defs/TrainingReview"
+        },
+        "title": "Reviews",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "reviews",
+      "dimensions"
+    ],
+    "title": "TrainingReviewListResponse",
+    "type": "object"
+  },
+  "TutorChartInstruction": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "evidence_ids": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "points": {
+        "items": {
+          "$ref": "#/$defs/AnnotationPoint"
+        },
+        "maxItems": 4,
+        "minItems": 1,
+        "title": "Points",
+        "type": "array"
+      },
+      "shape": {
+        "enum": [
+          "line",
+          "zone",
+          "marker",
+          "label"
+        ],
+        "title": "Shape",
+        "type": "string"
+      }
+    },
+    "required": [
+      "shape",
+      "label",
+      "evidence_ids",
+      "points"
+    ],
+    "title": "TutorChartInstruction",
+    "type": "object"
+  },
+  "TutorInference": {
+    "additionalProperties": false,
+    "properties": {
+      "confidence": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "title": "Confidence",
+        "type": "string"
+      },
+      "evidence_ids": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "text": {
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "text",
+      "confidence"
+    ],
+    "title": "TutorInference",
+    "type": "object"
+  },
+  "TutorObservation": {
+    "additionalProperties": false,
+    "properties": {
+      "evidence_ids": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "text": {
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ],
+    "title": "TutorObservation",
+    "type": "object"
+  },
+  "TutorRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "question": {
+        "maxLength": 2000,
+        "minLength": 2,
+        "title": "Question",
+        "type": "string"
+      },
+      "stage": {
+        "default": "environment",
+        "enum": [
+          "environment",
+          "plan",
+          "position",
+          "exit",
+          "after_action"
+        ],
+        "title": "Stage",
+        "type": "string"
+      }
+    },
+    "required": [
+      "question"
+    ],
+    "title": "TutorRequest",
+    "type": "object"
+  },
+  "TutorResponse": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "TutorChartInstruction": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label"
+            ],
+            "title": "Shape",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shape",
+          "label",
+          "evidence_ids",
+          "points"
+        ],
+        "title": "TutorChartInstruction",
+        "type": "object"
+      },
+      "TutorInference": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "confidence"
+        ],
+        "title": "TutorInference",
+        "type": "object"
+      },
+      "TutorObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TutorObservation",
+        "type": "object"
+      },
+      "TutorRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason"
+        ],
+        "title": "TutorRuleCheck",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "annotations": {
+        "items": {
+          "$ref": "#/$defs/TutorChartInstruction"
+        },
+        "title": "Annotations",
+        "type": "array"
+      },
+      "disclaimer": {
+        "title": "Disclaimer",
+        "type": "string"
+      },
+      "inferences": {
+        "items": {
+          "$ref": "#/$defs/TutorInference"
+        },
+        "title": "Inferences",
+        "type": "array"
+      },
+      "next_questions": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Next Questions",
+        "type": "array"
+      },
+      "observations": {
+        "items": {
+          "$ref": "#/$defs/TutorObservation"
+        },
+        "title": "Observations",
+        "type": "array"
+      },
+      "risks_and_unknowns": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Risks And Unknowns",
+        "type": "array"
+      },
+      "rule_checks": {
+        "items": {
+          "$ref": "#/$defs/TutorRuleCheck"
+        },
+        "title": "Rule Checks",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "summary": {
+        "title": "Summary",
+        "type": "string"
+      }
+    },
+    "required": [
+      "summary",
+      "disclaimer"
+    ],
+    "title": "TutorResponse",
+    "type": "object"
+  },
+  "TutorRuleCheck": {
+    "additionalProperties": false,
+    "properties": {
+      "evidence_ids": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "reason": {
+        "title": "Reason",
+        "type": "string"
+      },
+      "rule_id": {
+        "title": "Rule Id",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "passed",
+          "failed",
+          "unknown"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rule_id",
+      "status",
+      "reason"
+    ],
+    "title": "TutorRuleCheck",
+    "type": "object"
+  },
+  "TutorRun": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "TutorChartInstruction": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label"
+            ],
+            "title": "Shape",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shape",
+          "label",
+          "evidence_ids",
+          "points"
+        ],
+        "title": "TutorChartInstruction",
+        "type": "object"
+      },
+      "TutorInference": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "confidence"
+        ],
+        "title": "TutorInference",
+        "type": "object"
+      },
+      "TutorObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TutorObservation",
+        "type": "object"
+      },
+      "TutorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "items": {
+              "$ref": "#/$defs/TutorChartInstruction"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "inferences": {
+            "items": {
+              "$ref": "#/$defs/TutorInference"
+            },
+            "title": "Inferences",
+            "type": "array"
+          },
+          "next_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Next Questions",
+            "type": "array"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/$defs/TutorObservation"
+            },
+            "title": "Observations",
+            "type": "array"
+          },
+          "risks_and_unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Risks And Unknowns",
+            "type": "array"
+          },
+          "rule_checks": {
+            "items": {
+              "$ref": "#/$defs/TutorRuleCheck"
+            },
+            "title": "Rule Checks",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "disclaimer"
+        ],
+        "title": "TutorResponse",
+        "type": "object"
+      },
+      "TutorRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason"
+        ],
+        "title": "TutorRuleCheck",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "agent_id": {
+        "const": "codex-local",
+        "default": "codex-local",
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "completed_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Completed At"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "error": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Error"
+      },
+      "frame_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Frame Id",
+        "type": "string"
+      },
+      "question": {
+        "title": "Question",
+        "type": "string"
+      },
+      "response": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TutorResponse"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "run_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "stage": {
+        "enum": [
+          "environment",
+          "plan",
+          "position",
+          "exit",
+          "after_action"
+        ],
+        "title": "Stage",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "running",
+          "completed",
+          "failed",
+          "cancelled",
+          "timed_out"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "run_id",
+      "session_id",
+      "frame_id",
+      "status",
+      "question",
+      "stage",
+      "created_at"
+    ],
+    "title": "TutorRun",
+    "type": "object"
+  }
+} as const;
+const ajv = new Ajv({ allErrors: true, strict: false });
+addFormats(ajv);
+const cache = new Map<string, ValidateFunction>();
+
+export function validateContract<T>(name: keyof typeof schemas, value: unknown): value is T {
+  let validator = cache.get(name);
+  if (!validator) {
+    validator = ajv.compile(schemas[name]);
+    cache.set(name, validator);
+  }
+  return validator(value) as boolean;
+}
+
+export function contractValidationErrors(name: keyof typeof schemas): readonly unknown[] {
+  return cache.get(name)?.errors ?? [];
+}

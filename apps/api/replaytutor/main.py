@@ -10,9 +10,14 @@ from replaytutor import __version__
 from replaytutor.config import Settings, get_settings
 from replaytutor.errors import install_exception_handlers
 from replaytutor.middleware import RequestIdMiddleware
+from replaytutor.routes.datasets import router as datasets_router
 from replaytutor.routes.health import router as health_router
+from replaytutor.routes.playbooks import router as playbooks_router
+from replaytutor.routes.reviews import router as reviews_router
+from replaytutor.routes.sessions import router as sessions_router
+from replaytutor.routes.tutor import router as tutor_router
 from replaytutor.runtime import ensure_runtime_directories
-from replaytutor.storage.database import connect_database
+from replaytutor.storage.database import connect_database, upgrade_database
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -21,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         ensure_runtime_directories(configured_settings)
+        upgrade_database(configured_settings)
         connection = connect_database(configured_settings.database_path)
         app.state.database_connection = connection
         try:
@@ -44,6 +50,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     install_exception_handlers(app)
     app.include_router(health_router)
+    app.include_router(playbooks_router)
+    app.include_router(datasets_router)
+    app.include_router(reviews_router)
+    app.include_router(sessions_router)
+    app.include_router(tutor_router)
     return app
 
 

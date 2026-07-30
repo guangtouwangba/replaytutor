@@ -1,9 +1,23 @@
 # ReplayTutor MVP v1 实施计划
 
 状态：Approved for implementation v1.0  
-更新时间：2026-07-19  
+更新时间：2026-07-31
 覆盖范围：MVP v1 产品功能、前端、后端、数据、Agent、测试与本地交付  
 上游真源：[视觉设计](../DESIGN.md) · [产品设计](DESIGN.md) · [系统架构](SYSTEM_ARCHITECTURE.md) · [Agent 契约](AGENT_BINDING.md)
+
+当前开发批次、页面交付顺序与第一批 Backlog 见
+[产品化实施计划 v2](plans/2026-07-30-replaytutor-implementation-plan-v2.md)。
+
+## 当前实施状态
+
+- M0：完成。
+- M1：完成第一批纵向交付，包括 Pydantic → JSON Schema → TypeScript/Ajv 生成链、真实 BTCUSDT 2025-01 Golden Dataset、Binance Public Adapter、CSV/Parquet 导入预览与提交、不可变 Parquet Snapshot、DuckDB 查询和真实数据中心页面。
+- Binance 只读复盘切片：已完成 U 本位近 6 个月 Fill/账务同步、Fill 去重、Episode 重建、五周期价格行为标注、反前视门禁、离线 HTML、API/CLI 与 `/reviews` 页面。离线报告图表支持滚轮/按钮缩放、拖拽平移、视窗复位和结构标签碰撞避让。币安当前 `allOrders` 普通查询限制为最近 90 天，因此更早成交的订单元数据会明确标记 `partial`；年度异步导出接口已封装，跨 6 个月历史的自动下载恢复仍作为后续增强。
+- M2：完成 Session/Replay 纵向切片，包括服务端 `frame_id`/`visible_at`、revision 与命令幂等、真实 Snapshot 可见窗口、推进/结束/恢复 REST、训练配置页、KLineChart 回放工作台和单飞播放器。浏览器验收已覆盖“创建 → 推进 → 刷新恢复”，图表仅渲染可见 bars。
+- M3–M5：完成 MVP 1A 核心纵向闭环。包含 bracket/OCO、取消订单、订单与成交 Overlay、用户/AI 图层、确定性 MFE/MAE/R/回撤/退出效率、Codex 回放中与事后审查、Playbook 和真实产品页面。完整绘图、证据回跳、AI 标注接受/拒绝、Playbook 确定性规则检查和发布级 E2E 尚未封板，因此不能标记完整 MVP v1。
+- M6–M8：等待 MVP 1A 真实用户试用后启动；A 股规则、发布硬化和 Post-MVP 能力不计入当前 Codex-only 交付。
+
+M1 Golden Dataset 固定为 `2025-01-01T00:00:00Z` 至 `2025-02-01T00:00:00Z` 的 BTCUSDT 1m 数据，共 44,640 根。仓库 fixture manifest 保存来源请求、抓取时间、源字段 hash、Parquet hash 和质量摘要；运行时载入生成新的不可变 Snapshot，fixture 本身不被修改。
 
 ## 1. 交付定义
 
@@ -19,7 +33,7 @@ MVP v1 不是一个静态图表 Demo。完成标准是用户能够在本机完�
 MVP v1 由两个连续发布门组成：
 
 - **MVP 1A：确定性纵向切片**。BTCUSDT、1 分钟、固定快照、Crypto Spot 规则、Codex Tutor。
-- **MVP 1B：完整 MVP v1**。加入 A 股规则与数据导入、Playbook、当日/会话报告和 Claude Code Adapter。
+- **MVP 1B：完整 MVP v1**。加入 A 股规则与数据导入、Playbook、当日/会话报告；AI 仍只接入 Codex。
 
 1A 是第一份可运行软件，1B 是对外称为 MVP v1 的完整版本。两个阶段共享同一契约和数据模型，不做一次性 Demo 实现。
 
@@ -42,7 +56,7 @@ MVP v1 由两个连续发布门组成：
 
 ### 3.1 首次启动与本机健康检查
 
-- 展示 API、SQLite、行情目录、Codex、Claude 的检测结果。
+- 展示 API、SQLite、行情目录和 Codex 的检测结果。
 - 数据目录不存在时安全创建；数据库通过迁移初始化。
 - Agent 状态区分：未安装、认证未知、未认证、可用、自检失败。
 - 缺少 Agent 不阻止用户使用回放和确定性复盘指标。
@@ -155,7 +169,8 @@ A 股规则：交易日历、集合竞价状态、100 股整手买入、零股�
 
 Agent：
 
-- 1A 接入 Codex CLI；1B 接入 Claude Code。
+- MVP 1A 和 1B 都只接入 Codex CLI。
+- Claude Code、Kimi 和其他 Agent Adapter 全部延后到 Post-MVP。
 - 文件证据包、只读工作目录、结构化 Schema、事件流、取消和 180 秒超时。
 - 不合法 JSON 或无效 evidence ID 不能作为合格报告；UI 可展示“未校验原始输出”但不得混入正式报告。
 
@@ -373,7 +388,7 @@ run(spec: AgentRunSpec) -> AgentRunHandle
 cancel(run_id: AgentRunId) -> None
 ```
 
-真实 seam：Codex 与 Claude 两个 Adapter；测试提供 FakeAgentAdapter。
+MVP 的两个 Adapter 是 CodexAdapter 与 FakeAgentAdapter；Claude、Kimi 和通用 CLI Adapter 仅保留 Post-MVP 设计，不进入当前交付。
 
 #### Playbook Module
 
@@ -904,15 +919,15 @@ make verify
 
 退出条件：A 股验收场景通过，历史会话不受 Playbook/规则新版本影响。
 
-### M7：Claude Adapter 与完整 MVP v1
+### M7：产品闭环与完整 MVP v1
 
 交付：
 
-- Claude Code Adapter，共享 Agent 契约测试。
-- Agent 切换、会话摘要来源标记、当日/会话报告。
+- Codex Adapter 兼容性、恢复、隔离和错误救援硬化。
+- 会话摘要来源标记、当日/会话报告。
 - 首次启动流程、设置、错误救援、数据清理。
 
-退出条件：Codex/Claude 消费同一证据包并返回同一结构；切换不改变任何确定性事实。
+退出条件：Codex 的版本漂移、未安装、未认证、超时、取消和非法输出全部有可验证的降级路径；任何失败都不改变确定性事实。
 
 ### M8：发布硬化
 
@@ -934,12 +949,12 @@ flowchart LR
     M3 --> M4["M4 确定性复盘"]
     M4 --> M5["M5 Codex / MVP 1A"]
     M3 --> M6["M6 Playbook + A股"]
-    M5 --> M7["M7 Claude / MVP v1"]
+    M5 --> M7["M7 产品闭环 / MVP v1"]
     M6 --> M7
     M7 --> M8["M8 发布硬化"]
 ```
 
-关键路径是 `M0 → M1 → M2 → M3 → M4 → M5 → M7 → M8`。不能为了先做漂亮 UI 绕过 M1/M2 的契约和未来数据门禁。
+关键路径是 `M0 → M1 → M2 → M3 → M4 → M5 → M7 → M8`。MVP 全程只接入 Codex；不能为了先做漂亮 UI 绕过 M1/M2 的契约和未来数据门禁。
 
 ## 17. 任务分解
 
@@ -980,7 +995,7 @@ flowchart LR
 | PBK-02 | Rule evaluator 与 UI | PBK-01,RVW-02 | passed/failed/unknown |
 | CNE-01 | A 股 Calendar/Rules/Fees | DAT-01,EXE-02 | Golden Sessions |
 | CNE-02 | A 股文件导入与复权标记 | DAT-04,CNE-01 | raw/adjusted 不混用 |
-| AGT-05 | Claude Adapter | AGT-01,AGT-03 | 共享契约测试 |
+| AGT-05 | Codex Runtime 发布硬化 | AGT-01,AGT-03 | 版本漂移、恢复与失败矩阵 |
 | APP-01 | 首次启动与设置 | DAT-05,AGT-01 | rescue flows |
 | APP-02 | 快捷键、无障碍、响应式 | FND-02,RPL-03 | axe/Playwright |
 | REL-01 | 崩溃恢复与迁移矩阵 | 全部 | kill/restart E2E |
@@ -1014,7 +1029,7 @@ flowchart LR
 - [ ] 账本平衡，可从空库事件重建最终账户。
 - [ ] 关闭/重启后会话、订单和 hash 不变。
 - [ ] 回放响应与 TutorContext 未来诱饵为零泄露。
-- [ ] Codex 和 Claude 都通过 Adapter 契约；任一缺失时产品正确降级。
+- [ ] Codex 通过 Adapter 契约；缺失、未认证、超时或输出非法时产品正确降级。
 - [ ] Tutor 正式报告通过 Schema，事实 evidence ID 100% 有效。
 - [ ] Agent 失败不影响回放、下单、账本和确定性复盘。
 - [ ] 导入失败、数据缺口、拒单、冲突、断网、超时都有明确救援路径。

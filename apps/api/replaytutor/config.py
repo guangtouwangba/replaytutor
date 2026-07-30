@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     log_level: str = "INFO"
     cors_origins: str = "http://127.0.0.1:5173"
+    codex_timeout_seconds: int = Field(default=180, ge=10, le=600)
+    binance_config_path: Path = Path(
+        "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/tools/config.json"
+    )
 
     @field_validator("host")
     @classmethod
@@ -43,6 +47,10 @@ class Settings(BaseSettings):
     @property
     def database_path(self) -> Path:
         return self.resolved_data_dir / "app.db"
+
+    @property
+    def resolved_binance_config_path(self) -> Path:
+        return self.binance_config_path.expanduser().resolve()
 
     @property
     def allowed_origins(self) -> list[str]:

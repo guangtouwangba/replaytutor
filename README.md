@@ -1,8 +1,8 @@
 # ReplayTutor（暂定名）
 
-一个本地优先、面向多市场的交易训练与复盘应用：提供类似 TradingView 的专业图表体验，支持 A 股、美股、加密货币和外汇历史回放、虚拟交易，以及可绑定 Codex、Claude Code、Kimi 等原生 Coding Agent 的 AI Tutor。
+一个本地优先的交易训练与复盘应用：提供类似 TradingView 的专业图表体验、隐藏未来的历史回放、确定性虚拟交易，以及通过本机 Codex CLI 工作的证据化 AI Tutor。
 
-> 当前阶段：M0 本地基础设施已经落地，回放、撮合、账本和 Tutor 业务功能尚未实现，也不连接真实资金账户。
+> 当前阶段：MVP 1A 的 BTCUSDT 核心纵向闭环已落地，包括 Snapshot、逐 K 回放、计划门禁、模拟订单、Decimal 账本、用户/AI 图层、确定性复盘、Playbook 和 Codex Tutor。完整绘图、证据回跳、AI 标注接受/拒绝、Playbook 确定性规则检查和发布级 E2E 仍待封板。Binance U 本位只读成交复盘作为独立切片保留。本项目不提供任何真实下单能力。
 
 ## 核心体验
 
@@ -36,6 +36,9 @@ make dev
 - Web：<http://127.0.0.1:5173>
 - API：<http://127.0.0.1:8788>
 - Health：<http://127.0.0.1:8788/api/v1/health>
+- 数据中心：<http://127.0.0.1:5173/data>
+- 训练复盘：<http://127.0.0.1:5173/reviews>
+- Binance 复盘：<http://127.0.0.1:5173/reviews/binance>
 
 常用入口：
 
@@ -47,6 +50,47 @@ make verify      # contracts → lint → typecheck → test → build
 make clean       # 只清构建缓存，不删除 data/ 和 logs/
 ```
 
+`make verify` 是当前可执行的工程质量门，覆盖契约、静态检查、前后端单元测试和生产构建。发布计划中的完整浏览器 E2E 尚未接入根命令，不能用 `make verify` 代替发布验收。
+
+首次启动后打开“数据中心”，点击“载入真实 BTC 样例”。系统会把仓库内经过哈希校验的 44,640 根 BTCUSDT 1m Golden Dataset 写成运行时不可变 Snapshot；首页不会用假价格或随机 K 线填充空状态。
+
+数据 API：
+
+```text
+GET  /api/v1/datasets
+POST /api/v1/datasets/golden
+POST /api/v1/datasets/binance
+GET  /api/v1/datasets/{snapshot_id}/bars
+POST /api/v1/datasets/imports
+POST /api/v1/datasets/imports/{import_id}/commit
+POST /api/v1/sessions
+POST /api/v1/sessions/{session_id}/commands
+POST /api/v1/sessions/{session_id}/plan
+POST /api/v1/sessions/{session_id}/orders
+POST /api/v1/sessions/{session_id}/annotations
+POST /api/v1/sessions/{session_id}/tutor
+GET  /api/v1/sessions/{session_id}/review
+```
+
+重新生成跨端契约或核验 Golden Dataset：
+
+```bash
+pnpm contracts:update
+uv run --project apps/api replaytutor data build-golden
+```
+
+Binance 只读复盘：
+
+```bash
+replaytutor binance check
+replaytutor binance sync --days 180
+replaytutor review today
+replaytutor review recent --count 10
+replaytutor review trade <episode_id>
+```
+
+凭据只从知识库的 `tools/config.json` 读取。同步器只实现 Binance 签名 `GET`，复盘产物不会保存 Key、Secret、签名或私有下载地址。
+
 本地覆盖配置复制 `.env.example` 为 `.env`；所有服务端配置使用 `REPLAYTUTOR_` 前缀。Vite 与 FastAPI 都固定监听 loopback，端口被占用时直接失败。
 
 如果当前终端没有继承 nvm、pnpm 或 uv 的 PATH，可先检查项目解析结果：
@@ -57,7 +101,7 @@ make runtime
 
 无需全局启用 pnpm；`make` 会通过 `scripts/pnpm` 调用 Corepack。若 Node 24 尚未安装，脚本会给出明确的 `nvm install 24` 提示。
 
-M0 Spike 可通过以下方式复现：
+M0 Spike 仍可通过以下方式复现：
 
 ```bash
 # 固定 BTCUSDT K 线与订单线创建/选择/拖动/删除
@@ -82,9 +126,18 @@ Spike 决策见 [`docs/decisions/`](docs/decisions/)。
 5. 右侧 Codex Tutor：当下讲解和单笔事后复盘。
 6. Golden Session、未来数据诱饵、撮合确定性和账本平衡门禁。
 
-第一条切片稳定后接入 A 股规则与 Claude Code；真实成交导入、美股、外汇和周期报告属于后续阶段。
+MVP 1A 只接入 Codex CLI。A 股规则、其他 Agent、现货/币本位真实成交、美股、外汇和跨周期报告属于后续阶段。
 
 MVP 不包含真实下单、跟单、收益承诺、社交社区和 Pine Script 兼容层。
+
+当前已知产品缺口：
+
+- 工作台只支持当前价格标记，趋势线、矩形及完整编辑操作尚未开放。
+- AI 标注写入独立图层，但接受、拒绝和修改工作流尚未实现。
+- 复盘证据已有稳定 ID，但点击回跳到 K 线、价格和图层尚未实现。
+- Playbook 已版本化，逐条确定性规则检查仍待实现。
+- 设置页当前以运行状态和安全边界展示为主，训练偏好、隐私和清理功能尚未开放。
+- A 股规则、其他市场、发布硬化和完整浏览器 E2E 属于后续阶段。
 
 ## 工作原则
 
