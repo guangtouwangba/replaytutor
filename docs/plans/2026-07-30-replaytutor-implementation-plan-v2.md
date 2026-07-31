@@ -15,6 +15,10 @@
 - [全页面交互设计](2026-07-30-replaytutor-page-interaction-design.md)
 - [可点击原型](../prototypes/replaytutor-product-prototype.html)
 
+后续封板计划：
+
+- [MVP 1A 封板实施计划](2026-07-31-replaytutor-mvp1a-hardening-plan.md)
+
 ## 1. 实施结论
 
 不按 13 个页面横向开发。第一优先级是一条可以被测试、恢复和复盘的纵向闭环：
