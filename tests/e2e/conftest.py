@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import signal
 import socket
@@ -25,6 +26,8 @@ class E2EStack:
     api_url: str
     web_url: str
     data_dir: Path
+    restart_api: Callable[[], None]
+    restart_web: Callable[[], None]
 
 
 def _free_port() -> int:
@@ -61,6 +64,17 @@ def _wait_for_url(url: str, processes: list[subprocess.Popen[str]], logs: list[P
         if path.exists()
     )
     raise RuntimeError(f"Timed out waiting for {url}: {last_error}\n{rendered_logs}")
+
+
+def _stop_process(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+    os.killpg(process.pid, signal.SIGTERM)
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=2)
 
 
 def _write_codex_stub(bin_dir: Path, mode: Literal["fake", "unavailable"]) -> Path:
@@ -134,12 +148,6 @@ def e2e_stack_factory(
         web_port = _free_port()
         api_url = f"http://127.0.0.1:{api_port}"
         web_url = f"http://127.0.0.1:{web_port}"
-        api_log = log_dir / "api.log"
-        web_log = log_dir / "web.log"
-        api_handle = api_log.open("w", encoding="utf-8")
-        web_handle = web_log.open("w", encoding="utf-8")
-        handles.extend((api_handle, web_handle))
-
         api_env = os.environ.copy()
         api_env.update(
             {
@@ -149,66 +157,116 @@ def e2e_stack_factory(
                 "REPLAYTUTOR_DATA_DIR": str(data_dir),
             }
         )
-        api_process = subprocess.Popen(
-            [
-                str(ROOT / "scripts" / "uv"),
-                "run",
-                "--project",
-                "apps/api",
-                "uvicorn",
-                "replaytutor.main:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(api_port),
-            ],
-            cwd=ROOT,
-            env=api_env,
-            stdout=api_handle,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            text=True,
-        )
         web_env = os.environ.copy()
         web_env["VITE_API_BASE_URL"] = api_url
-        web_process = subprocess.Popen(
-            [
-                str(ROOT / "scripts" / "pnpm"),
-                "--filter",
-                "@replaytutor/web",
-                "exec",
-                "vite",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(web_port),
-                "--strictPort",
-            ],
-            cwd=ROOT,
-            env=web_env,
-            stdout=web_handle,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            text=True,
+
+        api_logs: list[Path] = []
+        web_logs: list[Path] = []
+        api_generation = 0
+        web_generation = 0
+
+        def spawn_api() -> subprocess.Popen[str]:
+            nonlocal api_generation
+            api_generation += 1
+            api_log = log_dir / f"api-{api_generation}.log"
+            api_logs.append(api_log)
+            api_handle = api_log.open("w", encoding="utf-8")
+            handles.append(api_handle)
+            process = subprocess.Popen(
+                [
+                    str(ROOT / "scripts" / "uv"),
+                    "run",
+                    "--project",
+                    "apps/api",
+                    "uvicorn",
+                    "replaytutor.main:app",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(api_port),
+                ],
+                cwd=ROOT,
+                env=api_env,
+                stdout=api_handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            processes.append(process)
+            return process
+
+        def spawn_web() -> subprocess.Popen[str]:
+            nonlocal web_generation
+            web_generation += 1
+            web_log = log_dir / f"web-{web_generation}.log"
+            web_logs.append(web_log)
+            web_handle = web_log.open("w", encoding="utf-8")
+            handles.append(web_handle)
+            process = subprocess.Popen(
+                [
+                    str(ROOT / "scripts" / "pnpm"),
+                    "--filter",
+                    "@replaytutor/web",
+                    "exec",
+                    "vite",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(web_port),
+                    "--strictPort",
+                ],
+                cwd=ROOT,
+                env=web_env,
+                stdout=web_handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True,
+            )
+            processes.append(process)
+            return process
+
+        current = {"api": spawn_api(), "web": spawn_web()}
+        _wait_for_url(
+            f"{api_url}/api/v1/health",
+            [current["api"], current["web"]],
+            [*api_logs, *web_logs],
         )
-        processes.extend((api_process, web_process))
-        _wait_for_url(f"{api_url}/api/v1/health", [api_process, web_process], [api_log, web_log])
-        _wait_for_url(web_url, [api_process, web_process], [api_log, web_log])
-        return E2EStack(api_url=api_url, web_url=web_url, data_dir=data_dir)
+        _wait_for_url(
+            web_url,
+            [current["api"], current["web"]],
+            [*api_logs, *web_logs],
+        )
+
+        def restart_api() -> None:
+            _stop_process(current["api"])
+            current["api"] = spawn_api()
+            _wait_for_url(
+                f"{api_url}/api/v1/health",
+                [current["api"], current["web"]],
+                [*api_logs, *web_logs],
+            )
+
+        def restart_web() -> None:
+            _stop_process(current["web"])
+            current["web"] = spawn_web()
+            _wait_for_url(
+                web_url,
+                [current["api"], current["web"]],
+                [*api_logs, *web_logs],
+            )
+
+        return E2EStack(
+            api_url=api_url,
+            web_url=web_url,
+            data_dir=data_dir,
+            restart_api=restart_api,
+            restart_web=restart_web,
+        )
 
     yield start
 
     for process in reversed(processes):
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGTERM)
-    deadline = time.monotonic() + 5
-    for process in reversed(processes):
-        timeout = max(0.1, deadline - time.monotonic())
-        try:
-            process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.wait(timeout=2)
+        _stop_process(process)
     for handle in handles:
         handle.close()  # type: ignore[attr-defined]
 
@@ -240,10 +298,15 @@ def page(
     yield current_page
 
     failed = bool(getattr(request.node, "rep_call", None) and request.node.rep_call.failed)
+    release_acceptance = request.node.get_closest_marker("release_acceptance") is not None
     artifact_stem = request.node.nodeid.replace("/", "_").replace("::", "__")
-    if failed:
-        current_page.screenshot(path=RESULTS_DIR / f"{artifact_stem}.png", full_page=True)
-        context.tracing.stop(path=RESULTS_DIR / f"{artifact_stem}.zip")
+    if failed or release_acceptance:
+        prefix = "release-acceptance-" if release_acceptance else ""
+        current_page.screenshot(
+            path=RESULTS_DIR / f"{prefix}{artifact_stem}.png",
+            full_page=True,
+        )
+        context.tracing.stop(path=RESULTS_DIR / f"{prefix}{artifact_stem}.zip")
     else:
         context.tracing.stop()
     context.close()
@@ -259,3 +322,20 @@ def pytest_runtest_makereport(
     outcome = yield
     report = outcome.get_result()
     setattr(item, f"rep_{report.when}", report)
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    RESULTS_DIR.mkdir(exist_ok=True)
+    (RESULTS_DIR / "release-acceptance-summary.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "exit_status": exitstatus,
+                "tests_collected": session.testscollected,
+                "release_acceptance": exitstatus == 0,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )

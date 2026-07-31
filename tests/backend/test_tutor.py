@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
+import threading
 import time
 from pathlib import Path
 
@@ -225,3 +228,68 @@ def test_codex_adapter_never_uses_bypass_flags() -> None:
     assert '"--ignore-user-config"' in source
     assert '"--ignore-rules"' in source
     assert "dangerously-bypass" not in source
+
+
+def test_tutor_timeout_crash_and_cancel_are_terminal_and_clean_up_process(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    created = create_session(client)
+    session_id = created["session"]["session_id"]
+
+    def timeout_run(self, workspace, *, timeout_seconds, on_process):
+        del self, workspace, timeout_seconds, on_process
+        raise TimeoutError("deterministic timeout")
+
+    monkeypatch.setattr(CodexAdapter, "run", timeout_run)
+    timed_out = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={"question": "触发超时", "stage": "environment"},
+    ).json()
+    timed_out_run = wait_for_run(client, timed_out["run_id"])
+    assert timed_out_run["status"] == "timed_out"
+    assert timed_out_run["error"] == "deterministic timeout"
+
+    def crash_run(self, workspace, *, timeout_seconds, on_process):
+        del self, workspace, timeout_seconds, on_process
+        raise RuntimeError("deterministic adapter crash")
+
+    monkeypatch.setattr(CodexAdapter, "run", crash_run)
+    crashed = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={"question": "触发崩溃", "stage": "environment"},
+    ).json()
+    crashed_run = wait_for_run(client, crashed["run_id"])
+    assert crashed_run["status"] == "failed"
+    assert crashed_run["error"] == "deterministic adapter crash"
+
+    process_started = threading.Event()
+    child: subprocess.Popen[str] | None = None
+
+    def blocking_run(self, workspace, *, timeout_seconds, on_process):
+        nonlocal child
+        del self, workspace, timeout_seconds
+        child = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            text=True,
+        )
+        on_process(child)
+        process_started.set()
+        child.wait(timeout=5)
+        raise RuntimeError("cancelled child exited")
+
+    monkeypatch.setattr(CodexAdapter, "run", blocking_run)
+    cancellable = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={"question": "触发取消", "stage": "environment"},
+    ).json()
+    assert process_started.wait(timeout=2)
+    cancelled = client.post(f"/api/v1/tutor/runs/{cancellable['run_id']}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    deadline = time.monotonic() + 2
+    while child is not None and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert child is not None
+    assert child.poll() is not None
+    assert wait_for_run(client, cancellable["run_id"])["status"] == "cancelled"

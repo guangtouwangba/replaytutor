@@ -11,7 +11,12 @@
 - WCAG 2 A/AA serious/critical axe violations 为 0
 - 浏览器 console error 与 page error 为 0
 - 失败 E2E 自动保存截图和 Playwright trace 到 `test-results/`
-- `scripts/check-release-artifacts.sh` 确认前端产物不包含本机路径、数据库、日志或 secret pattern
+- 成功发布验收保留 `test-results/release-acceptance-*.png`、
+  `test-results/release-acceptance-*.zip` 和
+  `test-results/release-acceptance-summary.json`
+- GitHub CI 始终上传 `release-acceptance-artifacts`，供发布复核下载
+- `scripts/check-release-artifacts.sh` 确认前端产物和 Git 跟踪文件不包含
+  本机路径、数据库、日志、凭据文件或 secret pattern
 
 ## 恢复演练
 

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import sqlite3
 import time
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from .conftest import E2EStack
@@ -15,6 +17,14 @@ def test_user_can_complete_core_training_flow(
     e2e_stack_factory,
 ) -> None:
     stack: E2EStack = e2e_stack_factory("fake")
+
+    health = page.request.get(f"{stack.api_url}/api/v1/health")
+    assert health.ok
+    assert (
+        health.json()["database"]["migration_current"]
+        == health.json()["database"]["migration_head"]
+        == "0012_local_hardening"
+    )
 
     page.goto(f"{stack.web_url}/data")
     expect(page.get_by_role("heading", name="数据中心")).to_be_visible()
@@ -59,6 +69,11 @@ def test_user_can_complete_core_training_flow(
         time.sleep(0.1)
     assert any(annotation["label"] == "E2E 用户观察" for annotation in annotations)
 
+    page.get_by_label("向 Codex 询问当前 frame").fill("为复盘生成独立 AI 证据")
+    page.get_by_role("button", name="让 Codex 检查").click()
+    expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible(timeout=30_000)
+    expect(page.locator(".annotation-list", has_text="E2E Tutor 标注")).to_be_visible()
+
     with page.expect_response(
         lambda response: (
             response.url.endswith(f"/api/v1/sessions/{session_id}/finish")
@@ -75,6 +90,33 @@ def test_user_can_complete_core_training_flow(
     expect(page.get_by_role("img", name="会话净值曲线")).to_be_visible()
     expect(page.locator(".review-timeline-panel")).to_contain_text("训练会话结束")
     page.get_by_role("link", name="打开完整复盘").click()
+    review_url = page.url
+    evidence_kinds = ["plan", "order", "fill", "user_annotation", "ai_annotation"]
+    assert {
+        item.locator("span").inner_text()
+        for item in page.locator(".evidence-row").all()
+    } >= set(evidence_kinds)
+    for kind in evidence_kinds:
+        evidence_link = page.locator(".evidence-row", has_text=kind).first
+        evidence_dom_id = evidence_link.get_attribute("id")
+        evidence_href = evidence_link.get_attribute("href")
+        assert evidence_dom_id is not None
+        assert evidence_href is not None
+        evidence_link.click()
+        expect(page).to_have_url(f"{stack.web_url}{evidence_href}")
+        expect(page.get_by_role("button", name="下一根 K 线")).to_be_disabled()
+        expect(page.locator(".evidence-focus-card")).to_contain_text(kind)
+        expect(page.locator(".replay-chart-shell")).to_have_attribute(
+            "data-evidence-id",
+            evidence_dom_id.removeprefix("evidence-"),
+        )
+        if kind == "plan":
+            expect(page.locator(".evidence-focus-card")).to_contain_text(
+                "该证据没有价格坐标"
+            )
+        page.goto(review_url)
+        expect(page.locator(".evidence-row").first).to_be_visible()
+
     evidence_link = page.locator(".evidence-row").first
     evidence_dom_id = evidence_link.get_attribute("id")
     evidence_href = evidence_link.get_attribute("href")
@@ -165,6 +207,225 @@ def test_order_is_not_filled_before_activation_bar(
     assert placed["execution"]["fills"] == []
 
 
+def test_market_limit_and_bracket_orders_respect_activation_boundaries(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+
+    def session_with_plan(thesis: str) -> tuple[dict, str]:
+        response = page.request.post(
+            f"{stack.api_url}/api/v1/datasets/golden",
+            data={},
+        )
+        assert response.ok
+        created = page.request.post(
+            f"{stack.api_url}/api/v1/sessions",
+            data={
+                "snapshot_id": response.json()["snapshot_id"],
+                "start_mode": "beginning",
+                "seed": 7,
+                "warmup_bars": 20,
+                "initial_cash": "100000",
+                "hidden_real_date": True,
+                "playbook_id": None,
+            },
+        ).json()
+        session_id = created["session"]["session_id"]
+        locked = page.request.post(
+            f"{stack.api_url}/api/v1/sessions/{session_id}/plan",
+            data={
+                "command_id": command_id(),
+                "expected_revision": 0,
+                "side": "BUY",
+                "thesis": thesis,
+                "invalidation": "结构失效时退出",
+                "risk_amount": "100",
+            },
+        )
+        assert locked.ok, locked.text()
+        return created, session_id
+
+    market_created, market_session_id = session_with_plan("市价下一根确认")
+    market = page.request.post(
+        f"{stack.api_url}/api/v1/sessions/{market_session_id}/orders",
+        data={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "side": "BUY",
+            "order_type": "MARKET",
+            "quantity": "0.01",
+        },
+    ).json()
+    assert market["order"]["status"] == "PENDING"
+    assert market["order"]["activate_index"] == (
+        market_created["session"]["frame"]["current_index"] + 1
+    )
+
+    _, limit_session_id = session_with_plan("限价等待回调")
+    limit = page.request.post(
+        f"{stack.api_url}/api/v1/sessions/{limit_session_id}/orders",
+        data={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "side": "BUY",
+            "order_type": "LIMIT",
+            "quantity": "0.01",
+            "limit_price": "1.00",
+        },
+    ).json()
+    assert limit["order"]["status"] == "PENDING"
+    limit_advanced = page.request.post(
+        f"{stack.api_url}/api/v1/sessions/{limit_session_id}/commands",
+        data={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "kind": "advance",
+            "bars": 1,
+        },
+    ).json()
+    assert limit_advanced["execution"]["orders"][0]["status"] == "PENDING"
+    assert limit_advanced["execution"]["fills"] == []
+
+    bracket_created, bracket_session_id = session_with_plan("括号单保护退出")
+    bracket = page.request.post(
+        f"{stack.api_url}/api/v1/sessions/{bracket_session_id}/orders",
+        data={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "side": "BUY",
+            "order_type": "MARKET",
+            "quantity": "0.01",
+            "take_profit_price": "1.00",
+            "protective_stop_price": "1.00",
+        },
+    ).json()
+    orders = bracket["execution"]["orders"]
+    parent = next(order for order in orders if order["parent_order_id"] is None)
+    children = [
+        order for order in orders if order["parent_order_id"] == parent["order_id"]
+    ]
+    assert parent["status"] == "PENDING"
+    assert all(
+        child["activate_index"] == bracket_created["session"]["frame"]["total_bars"]
+        for child in children
+    )
+    after_parent = page.request.post(
+        f"{stack.api_url}/api/v1/sessions/{bracket_session_id}/commands",
+        data={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "kind": "advance",
+            "bars": 1,
+        },
+    ).json()
+    assert len(after_parent["execution"]["fills"]) == 1
+    assert all(
+        child["status"] == "PENDING"
+        and child["activate_index"]
+        == bracket_created["session"]["frame"]["current_index"] + 2
+        for child in after_parent["execution"]["orders"]
+        if child["parent_order_id"] is not None
+    )
+
+
+def test_api_and_web_restart_preserve_session_ledger_annotations_and_review(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    locked = client.post(
+        f"/api/v1/sessions/{session_id}/plan",
+        json={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "side": "BUY",
+            "thesis": "重启前锁定确定性计划",
+            "invalidation": "结构失效退出",
+            "risk_amount": "100",
+        },
+    )
+    locked.raise_for_status()
+    order = client.post(
+        f"/api/v1/sessions/{session_id}/orders",
+        json={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "side": "BUY",
+            "order_type": "MARKET",
+            "quantity": "0.01",
+        },
+    )
+    order.raise_for_status()
+    advanced = client.post(
+        f"/api/v1/sessions/{session_id}/commands",
+        json={
+            "command_id": command_id(),
+            "expected_revision": 0,
+            "kind": "advance",
+            "bars": 1,
+        },
+    )
+    advanced.raise_for_status()
+    advanced_body = advanced.json()
+    visible = advanced_body["bars"][-1]
+    annotation = client.post(
+        f"/api/v1/sessions/{session_id}/annotations",
+        json={
+            "command_id": command_id(),
+            "expected_revision": 1,
+            "shape": "marker",
+            "label": "重启持久化标注",
+            "points": [
+                {
+                    "time": visible["close_time"],
+                    "price": visible["raw"]["close"],
+                }
+            ],
+        },
+    )
+    annotation.raise_for_status()
+    finished = client.post(
+        f"/api/v1/sessions/{session_id}/finish",
+        json={"command_id": command_id(), "expected_revision": 1},
+    )
+    finished.raise_for_status()
+    before = client.get(f"/api/v1/sessions/{session_id}").json()
+    review_before = client.get(f"/api/v1/sessions/{session_id}/review").json()
+    database_path = stack.data_dir / "app.db"
+    with sqlite3.connect(database_path) as connection:
+        ledger_before = connection.execute(
+            "SELECT COUNT(*), COALESCE(SUM(debit), 0), COALESCE(SUM(credit), 0) "
+            "FROM ledger_journal"
+        ).fetchone()
+
+    stack.restart_api()
+    stack.restart_web()
+
+    after = client.get(f"/api/v1/sessions/{session_id}").json()
+    review_after = client.get(f"/api/v1/sessions/{session_id}/review").json()
+    with sqlite3.connect(database_path) as connection:
+        ledger_after = connection.execute(
+            "SELECT COUNT(*), COALESCE(SUM(debit), 0), COALESCE(SUM(credit), 0) "
+            "FROM ledger_journal"
+        ).fetchone()
+    assert after["session"]["revision"] == before["session"]["revision"]
+    assert after["execution"] == before["execution"]
+    assert after["annotations"] == before["annotations"]
+    assert review_after["review_hash"] == review_before["review_hash"]
+    assert ledger_after == ledger_before
+    assert ledger_after is not None
+    assert ledger_after[0] > 0
+    assert ledger_after[1] == ledger_after[2]
+
+    page.goto(f"{stack.web_url}/sessions/{session_id}/review")
+    expect(page.get_by_role("heading", name="确定性训练复盘")).to_be_visible()
+    expect(page.locator(".evidence-row", has_text="重启持久化标注")).to_be_visible()
+    client.close()
+
+
 def test_drawings_and_dispositions_survive_reload(
     page: Page, e2e_stack_factory
 ) -> None:
@@ -208,6 +469,26 @@ def test_drawings_and_dispositions_survive_reload(
         item["original_annotation"]["shape"] == "zone"
         for item in rectangle_dispositions
     )
+    page.locator(".annotation-list button", has_text="E2E 矩形").click()
+    page.locator(".annotation-inspector input").first.fill("E2E 修订矩形")
+    page.get_by_role("button", name="保存修改").click()
+    expect(page.locator(".annotation-list", has_text="E2E 修订矩形")).to_be_visible()
+    page.locator(".annotation-list button", has_text="E2E 修订矩形").click()
+    page.locator(".annotation-inspector").get_by_role("button", name="删除").click()
+    expect(page.locator(".annotation-list button", has_text="deleted")).to_have_count(2)
+
+    page.get_by_label("标注文字").first.fill("E2E 标记")
+    page.get_by_role("button", name="标记当前价格").click()
+    expect(page.locator(".annotation-list", has_text="E2E 标记")).to_be_visible()
+    page.locator(".annotation-list button", has_text="E2E 标记").click()
+    page.locator(".annotation-inspector input").first.fill("E2E 修订标记")
+    page.get_by_role("button", name="保存修改").click()
+    expect(page.locator(".annotation-list", has_text="E2E 修订标记")).to_be_visible()
+    page.locator(".annotation-list button", has_text="E2E 修订标记").click()
+    page.locator(".annotation-inspector").get_by_role("button", name="删除").click()
+    expect(page.locator(".annotation-list button", has_text="deleted")).to_have_count(3)
+    page.reload()
+    expect(page.locator(".annotation-list button", has_text="deleted")).to_have_count(3)
 
     before_count = len(
         client.get(f"/api/v1/sessions/{session_id}/annotations/dispositions").json()[
@@ -227,6 +508,7 @@ def test_drawings_and_dispositions_survive_reload(
     client.close()
 
 
+@pytest.mark.release_acceptance
 def test_local_settings_responsive_layout_and_axe(
     page: Page, e2e_stack_factory
 ) -> None:

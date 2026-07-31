@@ -1,14 +1,15 @@
 # ReplayTutor MVP 1A 封板实施计划
 
-状态：Implemented in stacked PRs #1–#6  
+状态：Implemented and requirement-audited in stacked PRs #1–#6
 日期：2026-07-31  
 基线提交：`c087e3c`  
 目标：把当前可运行的 MVP 1A 核心纵向闭环推进为可持续使用、可自动验收的本地产品。
 
 完成证据：H0–H5 已分别落到 `codex/e2e-ci`、`codex/annotation-workflow`、
 `codex/evidence-jump`、`codex/playbook-evaluator`、`codex/review-aggregation`
-和 `codex/local-hardening`。最终本地门禁为 48 个后端测试、8 个前端测试、
-6 个隔离浏览器 E2E、三宽度/axe 验收与发布产物扫描。
+和 `codex/local-hardening`。最终需求审计门禁为 49 个后端测试、8 个前端测试、
+8 个隔离浏览器 E2E、三宽度/axe 验收、API/Web kill-restart 恢复、
+成功验收截图/trace/摘要与构建/Git 产物扫描。
 
 上游真源：
 
@@ -490,17 +491,32 @@ H2 与 H3 可以在 H1 契约稳定后并行，但在同一工作区实施时仍
 
 MVP 1A 封板必须同时满足：
 
-- [ ] `make verify` 与 `make e2e` 全绿。
-- [ ] GitHub CI 在全新环境通过。
-- [ ] 用户能完成趋势线、矩形和标记的创建、修改与删除。
-- [ ] AI 标注可以接受、拒绝和修改，且原始 provenance 不丢失。
-- [ ] 五类 evidence 可以回跳到只读图表。
-- [ ] Playbook 规则检查由确定性 evaluator 生成。
-- [ ] 低样本能力维度不生成伪分数。
-- [ ] 会话、订单、账本、标注和 review 在刷新/重启后一致。
-- [ ] 回放与 Tutor future-bait 测试保持零泄露。
-- [ ] Agent 失败不影响回放、模拟交易和确定性复盘。
-- [ ] 数据库、凭据、日志和本机路径不进入构建或 Git。
+- [x] `make verify` 与 `make e2e` 全绿。
+- [ ] GitHub CI 在全新环境通过（等待本次需求审计提交的 CI）。
+- [x] 用户能完成趋势线、矩形和标记的创建、修改与删除。
+- [x] AI 标注可以接受、拒绝和修改，且原始 provenance 不丢失。
+- [x] 五类 evidence 可以回跳到只读图表。
+- [x] Playbook 规则检查由确定性 evaluator 生成。
+- [x] 低样本能力维度不生成伪分数。
+- [x] 会话、订单、账本、标注和 review 在刷新/重启后一致。
+- [x] 回放与 Tutor future-bait 测试保持零泄露。
+- [x] Agent 失败不影响回放、模拟交易和确定性复盘。
+- [x] 数据库、凭据、日志和本机路径不进入构建或 Git。
+
+最终审计补充证明：
+
+- E2E 同时覆盖市价、未触达限价和 bracket 子单的激活边界。
+- 趋势线、矩形、标记分别完成创建、选择、修改、删除和刷新恢复。
+- 三次 Fake Tutor 运行分别覆盖接受、拒绝、用户修订，并校验原始 AI
+  label、layer 和 `provenance_run_id` 保持不变。
+- 计划、订单、成交、用户标注、AI 标注逐类进入只读 Workbench，并验证
+  深链接、图表 evidence 高亮和缺价格坐标提示。
+- Agent 不可用、超时、崩溃、取消和应用重启孤儿 run 均有终态与降级证明；
+  取消测试确认已注册子进程退出。
+- API/Web kill-restart 后 revision、execution、平衡 ledger、annotations 与
+  review hash 不变。
+- 成功 E2E 生成浏览器截图、Playwright trace 和机器可读测试摘要，CI 始终
+  上传 `release-acceptance-artifacts`。
 
 ## 13. 首个执行任务
 

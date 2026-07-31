@@ -50,3 +50,13 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Upload release acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-acceptance-artifacts
+          path: |
+            test-results/release-acceptance-*
+          if-no-files-found: error
+          retention-days: 14

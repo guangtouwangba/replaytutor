@@ -17,4 +17,21 @@ if rg -l '/Users/|/home/[^/]+/|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|api[_-]?sec
   exit 1
 fi
 
-echo "release artifacts contain no local paths, databases, logs, or secret patterns"
+if git ls-files | rg '\.(db|sqlite|log)$|(^|/)(auth\.json|credentials\.json)$'; then
+  echo "release scan: tracked database, log, or credential file found" >&2
+  exit 1
+fi
+
+if git ls-files | rg --pcre2 '(^|/)\.env(?!\.example$)'; then
+  echo "release scan: tracked database, log, or credential file found" >&2
+  exit 1
+fi
+
+if git grep -IlE \
+  '/Users/|/home/[^/]+/|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[A-Z0-9]{16}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}' \
+  -- . ':(exclude)scripts/check-release-artifacts.sh'; then
+  echo "release scan: tracked local path or secret-like material found" >&2
+  exit 1
+fi
+
+echo "release artifacts and tracked files contain no local paths, databases, logs, or secret patterns"
