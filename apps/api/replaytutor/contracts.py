@@ -392,11 +392,41 @@ class ReviewMetric(ContractModel):
 
 class EvidenceRef(ContractModel):
     evidence_id: str
-    kind: Literal["plan", "order", "fill", "bar", "metric"]
+    kind: Literal[
+        "plan",
+        "order",
+        "fill",
+        "bar",
+        "metric",
+        "user_annotation",
+        "ai_annotation",
+    ]
     summary: str
     frame_id: Identifier | None = None
     occurred_at: datetime | None = None
     price: DecimalString | None = None
+
+
+class EvidenceTarget(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    evidence_id: Identifier
+    session_id: Identifier
+    kind: Literal[
+        "plan",
+        "order",
+        "fill",
+        "bar",
+        "metric",
+        "user_annotation",
+        "ai_annotation",
+    ]
+    frame_id: Identifier | None = None
+    occurred_at: datetime | None = None
+    price: DecimalString | None = None
+    layer: Literal["user", "ai"] | None = None
+    annotation_id: Identifier | None = None
+    order_id: Identifier | None = None
+    fill_id: Identifier | None = None
 
 
 class TrainingReview(ContractModel):

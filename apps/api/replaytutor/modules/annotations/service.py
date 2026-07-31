@@ -69,26 +69,24 @@ def load_dispositions(
     annotations = load_annotations(connection, session_id)
     rows = connection.execute(
         """
-        SELECT event.* FROM session_annotation_event AS event
-        INNER JOIN (
-            SELECT annotation_id, MAX(rowid) AS latest_rowid
-            FROM session_annotation_event
-            WHERE session_id = ?
-            GROUP BY annotation_id
-        ) AS latest ON latest.latest_rowid = event.rowid
+        SELECT * FROM session_annotation_event
+        WHERE session_id = ?
+        ORDER BY rowid
         """,
         (session_id,),
     ).fetchall()
-    latest_by_annotation = {str(row["annotation_id"]): dict(row) for row in rows}
+    events_by_annotation: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        events_by_annotation.setdefault(str(row["annotation_id"]), []).append(dict(row))
     return [
-        _disposition(annotation, latest_by_annotation.get(annotation.annotation_id))
+        _disposition(annotation, events_by_annotation.get(annotation.annotation_id, []))
         for annotation in annotations
     ]
 
 
 def _disposition(
     annotation: ChartAnnotation,
-    event: dict[str, Any] | None,
+    events: list[dict[str, Any]],
 ) -> AnnotationDisposition:
     state: Literal["active", "proposed", "accepted", "rejected", "deleted"] = (
         "active" if annotation.layer == "user" else "proposed"
@@ -96,7 +94,7 @@ def _disposition(
     effective_label = annotation.label
     effective_points = annotation.points
     latest_event_id = None
-    if event is not None:
+    for event in events:
         action = str(event["action"])
         latest_event_id = str(event["event_id"])
         if action == "rejected":
@@ -225,7 +223,10 @@ class AnnotationService:
         try:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
-                "SELECT * FROM session_annotation_event WHERE command_id = ?",
+                """
+                SELECT rowid AS event_rowid, * FROM session_annotation_event
+                WHERE command_id = ?
+                """,
                 (request.command_id,),
             ).fetchone()
             if existing is not None:
@@ -240,10 +241,18 @@ class AnnotationService:
                 ).fetchone()
                 if annotation_row is None:
                     raise TrainingSessionError("Annotation not found")
+                events = connection.execute(
+                    """
+                    SELECT * FROM session_annotation_event
+                    WHERE annotation_id = ? AND rowid <= ?
+                    ORDER BY rowid
+                    """,
+                    (annotation_id, existing["event_rowid"]),
+                ).fetchall()
                 connection.rollback()
                 return _disposition(
                     _annotation_from_row(annotation_row),
-                    dict(existing),
+                    [dict(event) for event in events],
                 )
             session = connection.execute(
                 "SELECT revision FROM replay_session WHERE session_id = ?",
@@ -316,14 +325,16 @@ class AnnotationService:
                     utc_text(now),
                 ),
             )
-            event = connection.execute(
-                "SELECT * FROM session_annotation_event WHERE event_id = ?",
-                (event_id,),
-            ).fetchone()
+            events = connection.execute(
+                """
+                SELECT * FROM session_annotation_event
+                WHERE annotation_id = ?
+                ORDER BY rowid
+                """,
+                (annotation_id,),
+            ).fetchall()
             connection.commit()
-            if event is None:
-                raise TrainingSessionError("Annotation event was not persisted")
-            return _disposition(annotation, dict(event))
+            return _disposition(annotation, [dict(event) for event in events])
         except BaseException:
             if connection.in_transaction:
                 connection.rollback()

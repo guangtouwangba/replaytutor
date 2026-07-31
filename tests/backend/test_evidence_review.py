@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from replaytutor.config import Settings
+from replaytutor.contracts import AnnotationPoint, TutorChartInstruction
 from replaytutor.ids import new_id
+from replaytutor.modules.annotations import persist_ai_annotations
+from replaytutor.storage.database import connect_database
 
 
 def create_session(client: TestClient) -> dict:
@@ -19,12 +23,29 @@ def create_session(client: TestClient) -> dict:
 
 def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
     client: TestClient,
+    settings: Settings,
 ) -> None:
     created = create_session(client)
     session = created["session"]
     session_id = session["session_id"]
     hidden = client.get(f"/api/v1/sessions/{session_id}/review")
     assert hidden.status_code == 409
+    user_annotation = client.post(
+        f"/api/v1/sessions/{session_id}/annotations",
+        json={
+            "command_id": new_id("cmd"),
+            "expected_revision": 0,
+            "shape": "marker",
+            "label": "用户证据",
+            "points": [
+                {
+                    "time": created["bars"][-1]["close_time"],
+                    "price": created["bars"][-1]["raw"]["close"],
+                }
+            ],
+        },
+    )
+    assert user_annotation.status_code == 200
 
     plan = client.post(
         f"/api/v1/sessions/{session_id}/plan",
@@ -59,6 +80,29 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
         },
     )
     assert advanced.status_code == 200
+    advanced_body = advanced.json()
+    ai_point = advanced_body["bars"][-1]
+    with connect_database(settings.database_path) as connection:
+        ai_annotations = persist_ai_annotations(
+            connection,
+            run_id=new_id("run"),
+            session_id=session_id,
+            frame_id=advanced_body["session"]["frame"]["frame_id"],
+            instructions=[
+                TutorChartInstruction(
+                    shape="marker",
+                    label="AI 证据",
+                    evidence_ids=[ai_point["bar_id"]],
+                    points=[
+                        AnnotationPoint(
+                            time=ai_point["close_time"],
+                            price=ai_point["raw"]["close"],
+                        )
+                    ],
+                )
+            ],
+        )
+        connection.commit()
     finished = client.post(
         f"/api/v1/sessions/{session_id}/finish",
         json={"command_id": new_id("cmd"), "expected_revision": 1},
@@ -71,7 +115,13 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
     body = review.json()
     assert body["review_hash"] == replayed.json()["review_hash"]
     assert body["process_outcome"].startswith("good_process_")
-    assert {item["kind"] for item in body["evidence"]} >= {"plan", "order", "fill"}
+    assert {item["kind"] for item in body["evidence"]} >= {
+        "plan",
+        "order",
+        "fill",
+        "user_annotation",
+        "ai_annotation",
+    }
     assert {item["key"] for item in body["metrics"]} == {
         "net_pnl",
         "realized_pnl",
@@ -86,6 +136,33 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
         "exit_efficiency",
     }
     assert all(item["evidence_id"] for item in body["evidence"])
+    targets = {
+        item["kind"]: client.get(
+            f"/api/v1/sessions/{session_id}/evidence/{item['evidence_id']}"
+        )
+        for item in body["evidence"]
+    }
+    assert all(response.status_code == 200 for response in targets.values())
+    assert (
+        targets["plan"].json()["frame_id"]
+        == plan.json()["execution"]["plan"]["frame_id"]
+    )
+    assert targets["order"].json()["order_id"] == order.json()["order"]["order_id"]
+    assert (
+        targets["fill"].json()["fill_id"]
+        == advanced_body["execution"]["fills"][0]["fill_id"]
+    )
+    assert targets["user_annotation"].json()["layer"] == "user"
+    assert (
+        targets["ai_annotation"].json()["annotation_id"]
+        == ai_annotations[0].annotation_id
+    )
+    bar_target = client.get(
+        f"/api/v1/sessions/{session_id}/evidence/{ai_point['bar_id']}"
+    )
+    assert bar_target.status_code == 200
+    assert bar_target.json()["kind"] == "bar"
+    assert bar_target.json()["occurred_at"] == ai_point["close_time"]
     aggregate = client.get("/api/v1/training-reviews")
     assert aggregate.status_code == 200
     assert aggregate.json()["reviews"][0]["review_id"] == body["review_id"]
@@ -95,3 +172,11 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
         and item["sample_count"] == 1
         for item in aggregate.json()["dimensions"]
     )
+
+    other = create_session(client)
+    cross_session = client.get(
+        f"/api/v1/sessions/{other['session']['session_id']}/evidence/"
+        f"{user_annotation.json()['annotation_id']}"
+    )
+    unknown = client.get(f"/api/v1/sessions/{session_id}/evidence/{new_id('ann')}")
+    assert cross_session.status_code == unknown.status_code == 404

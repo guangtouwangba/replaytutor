@@ -1,4 +1,11 @@
-import type { AnnotationPoint, Bar, ChartAnnotation, PaperFill, PaperOrder } from "@replaytutor/contracts";
+import type {
+  AnnotationPoint,
+  Bar,
+  ChartAnnotation,
+  EvidenceTarget,
+  PaperFill,
+  PaperOrder,
+} from "@replaytutor/contracts";
 import { dispose, init, type Chart, type KLineData } from "klinecharts";
 import { type MouseEvent as ReactMouseEvent, useEffect, useRef } from "react";
 import { overlayName, type DrawingTool } from "./DrawingController";
@@ -19,6 +26,7 @@ interface ReplayChartProps {
     points: AnnotationPoint[],
   ) => void;
   readonly onAnnotationSelect?: (annotationId: string) => void;
+  readonly evidenceTarget?: EvidenceTarget | null;
 }
 
 function toKLineData(bar: Bar): KLineData {
@@ -45,12 +53,14 @@ export function ReplayChart({
   drawingRequest = 0,
   onDrawingComplete,
   onAnnotationSelect,
+  evidenceTarget = null,
 }: ReplayChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const barsRef = useRef<KLineData[]>([]);
   const executionOverlayIds = useRef<string[]>([]);
   const draftOverlayId = useRef<string | null>(null);
+  const evidenceOverlayId = useRef<string | null>(null);
   const draftPoints = useRef<AnnotationPoint[]>([]);
 
   useEffect(() => {
@@ -196,6 +206,9 @@ export function ReplayChart({
           value: Number(fill.price),
         }],
         extendData: `${fill.side} ${fill.quantity}`,
+        styles: evidenceTarget?.fill_id === fill.fill_id
+          ? { point: { color: "#f5d66f", borderColor: "#f5d66f" }, text: { color: "#f5d66f" } }
+          : undefined,
       });
       if (created === id) ids.push(id);
     }
@@ -211,6 +224,7 @@ export function ReplayChart({
           ? "rect"
           : "simpleAnnotation";
       const color = annotation.layer === "ai" ? "#7c5cff" : "#20b7f5";
+      const selected = evidenceTarget?.annotation_id === annotation.annotation_id;
       const created = chart.createOverlay({
         id,
         name,
@@ -218,7 +232,7 @@ export function ReplayChart({
         points,
         extendData: annotation.label,
         styles: {
-          line: { color, size: 1, style: annotation.layer === "ai" ? "dashed" : "solid" },
+          line: { color: selected ? "#f5d66f" : color, size: selected ? 3 : 1, style: annotation.layer === "ai" ? "dashed" : "solid" },
           polygon: { color: `${color}26`, borderColor: color },
           point: { color, borderColor: color },
           text: { color, backgroundColor: "#101722" },
@@ -228,10 +242,40 @@ export function ReplayChart({
       if (created === id) ids.push(id);
     }
     executionOverlayIds.current = ids;
-  }, [annotations, fills, onAnnotationSelect, orders]);
+  }, [annotations, evidenceTarget, fills, onAnnotationSelect, orders]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (evidenceOverlayId.current) {
+      chart.removeOverlay({ id: evidenceOverlayId.current });
+      evidenceOverlayId.current = null;
+    }
+    if (!evidenceTarget?.occurred_at) return;
+    const timestamp = new Date(evidenceTarget.occurred_at).getTime();
+    chart.scrollToTimestamp(timestamp, 200);
+    const closestBar = [...bars]
+      .reverse()
+      .find((bar) => new Date(bar.close_time).getTime() <= timestamp);
+    const price = evidenceTarget.price ?? closestBar?.raw.close;
+    if (!price) return;
+    const id = "evidence-focus";
+    const created = chart.createOverlay({
+      id,
+      name: "simpleAnnotation",
+      lock: true,
+      points: [{ timestamp, value: Number(price) }],
+      extendData: `证据 · ${evidenceTarget.kind}`,
+      styles: {
+        point: { color: "#f5d66f", borderColor: "#fff2a8" },
+        text: { color: "#111820", backgroundColor: "#f5d66f" },
+      },
+    });
+    if (created === id) evidenceOverlayId.current = id;
+  }, [bars, evidenceTarget]);
 
   return (
-    <div className="replay-chart-shell">
+    <div className="replay-chart-shell" data-evidence-id={evidenceTarget?.evidence_id}>
       <div className="replay-chart" onClick={handleChartClick} ref={hostRef} aria-label={`${symbol} 回放 K 线图`} />
       <div className="visible-boundary" aria-hidden="true">
         <span>{hideRealDate ? "Visible to 当前帧" : `Visible to ${new Date(visibleAt).toLocaleString("zh-CN", { hour12: false })}`}</span>

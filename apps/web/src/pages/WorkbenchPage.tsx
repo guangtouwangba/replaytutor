@@ -7,7 +7,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, ChevronRight, MapPin, Pause, Play, Square, StepForward } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   applySessionCommand,
   actOnAnnotation,
@@ -15,6 +15,7 @@ import {
   commandId,
   createAnnotation,
   fetchAnnotationDispositions,
+  fetchEvidenceTarget,
   fetchSession,
   finishSession,
   lockTradePlan,
@@ -22,6 +23,7 @@ import {
 } from "../api/sessions";
 import { ReplayChart } from "../chart/ReplayChart";
 import type { DrawingTool } from "../chart/DrawingController";
+import { evidenceReturnUrl } from "../chart/EvidenceSelectionBridge";
 import { AnnotationInspector } from "../components/AnnotationInspector";
 import { TutorDock } from "../components/TutorDock";
 
@@ -34,6 +36,9 @@ function boundedPoints(points: AnnotationPoint[]): CreateAnnotationRequest["poin
 
 export function WorkbenchPage() {
   const { sessionId } = useParams();
+  const [searchParams] = useSearchParams();
+  const evidenceId = searchParams.get("evidence");
+  const reviewMode = searchParams.get("mode") === "review";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [playing, setPlaying] = useState(false);
@@ -60,6 +65,11 @@ export function WorkbenchPage() {
     queryKey: ["annotation-dispositions", sessionId],
     queryFn: () => fetchAnnotationDispositions(sessionId!),
     enabled: Boolean(sessionId),
+  });
+  const evidence = useQuery({
+    queryKey: ["evidence-target", sessionId, evidenceId],
+    queryFn: () => fetchEvidenceTarget(sessionId!, evidenceId!),
+    enabled: Boolean(sessionId && evidenceId && reviewMode),
   });
   const advance = useMutation({
     mutationFn: async (bars: number) => {
@@ -258,6 +268,7 @@ export function WorkbenchPage() {
     [createDrawing],
   );
   const startDrawing = (tool: Exclude<DrawingTool, "select">) => {
+    if (reviewMode) return;
     setDrawingTool(tool);
     setDrawingRequest((value) => value + 1);
   };
@@ -272,6 +283,12 @@ export function WorkbenchPage() {
     const timer = window.setTimeout(() => advance.mutate(speed), 650);
     return () => window.clearTimeout(timer);
   }, [advance, playing, session.data, speed]);
+
+  useEffect(() => {
+    if (evidence.data?.annotation_id) {
+      setSelectedAnnotationId(evidence.data.annotation_id);
+    }
+  }, [evidence.data?.annotation_id]);
 
   if (!sessionId) {
     return (
@@ -291,6 +308,7 @@ export function WorkbenchPage() {
   const delta = session.data;
   const state = delta.session;
   const execution = delta.execution;
+  const readOnly = reviewMode || state.status === "completed";
   const visibleLabel = state.hidden_real_date
     ? `Frame ${String(state.frame.current_index).padStart(5, "0")}`
     : new Date(state.frame.visible_at).toLocaleString("zh-CN", { hour12: false });
@@ -300,27 +318,39 @@ export function WorkbenchPage() {
       <header className="workbench-top">
         <strong>{state.instrument.canonical_symbol}</strong>
         <span>1m</span>
-        <span className="replay-pill">REPLAY</span>
+        <span className="replay-pill">{readOnly ? "REVIEW" : "REPLAY"}</span>
         <span className="workbench-meta">{visibleLabel}</span>
         <span className="workbench-meta">revision {state.revision}</span>
         <span className="data-ok">数据质量 · OK</span>
-        <button
+        {readOnly ? (
+          <Link
+            className="secondary-action"
+            to={
+              evidenceId
+                ? evidenceReturnUrl(sessionId, evidenceId)
+                : `/sessions/${sessionId}/review`
+            }
+          >
+            {evidenceId ? "返回证据索引" : "返回完整复盘"}
+          </Link>
+        ) : <button
           className="danger-action"
           disabled={finish.isPending}
           onClick={() => { setPlaying(false); finish.mutate(); }}
           type="button"
         >
           <Square size={12} />结束会话
-        </button>
+        </button>}
       </header>
 
       <div className="workbench-grid">
         <aside className="drawing-rail" aria-label="绘图工具">
-          <button className={drawingTool === "select" ? "is-active" : ""} onClick={() => setDrawingTool("select")} title="选择" type="button">↖</button>
-          <button className={drawingTool === "line" ? "is-active" : ""} onClick={() => startDrawing("line")} title="趋势线" type="button">╱</button>
-          <button className={drawingTool === "zone" ? "is-active" : ""} onClick={() => startDrawing("zone")} title="矩形" type="button">□</button>
+          <button className={drawingTool === "select" ? "is-active" : ""} disabled={readOnly} onClick={() => setDrawingTool("select")} title="选择" type="button">↖</button>
+          <button className={drawingTool === "line" ? "is-active" : ""} disabled={readOnly} onClick={() => startDrawing("line")} title="趋势线" type="button">╱</button>
+          <button className={drawingTool === "zone" ? "is-active" : ""} disabled={readOnly} onClick={() => startDrawing("zone")} title="矩形" type="button">□</button>
           <button
             className={drawingTool === "marker" ? "is-active" : ""}
+            disabled={readOnly}
             onClick={() => startDrawing("marker")}
             title="在图上标记观察"
             type="button"
@@ -347,6 +377,7 @@ export function WorkbenchPage() {
             drawingRequest={drawingRequest}
             onDrawingComplete={handleDrawingComplete}
             onAnnotationSelect={setSelectedAnnotationId}
+            evidenceTarget={evidence.data ?? null}
           />
         </main>
         <aside className="workbench-dock">
@@ -360,7 +391,7 @@ export function WorkbenchPage() {
               <label>交易逻辑<textarea onChange={(event) => setThesis(event.target.value)} placeholder="为什么此刻值得交易？" required value={thesis} /></label>
               <label>失效条件<textarea onChange={(event) => setInvalidation(event.target.value)} placeholder="什么发生时证明判断错误？" required value={invalidation} /></label>
               <label>风险金额<input min="0.01" onChange={(event) => setRiskAmount(event.target.value)} step="0.01" type="number" value={riskAmount} /></label>
-              <button className="primary-action" disabled={lockPlan.isPending || thesis.length < 3 || invalidation.length < 3} type="submit">锁定计划</button>
+              <button className="primary-action" disabled={readOnly || lockPlan.isPending || thesis.length < 3 || invalidation.length < 3} type="submit">锁定计划</button>
             </form>
           ) : (
             <form className="dock-card decision-form" onSubmit={(event) => { event.preventDefault(); placeOrder.mutate(); }}>
@@ -371,7 +402,7 @@ export function WorkbenchPage() {
               <label>数量<input min="0.00001" onChange={(event) => setQuantity(event.target.value)} step="0.00001" type="number" value={quantity} /></label>
               {orderType !== "MARKET" && <label>{orderType === "LIMIT" ? "限价" : "触发价"}<input min="0.01" onChange={(event) => setTriggerPrice(event.target.value)} step="0.01" type="number" value={triggerPrice} /></label>}
               {side === "BUY" && <><label>止盈价（可选）<input min="0.01" onChange={(event) => setTakeProfit(event.target.value)} step="0.01" type="number" value={takeProfit} /></label><label>保护止损（成对）<input min="0.01" onChange={(event) => setProtectiveStop(event.target.value)} step="0.01" type="number" value={protectiveStop} /></label></>}
-              <button className="primary-action" disabled={placeOrder.isPending || (orderType !== "MARKET" && !triggerPrice)} type="submit">提交 · 下一根激活</button>
+              <button className="primary-action" disabled={readOnly || placeOrder.isPending || (orderType !== "MARKET" && !triggerPrice)} type="submit">提交 · 下一根激活</button>
             </form>
           )}
           <div className="dock-card">
@@ -386,7 +417,7 @@ export function WorkbenchPage() {
             </label>
             <button
               className="secondary-action"
-              disabled={!annotationLabel.trim() || markCurrent.isPending}
+              disabled={readOnly || !annotationLabel.trim() || markCurrent.isPending}
               onClick={() => markCurrent.mutate()}
               type="button"
             >
@@ -401,10 +432,25 @@ export function WorkbenchPage() {
               <div><dt>Progress</dt><dd>{(state.frame.progress * 100).toFixed(2)}%</dd></div>
             </dl>
           </div>
-          <TutorDock
+          {!readOnly && <TutorDock
             sessionId={sessionId}
             onAnnotationsChanged={handleAnnotationsChanged}
-          />
+          />}
+          {reviewMode && (
+            <div className="dock-card evidence-focus-card" role="status">
+              <span className="page-kicker">EVIDENCE FOCUS</span>
+              {evidence.isLoading && <p>正在定位证据…</p>}
+              {evidence.isError && <p>无法定位：{evidence.error.message}</p>}
+              {evidence.data && (
+                <>
+                  <strong>{evidence.data.kind}</strong>
+                  <code>{evidence.data.evidence_id}</code>
+                  <p>{evidence.data.occurred_at ?? "该证据没有时间坐标"}</p>
+                  <p>{evidence.data.price ? `价格 ${evidence.data.price}` : "该证据没有价格坐标"}</p>
+                </>
+              )}
+            </div>
+          )}
           <div className="dock-card annotation-list">
             <span className="page-kicker">图层对象</span>
             {(dispositions.data?.dispositions ?? []).map((item) => (
@@ -416,6 +462,7 @@ export function WorkbenchPage() {
           <AnnotationInspector
             disposition={selectedDisposition}
             pending={annotationAction.isPending}
+            readOnly={readOnly}
             onAction={(action, label, points) => {
               if (selectedAnnotationId) annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
             }}
@@ -425,15 +472,16 @@ export function WorkbenchPage() {
           <button
             aria-label={playing ? "暂停" : "播放"}
             className="play-button"
+            disabled={readOnly}
             onClick={() => setPlaying((value) => !value)}
             type="button"
           >
             {playing ? <Pause size={15} /> : <Play size={15} />}
           </button>
-          <button disabled={advance.isPending} onClick={() => advance.mutate(1)} type="button">下一根 K 线<ChevronRight size={13} /></button>
+          <button disabled={readOnly || advance.isPending} onClick={() => advance.mutate(1)} type="button">下一根 K 线<ChevronRight size={13} /></button>
           <span>速度</span>
           {[1, 2, 5, 10, 20].map((value) => (
-            <button className={speed === value ? "is-active" : ""} key={value} onClick={() => setSpeed(value)} type="button">{value}×</button>
+            <button className={speed === value ? "is-active" : ""} disabled={readOnly} key={value} onClick={() => setSpeed(value)} type="button">{value}×</button>
           ))}
           <div className="timeline"><span style={{ width: `${state.frame.progress * 100}%` }} /></div>
           <code>{visibleLabel}</code>
@@ -446,7 +494,7 @@ export function WorkbenchPage() {
             <span>持仓</span><strong>{execution?.portfolio.position_quantity ?? "0"} {state.instrument.base_currency}</strong>
             <span>最新订单</span><strong>{execution?.orders?.at(-1)?.status ?? "无"}</strong>
           </div>
-          {execution?.orders?.some((order) => order.status === "PENDING" && !order.parent_order_id) && <button className="cancel-pending" disabled={cancelPending.isPending} onClick={() => { const pending = execution.orders?.find((order) => order.status === "PENDING" && !order.parent_order_id); if (pending) cancelPending.mutate(pending.order_id); }} type="button">取消待成交订单</button>}
+          {!readOnly && execution?.orders?.some((order) => order.status === "PENDING" && !order.parent_order_id) && <button className="cancel-pending" disabled={cancelPending.isPending} onClick={() => { const pending = execution.orders?.find((order) => order.status === "PENDING" && !order.parent_order_id); if (pending) cancelPending.mutate(pending.order_id); }} type="button">取消待成交订单</button>}
           {(advance.isError || finish.isError || lockPlan.isError || placeOrder.isError) && <div className="inline-error">{advance.error?.message ?? finish.error?.message ?? lockPlan.error?.message ?? placeOrder.error?.message}</div>}
         </section>
       </div>

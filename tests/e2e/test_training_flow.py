@@ -59,6 +59,27 @@ def test_user_can_complete_core_training_flow(
         page.get_by_role("button", name="结束会话").click()
     expect(page).to_have_url(f"{stack.web_url}/sessions/{session_id}/complete")
     expect(page.get_by_text("确定性复盘", exact=False)).to_be_visible(timeout=30_000)
+    page.get_by_role("link", name="打开完整复盘").click()
+    evidence_link = page.locator(".evidence-row").first
+    evidence_dom_id = evidence_link.get_attribute("id")
+    evidence_href = evidence_link.get_attribute("href")
+    assert evidence_dom_id is not None
+    assert evidence_href is not None
+    evidence_link.click()
+    expect(page).to_have_url(f"{stack.web_url}{evidence_href}")
+    expect(page.get_by_role("button", name="下一根 K 线")).to_be_disabled()
+    expect(page.locator(".evidence-focus-card")).to_be_visible()
+    expect(page.locator(".replay-chart-shell")).to_have_attribute(
+        "data-evidence-id",
+        evidence_dom_id.removeprefix("evidence-"),
+    )
+    page.reload()
+    expect(page.locator(".evidence-focus-card")).to_be_visible()
+    page.get_by_role("link", name="返回证据索引").click()
+    expect(page).to_have_url(
+        f"{stack.web_url}/sessions/{session_id}/review#{evidence_dom_id}"
+    )
+    expect(page.locator(f'[id="{evidence_dom_id}"]')).to_be_focused()
 
     response = page.request.get(f"{stack.api_url}/api/v1/sessions/{session_id}")
     assert response.ok

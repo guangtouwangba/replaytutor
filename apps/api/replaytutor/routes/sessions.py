@@ -12,6 +12,7 @@ from replaytutor.contracts import (
     CompletedSession,
     CreateAnnotationRequest,
     CreateSessionSpec,
+    EvidenceTarget,
     FinishSessionRequest,
     LockTradePlanRequest,
     OrderResult,
@@ -25,7 +26,7 @@ from replaytutor.contracts import (
 )
 from replaytutor.errors import ApiError
 from replaytutor.modules.annotations import AnnotationService
-from replaytutor.modules.evidence_review import EvidenceReviewService
+from replaytutor.modules.evidence_review import EvidenceResolver, EvidenceReviewService
 from replaytutor.modules.execution.service import ExecutionService
 from replaytutor.modules.market_data.service import MarketDataError
 from replaytutor.modules.market_rules import RuleViolation
@@ -199,6 +200,22 @@ def get_training_review(request: Request, session_id: str) -> TrainingReview:
     try:
         settings: Settings = request.app.state.settings
         return EvidenceReviewService(settings).get(session_id)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.get(
+    "/sessions/{session_id}/evidence/{evidence_id}",
+    response_model=EvidenceTarget,
+)
+def resolve_evidence(
+    request: Request,
+    session_id: str,
+    evidence_id: str,
+) -> EvidenceTarget:
+    try:
+        settings: Settings = request.app.state.settings
+        return EvidenceResolver(settings).resolve(session_id, evidence_id)
     except (TrainingSessionError, MarketDataError) as error:
         raise translate(error) from error
 

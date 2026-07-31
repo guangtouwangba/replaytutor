@@ -139,6 +139,10 @@ Tutor 生成的图上标注只能写入独立 AI 图层，初始状态为 `propo
 拒绝或修改时由应用追加处置事件；Agent 不得覆盖原始标注、转换为用户图层，
 也不得直接删除审计记录。
 
+Tutor 引用的 `evidence_id` 只作为只读定位键。时间、价格、frame、订单、成交和
+标注实体必须由应用的 `EvidenceResolver` 解析；Agent 不能自行拼装深链接或扩大
+当前 frame 的可见边界。
+
 ```json
 {
   "summary": "",

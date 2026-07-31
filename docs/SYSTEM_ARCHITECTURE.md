@@ -9,6 +9,11 @@ append-only 处置事件。`session_annotation` 继续保存不可变原始对�
 `proposed`，用户接受后仍保持 `layer=ai` 与 `provenance_run_id`，不得伪装成用户
 原始判断。
 
+实施注记（2026-07-31）：`EvidenceResolver` 将计划、订单、成交、可见 K 线和
+用户/AI 标注解析为只读 `EvidenceTarget`。复盘链接使用
+`/sessions/{session_id}?mode=review&evidence={evidence_id}`；REVIEW 工作台禁止
+推进回放或写入业务状态，只负责定位时间、价格和实体图层。
+
 实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
 `0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根
 激活的模拟撮合、Decimal 账本、确定性复盘、不可变 Playbook、用户/AI 图层，

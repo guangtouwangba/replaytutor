@@ -251,6 +251,10 @@ button.status-pill { cursor: pointer; }
 .review-columns p { color: var(--secondary); font-size: 11px; }
 .evidence-row { display: grid; grid-template-columns: 45px 1fr 90px; gap: 8px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 9px; }
 .evidence-row span, .evidence-row code { color: var(--muted); }
+.evidence-row { color: inherit; text-decoration: none; }
+.evidence-row:hover, .evidence-row:focus { background: #152131; outline: 1px solid var(--action-primary); }
+.evidence-focus-card { display: grid; gap: 8px; }
+.evidence-focus-card code { overflow-wrap: anywhere; }
 .review-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .review-actions > code { color: var(--muted); font-size: 9px; }
 .academy-page, .playbooks-page, .settings-page, .strategy-page { max-width: 1120px; margin: 0 auto; }

@@ -151,10 +151,12 @@ def test_user_annotation_revision_and_delete_are_append_only(
     )
     assert deleted.status_code == 200
     assert deleted.json()["state"] == "deleted"
+    assert deleted.json()["effective_label"] == "修订趋势线"
     restored = client.get(
         f"/api/v1/sessions/{session['session_id']}/annotations/dispositions"
     ).json()
     assert restored["dispositions"][0]["state"] == "deleted"
+    assert restored["dispositions"][0]["effective_label"] == "修订趋势线"
     with connect_database(settings.database_path) as connection:
         original = connection.execute(
             "SELECT label FROM session_annotation WHERE annotation_id = ?",

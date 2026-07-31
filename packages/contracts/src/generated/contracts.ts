@@ -22,6 +22,7 @@ export type { DatasetListResponse } from "./models/DatasetListResponse";
 export type { EpisodeReview } from "./models/EpisodeReview";
 export type { ErrorEnvelope } from "./models/ErrorEnvelope";
 export type { EvidenceRef } from "./models/EvidenceRef";
+export type { EvidenceTarget } from "./models/EvidenceTarget";
 export type { ExecutionFill } from "./models/ExecutionFill";
 export type { ExecutionSnapshot } from "./models/ExecutionSnapshot";
 export type { FinishSessionRequest } from "./models/FinishSessionRequest";

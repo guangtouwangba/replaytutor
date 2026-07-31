@@ -7,6 +7,7 @@ import type {
   ChartAnnotation,
   CreateAnnotationRequest,
   CreateSessionSpec,
+  EvidenceTarget,
   FinishSessionRequest,
   LockTradePlanRequest,
   OrderResult,
@@ -190,6 +191,18 @@ export async function fetchTrainingReview(
   return contractJson(
     await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/review`),
     "TrainingReview",
+  );
+}
+
+export async function fetchEvidenceTarget(
+  sessionId: string,
+  evidenceId: string,
+): Promise<EvidenceTarget> {
+  return contractJson(
+    await fetch(
+      `${API_BASE_URL}/api/v1/sessions/${sessionId}/evidence/${evidenceId}`,
+    ),
+    "EvidenceTarget",
   );
 }
 

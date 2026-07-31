@@ -8,6 +8,7 @@ from typing import Any, Literal, cast
 
 from replaytutor.config import Settings
 from replaytutor.contracts import (
+    AnnotationDisposition,
     CapabilityDimension,
     EvidenceRef,
     ReviewMetric,
@@ -15,6 +16,7 @@ from replaytutor.contracts import (
     TrainingReviewListResponse,
 )
 from replaytutor.ids import new_id
+from replaytutor.modules.annotations import load_dispositions
 from replaytutor.modules.execution.service import load_execution
 from replaytutor.modules.market_data.service import MarketDataService, utc_text
 from replaytutor.modules.training_session.service import (
@@ -106,8 +108,7 @@ class EvidenceReviewService:
                     label="R 倍数",
                     value=text(
                         net_pnl / Decimal(execution.plan.risk_amount)
-                        if execution.plan is not None
-                        and Decimal(execution.plan.risk_amount) > 0
+                        if execution.plan is not None and Decimal(execution.plan.risk_amount) > 0
                         else Decimal("0")
                     ),
                     unit="R",
@@ -125,7 +126,10 @@ class EvidenceReviewService:
                     unit="%",
                 ),
             ]
-            evidence = self._evidence(execution)
+            evidence = self._evidence(
+                execution,
+                load_dispositions(connection, session_id),
+            )
             good_process = execution.plan is not None
             if not execution.fills:
                 outcome: Literal[
@@ -241,10 +245,7 @@ class EvidenceReviewService:
         buy_quantity = sum((Decimal(fill.quantity) for fill in buys), Decimal("0"))
         entry_price = (
             sum(
-                (
-                    Decimal(fill.price) * Decimal(fill.quantity)
-                    for fill in buys
-                ),
+                (Decimal(fill.price) * Decimal(fill.quantity) for fill in buys),
                 Decimal("0"),
             )
             / buy_quantity
@@ -288,10 +289,7 @@ class EvidenceReviewService:
             )
             exit_price = (
                 sum(
-                    (
-                        Decimal(fill.price) * Decimal(fill.quantity)
-                        for fill in sells
-                    ),
+                    (Decimal(fill.price) * Decimal(fill.quantity) for fill in sells),
                     Decimal("0"),
                 )
                 / sold_quantity
@@ -313,7 +311,10 @@ class EvidenceReviewService:
         }
 
     @staticmethod
-    def _evidence(execution: Any) -> list[EvidenceRef]:
+    def _evidence(
+        execution: Any,
+        dispositions: list[AnnotationDisposition],
+    ) -> list[EvidenceRef]:
         refs: list[EvidenceRef] = []
         if execution.plan is not None:
             refs.append(
@@ -346,5 +347,20 @@ class EvidenceReviewService:
                 price=fill.price,
             )
             for fill in execution.fills
+        )
+        refs.extend(
+            EvidenceRef(
+                evidence_id=item.annotation_id,
+                kind=(
+                    "user_annotation"
+                    if item.original_annotation.layer == "user"
+                    else "ai_annotation"
+                ),
+                summary=f"{item.state}: {item.effective_label}",
+                frame_id=item.original_annotation.frame_id,
+                occurred_at=item.effective_points[0].time,
+                price=item.effective_points[0].price,
+            )
+            for item in dispositions
         )
         return refs

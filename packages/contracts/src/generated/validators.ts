@@ -2677,7 +2677,9 @@ const schemas = {
           "order",
           "fill",
           "bar",
-          "metric"
+          "metric",
+          "user_annotation",
+          "ai_annotation"
         ],
         "title": "Kind",
         "type": "string"
@@ -2719,6 +2721,141 @@ const schemas = {
       "summary"
     ],
     "title": "EvidenceRef",
+    "type": "object"
+  },
+  "EvidenceTarget": {
+    "additionalProperties": false,
+    "properties": {
+      "annotation_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Annotation Id"
+      },
+      "evidence_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Evidence Id",
+        "type": "string"
+      },
+      "fill_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Fill Id"
+      },
+      "frame_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Frame Id"
+      },
+      "kind": {
+        "enum": [
+          "plan",
+          "order",
+          "fill",
+          "bar",
+          "metric",
+          "user_annotation",
+          "ai_annotation"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "layer": {
+        "anyOf": [
+          {
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Layer"
+      },
+      "occurred_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Occurred At"
+      },
+      "order_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Order Id"
+      },
+      "price": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Price"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "evidence_id",
+      "session_id",
+      "kind"
+    ],
+    "title": "EvidenceTarget",
     "type": "object"
   },
   "ExecutionFill": {
@@ -9218,7 +9355,9 @@ const schemas = {
               "order",
               "fill",
               "bar",
-              "metric"
+              "metric",
+              "user_annotation",
+              "ai_annotation"
             ],
             "title": "Kind",
             "type": "string"
@@ -9468,7 +9607,9 @@ const schemas = {
               "order",
               "fill",
               "bar",
-              "metric"
+              "metric",
+              "user_annotation",
+              "ai_annotation"
             ],
             "title": "Kind",
             "type": "string"
