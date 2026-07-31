@@ -3,7 +3,7 @@ import { ArrowRight, Database, PlayCircle, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { fetchDatasets } from "../api/datasets";
-import { fetchSessions } from "../api/sessions";
+import { fetchSessions, fetchTrainingReviews } from "../api/sessions";
 
 export function HomePage() {
   const [onboarding, setOnboarding] = useState(
@@ -11,6 +11,10 @@ export function HomePage() {
   );
   const datasets = useQuery({ queryKey: ["datasets"], queryFn: fetchDatasets });
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: fetchSessions });
+  const reviews = useQuery({
+    queryKey: ["training-reviews"],
+    queryFn: fetchTrainingReviews,
+  });
   const first = datasets.data?.datasets[0];
   const resumable = sessions.data?.sessions.find((item) => item.status !== "completed");
 
@@ -71,6 +75,23 @@ export function HomePage() {
           <div className="section-title">
             <h2>继续上次训练</h2>
             <Link to={`/sessions/${resumable.session_id}`}>恢复到 revision {resumable.revision}</Link>
+          </div>
+        )}
+        {reviews.data?.recommendation && (
+          <div className="training-recommendation">
+            <div>
+              <div className="page-kicker">NEXT TRAINING · DETERMINISTIC</div>
+              <h2>
+                {reviews.data.recommendation.status === "ready"
+                  ? `重点训练：${reviews.data.recommendation.dimension}`
+                  : "继续积累可解析样本"}
+              </h2>
+              <p>{reviews.data.recommendation.reason}</p>
+              <small>{reviews.data.recommendation.sample_count} 个可解析会话</small>
+            </div>
+            <Link className="secondary-action" to={reviews.data.recommendation.setup_path ?? "/setup"}>
+              {reviews.data.recommendation.status === "ready" ? "开始推荐训练" : "完成下一场"}
+            </Link>
           </div>
         )}
         <div className="section-title"><h2>行情快照</h2><Link to="/data">管理数据</Link></div>

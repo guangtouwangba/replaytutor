@@ -951,6 +951,12 @@ const schemas = {
   "CapabilityDimension": {
     "additionalProperties": false,
     "properties": {
+      "evaluated_count": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Evaluated Count",
+        "type": "integer"
+      },
       "key": {
         "enum": [
           "environment",
@@ -965,6 +971,12 @@ const schemas = {
       "label": {
         "title": "Label",
         "type": "string"
+      },
+      "passed_count": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Passed Count",
+        "type": "integer"
       },
       "sample_count": {
         "minimum": 0,
@@ -983,6 +995,14 @@ const schemas = {
         ],
         "default": null,
         "title": "Score"
+      },
+      "session_ids": {
+        "items": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "type": "string"
+        },
+        "title": "Session Ids",
+        "type": "array"
       },
       "status": {
         "enum": [
@@ -2600,6 +2620,27 @@ const schemas = {
       "missing_context"
     ],
     "title": "EpisodeReview",
+    "type": "object"
+  },
+  "EquityCurvePoint": {
+    "additionalProperties": false,
+    "properties": {
+      "equity": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+        "title": "Equity",
+        "type": "string"
+      },
+      "occurred_at": {
+        "format": "date-time",
+        "title": "Occurred At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "occurred_at",
+      "equity"
+    ],
+    "title": "EquityCurvePoint",
     "type": "object"
   },
   "ErrorEnvelope": {
@@ -6451,6 +6492,47 @@ const schemas = {
     "title": "ReviewDimension",
     "type": "object"
   },
+  "ReviewDimensionObservation": {
+    "additionalProperties": false,
+    "properties": {
+      "evaluated_count": {
+        "minimum": 0,
+        "title": "Evaluated Count",
+        "type": "integer"
+      },
+      "evidence_ids": {
+        "items": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "key": {
+        "enum": [
+          "environment",
+          "plan",
+          "risk",
+          "execution",
+          "management"
+        ],
+        "title": "Key",
+        "type": "string"
+      },
+      "passed_count": {
+        "minimum": 0,
+        "title": "Passed Count",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "key",
+      "passed_count",
+      "evaluated_count"
+    ],
+    "title": "ReviewDimensionObservation",
+    "type": "object"
+  },
   "ReviewListResponse": {
     "$defs": {
       "AnnotationPoint": {
@@ -7051,6 +7133,52 @@ const schemas = {
       "scope_kind"
     ],
     "title": "ReviewRequest",
+    "type": "object"
+  },
+  "ReviewTimelineItem": {
+    "additionalProperties": false,
+    "properties": {
+      "evidence_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Evidence Id"
+      },
+      "kind": {
+        "enum": [
+          "plan",
+          "order",
+          "fill",
+          "user_annotation",
+          "ai_annotation",
+          "session_completed"
+        ],
+        "title": "Kind",
+        "type": "string"
+      },
+      "label": {
+        "title": "Label",
+        "type": "string"
+      },
+      "occurred_at": {
+        "format": "date-time",
+        "title": "Occurred At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "kind",
+      "label",
+      "occurred_at"
+    ],
+    "title": "ReviewTimelineItem",
     "type": "object"
   },
   "SessionCommand": {
@@ -9609,8 +9737,108 @@ const schemas = {
     "title": "TradeSyncResult",
     "type": "object"
   },
+  "TrainingRecommendation": {
+    "additionalProperties": false,
+    "properties": {
+      "dimension": {
+        "anyOf": [
+          {
+            "enum": [
+              "environment",
+              "plan",
+              "risk",
+              "execution",
+              "management"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Dimension"
+      },
+      "playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Playbook Id"
+      },
+      "reason": {
+        "title": "Reason",
+        "type": "string"
+      },
+      "sample_count": {
+        "minimum": 0,
+        "title": "Sample Count",
+        "type": "integer"
+      },
+      "score": {
+        "anyOf": [
+          {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Score"
+      },
+      "setup_path": {
+        "default": "/setup",
+        "title": "Setup Path",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "insufficient",
+          "ready"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "sample_count",
+      "reason"
+    ],
+    "title": "TrainingRecommendation",
+    "type": "object"
+  },
   "TrainingReview": {
     "$defs": {
+      "EquityCurvePoint": {
+        "additionalProperties": false,
+        "properties": {
+          "equity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Equity",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "occurred_at",
+          "equity"
+        ],
+        "title": "EquityCurvePoint",
+        "type": "object"
+      },
       "EvidenceRef": {
         "additionalProperties": false,
         "properties": {
@@ -9725,6 +9953,47 @@ const schemas = {
         "title": "PlaybookRuleCheck",
         "type": "object"
       },
+      "ReviewDimensionObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evaluated_count": {
+            "minimum": 0,
+            "title": "Evaluated Count",
+            "type": "integer"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "key": {
+            "enum": [
+              "environment",
+              "plan",
+              "risk",
+              "execution",
+              "management"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "passed_count": {
+            "minimum": 0,
+            "title": "Passed Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "passed_count",
+          "evaluated_count"
+        ],
+        "title": "ReviewDimensionObservation",
+        "type": "object"
+      },
       "ReviewMetric": {
         "additionalProperties": false,
         "properties": {
@@ -9773,6 +10042,52 @@ const schemas = {
         ],
         "title": "ReviewMetric",
         "type": "object"
+      },
+      "ReviewTimelineItem": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Id"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "order",
+              "fill",
+              "user_annotation",
+              "ai_annotation",
+              "session_completed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "occurred_at"
+        ],
+        "title": "ReviewTimelineItem",
+        "type": "object"
       }
     },
     "additionalProperties": false,
@@ -9781,6 +10096,20 @@ const schemas = {
         "format": "date-time",
         "title": "Created At",
         "type": "string"
+      },
+      "dimension_observations": {
+        "items": {
+          "$ref": "#/$defs/ReviewDimensionObservation"
+        },
+        "title": "Dimension Observations",
+        "type": "array"
+      },
+      "equity_curve": {
+        "items": {
+          "$ref": "#/$defs/EquityCurvePoint"
+        },
+        "title": "Equity Curve",
+        "type": "array"
       },
       "evidence": {
         "items": {
@@ -9859,6 +10188,13 @@ const schemas = {
         "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
         "title": "Session Id",
         "type": "string"
+      },
+      "timeline": {
+        "items": {
+          "$ref": "#/$defs/ReviewTimelineItem"
+        },
+        "title": "Timeline",
+        "type": "array"
       }
     },
     "required": [
@@ -9879,6 +10215,12 @@ const schemas = {
       "CapabilityDimension": {
         "additionalProperties": false,
         "properties": {
+          "evaluated_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Evaluated Count",
+            "type": "integer"
+          },
           "key": {
             "enum": [
               "environment",
@@ -9893,6 +10235,12 @@ const schemas = {
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "passed_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Passed Count",
+            "type": "integer"
           },
           "sample_count": {
             "minimum": 0,
@@ -9912,6 +10260,14 @@ const schemas = {
             "default": null,
             "title": "Score"
           },
+          "session_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Session Ids",
+            "type": "array"
+          },
           "status": {
             "enum": [
               "insufficient",
@@ -9928,6 +10284,27 @@ const schemas = {
           "status"
         ],
         "title": "CapabilityDimension",
+        "type": "object"
+      },
+      "EquityCurvePoint": {
+        "additionalProperties": false,
+        "properties": {
+          "equity": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Equity",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "occurred_at",
+          "equity"
+        ],
+        "title": "EquityCurvePoint",
         "type": "object"
       },
       "EvidenceRef": {
@@ -10044,6 +10421,47 @@ const schemas = {
         "title": "PlaybookRuleCheck",
         "type": "object"
       },
+      "ReviewDimensionObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evaluated_count": {
+            "minimum": 0,
+            "title": "Evaluated Count",
+            "type": "integer"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "key": {
+            "enum": [
+              "environment",
+              "plan",
+              "risk",
+              "execution",
+              "management"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "passed_count": {
+            "minimum": 0,
+            "title": "Passed Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "passed_count",
+          "evaluated_count"
+        ],
+        "title": "ReviewDimensionObservation",
+        "type": "object"
+      },
       "ReviewMetric": {
         "additionalProperties": false,
         "properties": {
@@ -10093,6 +10511,131 @@ const schemas = {
         "title": "ReviewMetric",
         "type": "object"
       },
+      "ReviewTimelineItem": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Id"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "order",
+              "fill",
+              "user_annotation",
+              "ai_annotation",
+              "session_completed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "occurred_at"
+        ],
+        "title": "ReviewTimelineItem",
+        "type": "object"
+      },
+      "TrainingRecommendation": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "anyOf": [
+              {
+                "enum": [
+                  "environment",
+                  "plan",
+                  "risk",
+                  "execution",
+                  "management"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Dimension"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "sample_count": {
+            "minimum": 0,
+            "title": "Sample Count",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Score"
+          },
+          "setup_path": {
+            "default": "/setup",
+            "title": "Setup Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "insufficient",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "sample_count",
+          "reason"
+        ],
+        "title": "TrainingRecommendation",
+        "type": "object"
+      },
       "TrainingReview": {
         "additionalProperties": false,
         "properties": {
@@ -10100,6 +10643,20 @@ const schemas = {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "dimension_observations": {
+            "items": {
+              "$ref": "#/$defs/ReviewDimensionObservation"
+            },
+            "title": "Dimension Observations",
+            "type": "array"
+          },
+          "equity_curve": {
+            "items": {
+              "$ref": "#/$defs/EquityCurvePoint"
+            },
+            "title": "Equity Curve",
+            "type": "array"
           },
           "evidence": {
             "items": {
@@ -10178,6 +10735,13 @@ const schemas = {
             "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
             "title": "Session Id",
             "type": "string"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/$defs/ReviewTimelineItem"
+            },
+            "title": "Timeline",
+            "type": "array"
           }
         },
         "required": [
@@ -10203,6 +10767,9 @@ const schemas = {
         "title": "Dimensions",
         "type": "array"
       },
+      "recommendation": {
+        "$ref": "#/$defs/TrainingRecommendation"
+      },
       "reviews": {
         "items": {
           "$ref": "#/$defs/TrainingReview"
@@ -10219,7 +10786,8 @@ const schemas = {
     },
     "required": [
       "reviews",
-      "dimensions"
+      "dimensions",
+      "recommendation"
     ],
     "title": "TrainingReviewListResponse",
     "type": "object"

@@ -22,6 +22,15 @@ export function SessionReviewPage({ complete = false }: { readonly complete?: bo
   if (review.isLoading) return <div className="route-loading">正在生成确定性复盘…</div>;
   if (review.isError || !review.data) return <section className="page centered-page"><h1>复盘不可用</h1><p>{review.error?.message ?? "缺少复盘数据"}</p></section>;
   const data = review.data;
+  const equityValues = (data.equity_curve ?? []).map((point) => Number(point.equity));
+  const equityMin = Math.min(...equityValues);
+  const equityMax = Math.max(...equityValues);
+  const equityRange = Math.max(equityMax - equityMin, 1);
+  const equityPolyline = (data.equity_curve ?? []).map((point, index, points) => {
+    const x = points.length === 1 ? 0 : index / (points.length - 1) * 100;
+    const y = 100 - (Number(point.equity) - equityMin) / equityRange * 100;
+    return `${x},${y}`;
+  }).join(" ");
   return (
     <section className="page deterministic-review">
       <div className="review-hero">
@@ -53,6 +62,28 @@ export function SessionReviewPage({ complete = false }: { readonly complete?: bo
           </div>
         ))}
       </article>
+      <div className="review-detail-grid">
+        <article className="review-equity-panel">
+          <div className="review-section-heading"><div><div className="page-kicker">ACCOUNT PATH</div><h2>净值曲线</h2></div><span>{(data.equity_curve ?? []).length} points</span></div>
+          {(data.equity_curve ?? []).length > 0 ? (
+            <svg aria-label="会话净值曲线" preserveAspectRatio="none" role="img" viewBox="0 0 100 100">
+              <polyline fill="none" points={equityPolyline} stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+            </svg>
+          ) : <p>没有可生成曲线的可见行情。</p>}
+        </article>
+        <article className="review-timeline-panel">
+          <div className="review-section-heading"><div><div className="page-kicker">AUDIT TRAIL</div><h2>操作时间线</h2></div></div>
+          <div className="review-timeline">
+            {(data.timeline ?? []).map((item, index) => (
+              <div key={`${item.kind}-${item.evidence_id ?? index}`}>
+                <time>{new Date(item.occurred_at).toLocaleString("zh-CN", { hour12: false })}</time>
+                {item.evidence_id ? <Link to={evidenceWorkbenchUrl(sessionId!, item.evidence_id)}>{item.label}</Link> : <strong>{item.label}</strong>}
+                <span>{item.kind}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+      </div>
       {!complete && (
         <div className="after-action-review">
           <div>

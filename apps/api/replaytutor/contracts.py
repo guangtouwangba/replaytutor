@@ -462,6 +462,35 @@ class PlaybookEvaluation(ContractModel):
     checks: list[PlaybookRuleCheck]
 
 
+CapabilityKey = Literal["environment", "plan", "risk", "execution", "management"]
+
+
+class ReviewDimensionObservation(ContractModel):
+    key: CapabilityKey
+    passed_count: int = Field(ge=0)
+    evaluated_count: int = Field(ge=0)
+    evidence_ids: list[Identifier] = Field(default_factory=list)
+
+
+class EquityCurvePoint(ContractModel):
+    occurred_at: datetime
+    equity: DecimalString
+
+
+class ReviewTimelineItem(ContractModel):
+    kind: Literal[
+        "plan",
+        "order",
+        "fill",
+        "user_annotation",
+        "ai_annotation",
+        "session_completed",
+    ]
+    label: str
+    occurred_at: datetime
+    evidence_id: Identifier | None = None
+
+
 class TrainingReview(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     review_id: Identifier
@@ -479,22 +508,39 @@ class TrainingReview(ContractModel):
     metrics: list[ReviewMetric]
     evidence: list[EvidenceRef]
     rule_checks: list[PlaybookRuleCheck] = Field(default_factory=list)
+    dimension_observations: list[ReviewDimensionObservation] = Field(default_factory=list)
+    equity_curve: list[EquityCurvePoint] = Field(default_factory=list)
+    timeline: list[ReviewTimelineItem] = Field(default_factory=list)
     findings: list[str]
     created_at: datetime
 
 
 class CapabilityDimension(ContractModel):
-    key: Literal["environment", "plan", "risk", "execution", "management"]
+    key: CapabilityKey
     label: str
     sample_count: int = Field(ge=0)
     status: Literal["insufficient", "ready"]
     score: DecimalString | None = None
+    passed_count: int = Field(ge=0, default=0)
+    evaluated_count: int = Field(ge=0, default=0)
+    session_ids: list[Identifier] = Field(default_factory=list)
+
+
+class TrainingRecommendation(ContractModel):
+    status: Literal["insufficient", "ready"]
+    dimension: CapabilityKey | None = None
+    score: DecimalString | None = None
+    sample_count: int = Field(ge=0)
+    playbook_id: Identifier | None = None
+    reason: str
+    setup_path: str = "/setup"
 
 
 class TrainingReviewListResponse(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     reviews: list[TrainingReview]
     dimensions: list[CapabilityDimension]
+    recommendation: TrainingRecommendation
 
 
 class AgentCapability(ContractModel):

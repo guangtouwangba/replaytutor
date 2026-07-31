@@ -20,6 +20,12 @@ append-only 处置事件。`session_annotation` 继续保存不可变原始对�
 自由文本规则保持 `unknown`。Tutor 只能读取并原样转述这些检查，服务端会覆盖模型
 自行生成的规则状态。
 
+实施注记（2026-07-31）：训练聚合从每场不可变复盘中的
+`dimension_observations` 重算五维能力。每维至少 5 个可解析会话才显示分数，
+响应保留 passed/evaluated 原始计数与 session ID。训练推荐只使用最低确定性
+维度和该维度失败最多的 Playbook，不读取盈亏排名。单场复盘同时保存最多 200 点
+确定性净值曲线和可回跳操作时间线。
+
 实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
 `0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根
 激活的模拟撮合、Decimal 账本、确定性复盘、不可变 Playbook、用户/AI 图层，

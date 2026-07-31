@@ -10,8 +10,14 @@ from replaytutor.config import Settings
 from replaytutor.contracts import (
     AnnotationDisposition,
     CapabilityDimension,
+    CapabilityKey,
+    EquityCurvePoint,
     EvidenceRef,
+    PlaybookRuleCheck,
+    ReviewDimensionObservation,
     ReviewMetric,
+    ReviewTimelineItem,
+    TrainingRecommendation,
     TrainingReview,
     TrainingReviewListResponse,
 )
@@ -23,6 +29,7 @@ from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import (
     InvalidSessionStateError,
     SessionNotFoundError,
+    parse_utc,
 )
 from replaytutor.storage.database import connect_database
 
@@ -30,6 +37,32 @@ from replaytutor.storage.database import connect_database
 def text(value: Decimal) -> str:
     rendered = format(value, "f")
     return rendered.rstrip("0").rstrip(".") if "." in rendered else rendered
+
+
+DIMENSION_RULES: dict[CapabilityKey, set[str]] = {
+    "environment": set(),
+    "plan": {
+        "plan_locked_before_first_order",
+        "entry_side_matches_locked_plan",
+    },
+    "risk": {
+        "risk_amount_within_limit",
+        "protective_stop_present",
+    },
+    "execution": {
+        "order_activated_on_next_bar",
+        "no_order_after_session_complete",
+    },
+    "management": {"protective_stop_present"},
+}
+
+DIMENSION_LABELS: dict[CapabilityKey, str] = {
+    "environment": "环境识别",
+    "plan": "计划纪律",
+    "risk": "风险控制",
+    "execution": "执行质量",
+    "management": "持仓管理",
+}
 
 
 class EvidenceReviewService:
@@ -132,6 +165,15 @@ class EvidenceReviewService:
                 load_dispositions(connection, session_id),
             )
             playbook_evaluation = PlaybookEvaluator(self.settings).evaluate(session_id)
+            dimension_observations = self._dimension_observations(
+                playbook_evaluation.checks,
+                evidence,
+            )
+            equity_curve = self._equity_curve(values, execution)
+            timeline = self._timeline(
+                evidence,
+                parse_utc(str(values["completed_at"])),
+            )
             good_process = execution.plan is not None
             if not execution.fills:
                 outcome: Literal[
@@ -164,6 +206,11 @@ class EvidenceReviewService:
                 "rule_checks": [
                     item.model_dump(mode="json") for item in playbook_evaluation.checks
                 ],
+                "dimension_observations": [
+                    item.model_dump(mode="json") for item in dimension_observations
+                ],
+                "equity_curve": [item.model_dump(mode="json") for item in equity_curve],
+                "timeline": [item.model_dump(mode="json") for item in timeline],
                 "findings": findings,
             }
             review_hash = hashlib.sha256(
@@ -180,6 +227,9 @@ class EvidenceReviewService:
                 metrics=metrics,
                 evidence=evidence,
                 rule_checks=playbook_evaluation.checks,
+                dimension_observations=dimension_observations,
+                equity_curve=equity_curve,
+                timeline=timeline,
                 findings=findings,
                 created_at=now,
             )
@@ -207,29 +257,162 @@ class EvidenceReviewService:
                 """
             ).fetchall()
         reviews = [self.get(str(row["session_id"])) for row in rows]
-        sample_count = len(reviews)
-        dimensions = [
-            CapabilityDimension(
-                key=cast(
-                    Literal["environment", "plan", "risk", "execution", "management"],
-                    key,
-                ),
-                label=label,
-                sample_count=sample_count,
-                status="insufficient",
-                score=None,
-            )
-            for key, label in (
-                ("environment", "环境识别"),
-                ("plan", "计划纪律"),
-                ("risk", "风险控制"),
-                ("execution", "执行质量"),
-                ("management", "持仓管理"),
-            )
-        ]
+        dimensions = [self._aggregate_dimension(key, reviews) for key in DIMENSION_RULES]
         return TrainingReviewListResponse(
             reviews=reviews,
             dimensions=dimensions,
+            recommendation=self._recommend(dimensions, reviews),
+        )
+
+    @staticmethod
+    def _dimension_observations(
+        checks: list[PlaybookRuleCheck],
+        evidence: list[EvidenceRef],
+    ) -> list[ReviewDimensionObservation]:
+        observations: list[ReviewDimensionObservation] = []
+        for key, rule_ids in DIMENSION_RULES.items():
+            if key == "environment":
+                annotations = [
+                    item
+                    for item in evidence
+                    if item.kind == "user_annotation" and item.occurred_at is not None
+                ]
+                orders = [
+                    item
+                    for item in evidence
+                    if item.kind == "order" and item.occurred_at is not None
+                ]
+                evaluated = bool(annotations and orders)
+                passed = evaluated and min(
+                    cast(datetime, item.occurred_at) for item in annotations
+                ) <= min(cast(datetime, item.occurred_at) for item in orders)
+                observations.append(
+                    ReviewDimensionObservation(
+                        key=key,
+                        passed_count=1 if passed else 0,
+                        evaluated_count=1 if evaluated else 0,
+                        evidence_ids=(
+                            [
+                                *[item.evidence_id for item in annotations],
+                                min(
+                                    orders,
+                                    key=lambda item: cast(
+                                        datetime,
+                                        item.occurred_at,
+                                    ),
+                                ).evidence_id,
+                            ]
+                            if evaluated
+                            else []
+                        ),
+                    )
+                )
+                continue
+            relevant = [
+                check for check in checks if check.rule_id in rule_ids and check.status != "unknown"
+            ]
+            observations.append(
+                ReviewDimensionObservation(
+                    key=key,
+                    passed_count=sum(check.status == "passed" for check in relevant),
+                    evaluated_count=len(relevant),
+                    evidence_ids=sorted(
+                        {evidence_id for check in relevant for evidence_id in check.evidence_ids}
+                    ),
+                )
+            )
+        return observations
+
+    @staticmethod
+    def _aggregate_dimension(
+        key: CapabilityKey,
+        reviews: list[TrainingReview],
+    ) -> CapabilityDimension:
+        usable = [
+            (review, observation)
+            for review in reviews
+            for observation in review.dimension_observations
+            if observation.key == key and observation.evaluated_count > 0
+        ]
+        passed_count = sum(item.passed_count for _, item in usable)
+        evaluated_count = sum(item.evaluated_count for _, item in usable)
+        sample_count = len(usable)
+        ready = sample_count >= 5
+        score = (
+            text(Decimal(passed_count) / Decimal(evaluated_count) * Decimal("100"))
+            if ready and evaluated_count > 0
+            else None
+        )
+        return CapabilityDimension(
+            key=key,
+            label=DIMENSION_LABELS[key],
+            sample_count=sample_count,
+            status="ready" if ready else "insufficient",
+            score=score,
+            passed_count=passed_count,
+            evaluated_count=evaluated_count,
+            session_ids=[review.session_id for review, _ in usable],
+        )
+
+    @staticmethod
+    def _recommend(
+        dimensions: list[CapabilityDimension],
+        reviews: list[TrainingReview],
+    ) -> TrainingRecommendation:
+        ready = [
+            dimension
+            for dimension in dimensions
+            if dimension.status == "ready" and dimension.score is not None
+        ]
+        if not ready:
+            sample_count = max(
+                (dimension.sample_count for dimension in dimensions),
+                default=0,
+            )
+            return TrainingRecommendation(
+                status="insufficient",
+                sample_count=sample_count,
+                reason="每个能力维度至少需要 5 个可解析会话, 当前不生成弱项排名。",
+            )
+        weakest = min(
+            ready,
+            key=lambda item: (
+                Decimal(item.score or "100"),
+                list(DIMENSION_RULES).index(item.key),
+            ),
+        )
+        failure_counts: dict[str, int] = {}
+        for review in reviews:
+            if review.playbook_id is None:
+                continue
+            observation = next(
+                (item for item in review.dimension_observations if item.key == weakest.key),
+                None,
+            )
+            if observation is not None and observation.evaluated_count > observation.passed_count:
+                failure_counts[review.playbook_id] = failure_counts.get(review.playbook_id, 0) + 1
+        playbook_id = (
+            sorted(
+                failure_counts,
+                key=lambda item: (-failure_counts[item], item),
+            )[0]
+            if failure_counts
+            else next(
+                (review.playbook_id for review in reviews if review.playbook_id is not None),
+                None,
+            )
+        )
+        return TrainingRecommendation(
+            status="ready",
+            dimension=weakest.key,
+            score=weakest.score,
+            sample_count=weakest.sample_count,
+            playbook_id=playbook_id,
+            reason=(
+                f"{weakest.label}是当前最低的可解析维度; 推荐基于"
+                f" {weakest.sample_count} 个会话和确定性规则检查, 不使用盈利排名。"
+            ),
+            setup_path=(f"/setup?playbook_id={playbook_id}" if playbook_id else "/setup"),
         )
 
     def _excursion_metrics(
@@ -319,6 +502,79 @@ class EvidenceReviewService:
             "max_drawdown": max_drawdown,
             "exit_efficiency": exit_efficiency,
         }
+
+    def _equity_curve(
+        self,
+        session: dict[str, Any],
+        execution: Any,
+    ) -> list[EquityCurvePoint]:
+        bars = self.market_data.query_snapshot_bar_slice(
+            str(session["snapshot_id"]),
+            offset=int(session["start_index"]),
+            limit=int(session["current_index"]) - int(session["start_index"]) + 1,
+        )
+        fills = sorted(execution.fills, key=lambda item: item.executed_at)
+        cash = Decimal(str(session["initial_cash"]))
+        position = Decimal("0")
+        fill_index = 0
+        points: list[EquityCurvePoint] = []
+        for bar in bars:
+            while fill_index < len(fills) and fills[fill_index].executed_at <= bar.close_time:
+                fill = fills[fill_index]
+                quantity = Decimal(fill.quantity)
+                quote = Decimal(fill.quote_amount)
+                fee = Decimal(fill.fee)
+                if fill.side == "BUY":
+                    cash -= quote + fee
+                    position += quantity
+                else:
+                    cash += quote - fee
+                    position -= quantity
+                fill_index += 1
+            points.append(
+                EquityCurvePoint(
+                    occurred_at=bar.close_time,
+                    equity=text(cash + position * Decimal(bar.raw.close)),
+                )
+            )
+        if len(points) <= 200:
+            return points
+        selected = {round(index * (len(points) - 1) / 199) for index in range(200)}
+        return [point for index, point in enumerate(points) if index in selected]
+
+    @staticmethod
+    def _timeline(
+        evidence: list[EvidenceRef],
+        completed_at: datetime,
+    ) -> list[ReviewTimelineItem]:
+        items = [
+            ReviewTimelineItem(
+                kind=cast(
+                    Literal[
+                        "plan",
+                        "order",
+                        "fill",
+                        "user_annotation",
+                        "ai_annotation",
+                    ],
+                    item.kind,
+                ),
+                label=item.summary,
+                occurred_at=item.occurred_at,
+                evidence_id=item.evidence_id,
+            )
+            for item in evidence
+            if item.kind in {"plan", "order", "fill", "user_annotation", "ai_annotation"}
+            and item.occurred_at is not None
+        ]
+        items.append(
+            ReviewTimelineItem(
+                kind="session_completed",
+                label="训练会话结束",
+                occurred_at=completed_at,
+            )
+        )
+        return sorted(items, key=lambda item: (item.occurred_at, item.kind))
 
     @staticmethod
     def _evidence(

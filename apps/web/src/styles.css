@@ -275,6 +275,14 @@ button.status-pill { cursor: pointer; }
 .review-rule-row p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
 .rule-evidence-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .rule-evidence-links a { color: #8db9ff; font: 8px "IBM Plex Mono", monospace; }
+.review-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.review-equity-panel, .review-timeline-panel { min-height: 220px; padding: 16px; border: 1px solid var(--border); background: var(--panel); }
+.review-equity-panel svg { width: 100%; height: 150px; color: #72d6a4; overflow: visible; }
+.review-section-heading > span { color: var(--muted); font: 9px "IBM Plex Mono", monospace; }
+.review-timeline { max-height: 180px; overflow: auto; }
+.review-timeline > div { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 9px; }
+.review-timeline time, .review-timeline span { color: var(--muted); font-family: "IBM Plex Mono", monospace; }
+.review-timeline a { color: #8db9ff; }
 .academy-page, .playbooks-page, .settings-page, .strategy-page { max-width: 1120px; margin: 0 auto; }
 .academy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; }
 .academy-card { min-height: 220px; padding: 18px; border: 1px solid var(--border); background: var(--panel); color: var(--secondary); text-decoration: none; }
@@ -343,6 +351,13 @@ button.status-pill { cursor: pointer; }
 .training-review-list > a { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; color: inherit; text-decoration: none; border-top: 1px solid var(--border); }
 .training-review-list > a:hover { background: var(--raised); }
 .training-review-list > a div { display: grid; gap: 4px; }
+.review-recommendation, .training-recommendation { padding: 14px; border: 1px solid var(--border-strong); background: var(--raised); }
+.review-recommendation { margin: 14px; }
+.review-recommendation p, .training-recommendation p { color: var(--muted); font-size: 10px; }
+.review-recommendation a { color: #8db9ff; font-size: 9px; }
+.training-recommendation { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 18px; }
+.training-recommendation h2 { margin: 5px 0; font-size: 14px; }
+.training-recommendation small { color: var(--muted); }
 .after-action-review { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(360px, 1.3fr); gap: 18px; margin-top: 16px; padding: 18px; border: 1px solid var(--border); background: var(--panel); }
 .after-action-review > div > p { color: var(--muted); }
 .after-action-review .tutor-card { margin: 0; border-color: #3a3260; background: var(--chart); }

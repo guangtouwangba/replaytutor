@@ -66,6 +66,8 @@ def test_user_can_complete_core_training_flow(
     expect(page.locator(".review-rule-checks")).to_contain_text("evaluator 1.0")
     expect(page.locator(".review-rule-checks .rule-status.passed")).to_have_count(5)
     expect(page.locator(".review-rule-checks .rule-status.failed")).to_have_count(1)
+    expect(page.get_by_role("img", name="会话净值曲线")).to_be_visible()
+    expect(page.locator(".review-timeline-panel")).to_contain_text("训练会话结束")
     page.get_by_role("link", name="打开完整复盘").click()
     evidence_link = page.locator(".evidence-row").first
     evidence_dom_id = evidence_link.get_attribute("id")

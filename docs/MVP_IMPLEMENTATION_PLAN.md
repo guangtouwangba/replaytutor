@@ -14,7 +14,7 @@
 - M1：完成第一批纵向交付，包括 Pydantic → JSON Schema → TypeScript/Ajv 生成链、真实 BTCUSDT 2025-01 Golden Dataset、Binance Public Adapter、CSV/Parquet 导入预览与提交、不可变 Parquet Snapshot、DuckDB 查询和真实数据中心页面。
 - Binance 只读复盘切片：已完成 U 本位近 6 个月 Fill/账务同步、Fill 去重、Episode 重建、五周期价格行为标注、反前视门禁、离线 HTML、API/CLI 与 `/reviews` 页面。离线报告图表支持滚轮/按钮缩放、拖拽平移、视窗复位和结构标签碰撞避让。币安当前 `allOrders` 普通查询限制为最近 90 天，因此更早成交的订单元数据会明确标记 `partial`；年度异步导出接口已封装，跨 6 个月历史的自动下载恢复仍作为后续增强。
 - M2：完成 Session/Replay 纵向切片，包括服务端 `frame_id`/`visible_at`、revision 与命令幂等、真实 Snapshot 可见窗口、推进/结束/恢复 REST、训练配置页、KLineChart 回放工作台和单飞播放器。浏览器验收已覆盖“创建 → 推进 → 刷新恢复”，图表仅渲染可见 bars。
-- M3–M5：完成 MVP 1A 核心纵向闭环。包含 bracket/OCO、取消订单、订单与成交 Overlay、用户/AI 图层、确定性 MFE/MAE/R/回撤/退出效率、Codex 回放中与事后审查、完整绘图、证据回跳、AI 标注处置、版本化 Playbook 确定性规则检查和隔离浏览器 E2E。完整 MVP v1 仍需经过 H4 产品验收与 H5 发布封板。
+- M3–M5：完成 MVP 1A 核心纵向闭环。包含 bracket/OCO、取消订单、订单与成交 Overlay、用户/AI 图层、确定性 MFE/MAE/R/回撤/退出效率、Codex 回放中与事后审查、完整绘图、证据回跳、AI 标注处置、版本化 Playbook 确定性规则检查、五维训练聚合/推荐和隔离浏览器 E2E。完整 MVP v1 仍需经过 H5 本地产品硬化与发布封板。
 - M6–M8：等待 MVP 1A 真实用户试用后启动；A 股规则、发布硬化和 Post-MVP 能力不计入当前 Codex-only 交付。
 
 M1 Golden Dataset 固定为 `2025-01-01T00:00:00Z` 至 `2025-02-01T00:00:00Z` 的 BTCUSDT 1m 数据，共 44,640 根。仓库 fixture manifest 保存来源请求、抓取时间、源字段 hash、Parquet hash 和质量摘要；运行时载入生成新的不可变 Snapshot，fixture 本身不被修改。

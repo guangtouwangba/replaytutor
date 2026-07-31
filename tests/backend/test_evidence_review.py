@@ -136,6 +136,19 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
         "exit_efficiency",
     }
     assert all(item["evidence_id"] for item in body["evidence"])
+    assert body["equity_curve"]
+    assert (
+        body["equity_curve"][-1]["occurred_at"]
+        == advanced_body["bars"][-1]["close_time"]
+    )
+    assert body["timeline"][-1]["kind"] == "session_completed"
+    assert {item["key"] for item in body["dimension_observations"]} == {
+        "environment",
+        "plan",
+        "risk",
+        "execution",
+        "management",
+    }
     targets = {
         item["kind"]: client.get(
             f"/api/v1/sessions/{session_id}/evidence/{item['evidence_id']}"
@@ -166,12 +179,12 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
     aggregate = client.get("/api/v1/training-reviews")
     assert aggregate.status_code == 200
     assert aggregate.json()["reviews"][0]["review_id"] == body["review_id"]
-    assert all(
-        item["status"] == "insufficient"
-        and item["score"] is None
-        and item["sample_count"] == 1
-        for item in aggregate.json()["dimensions"]
-    )
+    dimensions = {item["key"]: item for item in aggregate.json()["dimensions"]}
+    assert all(item["status"] == "insufficient" for item in dimensions.values())
+    assert dimensions["environment"]["sample_count"] == 1
+    assert dimensions["environment"]["passed_count"] == 1
+    assert dimensions["plan"]["sample_count"] == 0
+    assert aggregate.json()["recommendation"]["status"] == "insufficient"
 
     other = create_session(client)
     cross_session = client.get(
@@ -180,3 +193,104 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
     )
     unknown = client.get(f"/api/v1/sessions/{session_id}/evidence/{new_id('ann')}")
     assert cross_session.status_code == unknown.status_code == 404
+
+
+def test_five_session_scores_and_recommendation_use_rules_not_profit(
+    client: TestClient,
+    settings: Settings,
+) -> None:
+    snapshot = client.post("/api/v1/datasets/golden", json={}).json()
+    playbooks = client.get("/api/v1/playbooks").json()["playbooks"]
+    trend = next(
+        item
+        for item in playbooks
+        if item["slug"] == "trend-pullback" and item["version"] == 2
+    )
+    breakout = next(
+        item
+        for item in playbooks
+        if item["slug"] == "breakout-retest" and item["version"] == 2
+    )
+    session_ids: list[str] = []
+    for index in range(5):
+        playbook = trend if index < 3 else breakout
+        created = client.post(
+            "/api/v1/sessions",
+            json={
+                "snapshot_id": snapshot["snapshot_id"],
+                "warmup_bars": 20,
+                "playbook_id": playbook["playbook_id"],
+            },
+        ).json()
+        session_id = created["session"]["session_id"]
+        session_ids.append(session_id)
+        annotated = client.post(
+            f"/api/v1/sessions/{session_id}/annotations",
+            json={
+                "command_id": new_id("cmd"),
+                "expected_revision": 0,
+                "shape": "marker",
+                "label": f"环境观察 {index}",
+                "points": [
+                    {
+                        "time": created["bars"][-1]["close_time"],
+                        "price": created["bars"][-1]["raw"]["close"],
+                    }
+                ],
+            },
+        )
+        assert annotated.status_code == 200
+        locked = client.post(
+            f"/api/v1/sessions/{session_id}/plan",
+            json={
+                "command_id": new_id("cmd"),
+                "expected_revision": 0,
+                "side": "BUY",
+                "thesis": "结构确认后执行",
+                "invalidation": "结构失效退出",
+                "risk_amount": "150",
+            },
+        )
+        assert locked.status_code == 200
+        ordered = client.post(
+            f"/api/v1/sessions/{session_id}/orders",
+            json={
+                "command_id": new_id("cmd"),
+                "expected_revision": 0,
+                "side": "BUY",
+                "order_type": "MARKET",
+                "quantity": "0.01",
+            },
+        )
+        assert ordered.status_code == 200
+        finished = client.post(
+            f"/api/v1/sessions/{session_id}/finish",
+            json={"command_id": new_id("cmd"), "expected_revision": 0},
+        )
+        assert finished.status_code == 200
+
+    aggregate = client.get("/api/v1/training-reviews").json()
+    dimensions = {item["key"]: item for item in aggregate["dimensions"]}
+    assert all(item["status"] == "ready" for item in dimensions.values())
+    assert dimensions["environment"]["score"] == "100"
+    assert dimensions["plan"]["score"] == "100"
+    assert dimensions["risk"]["score"] == "0"
+    assert dimensions["execution"]["score"] == "100"
+    assert dimensions["management"]["score"] == "0"
+    assert dimensions["risk"]["passed_count"] == 0
+    assert dimensions["risk"]["evaluated_count"] == 10
+    assert aggregate["recommendation"]["dimension"] == "risk"
+    assert aggregate["recommendation"]["playbook_id"] == trend["playbook_id"]
+    assert "不使用盈利排名" in aggregate["recommendation"]["reason"]
+
+    with connect_database(settings.database_path) as connection:
+        connection.execute(
+            "UPDATE replay_session SET status = 'stopped' WHERE session_id = ?",
+            (session_ids[0],),
+        )
+    recomputed = client.get("/api/v1/training-reviews").json()
+    assert all(
+        item["status"] == "insufficient" and item["sample_count"] == 4
+        for item in recomputed["dimensions"]
+    )
+    assert recomputed["recommendation"]["status"] == "insufficient"

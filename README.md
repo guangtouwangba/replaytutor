@@ -2,7 +2,7 @@
 
 一个本地优先的交易训练与复盘应用：提供类似 TradingView 的专业图表体验、隐藏未来的历史回放、确定性虚拟交易，以及通过本机 Codex CLI 工作的证据化 AI Tutor。
 
-> 当前阶段：MVP 1A 的 BTCUSDT 核心纵向闭环已落地，包括 Snapshot、逐 K 回放、计划门禁、模拟订单、Decimal 账本、趋势线/矩形/标记、AI 标注处置、证据回跳、确定性复盘、版本化 Playbook 规则检查、Codex Tutor 和隔离浏览器 E2E。Binance U 本位只读成交复盘作为独立切片保留。本项目不提供任何真实下单能力。
+> 当前阶段：MVP 1A 的 BTCUSDT 核心纵向闭环已落地，包括 Snapshot、逐 K 回放、计划门禁、模拟订单、Decimal 账本、趋势线/矩形/标记、AI 标注处置、证据回跳、确定性复盘、版本化 Playbook 规则检查、五维训练聚合与推荐、Codex Tutor 和隔离浏览器 E2E。Binance U 本位只读成交复盘作为独立切片保留。本项目不提供任何真实下单能力。
 
 ## 核心体验
 

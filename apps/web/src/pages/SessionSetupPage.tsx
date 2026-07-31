@@ -1,13 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Database, Shuffle, Target } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { fetchDatasets } from "../api/datasets";
 import { fetchPlaybooks } from "../api/playbooks";
 import { createSession } from "../api/sessions";
 
 export function SessionSetupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const datasets = useQuery({ queryKey: ["datasets"], queryFn: fetchDatasets });
   const playbooks = useQuery({ queryKey: ["playbooks"], queryFn: fetchPlaybooks });
   const [snapshotId, setSnapshotId] = useState("");
@@ -21,7 +22,9 @@ export function SessionSetupPage() {
   ) ?? [];
   const activePlaybook = playbooks.data?.playbooks.find(
     (item) => item.playbook_id === (
-      playbookId || latestOfficialPlaybooks[0]?.playbook_id
+      playbookId
+      || searchParams.get("playbook_id")
+      || latestOfficialPlaybooks[0]?.playbook_id
     ),
   );
   const activeSnapshotId = snapshotId || datasets.data?.datasets[0]?.snapshot_id || "";
