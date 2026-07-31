@@ -1,9 +1,14 @@
 # ReplayTutor MVP 1A 封板实施计划
 
-状态：Draft for implementation  
+状态：Implemented in stacked PRs #1–#6  
 日期：2026-07-31  
 基线提交：`c087e3c`  
 目标：把当前可运行的 MVP 1A 核心纵向闭环推进为可持续使用、可自动验收的本地产品。
+
+完成证据：H0–H5 已分别落到 `codex/e2e-ci`、`codex/annotation-workflow`、
+`codex/evidence-jump`、`codex/playbook-evaluator`、`codex/review-aggregation`
+和 `codex/local-hardening`。最终本地门禁为 48 个后端测试、8 个前端测试、
+6 个隔离浏览器 E2E、三宽度/axe 验收与发布产物扫描。
 
 上游真源：
 
