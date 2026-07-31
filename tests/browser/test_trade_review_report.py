@@ -2,6 +2,7 @@ from __future__ import annotations
 
 # pyright: reportMissingImports=false
 import argparse
+import os
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -18,10 +19,11 @@ def main() -> int:
     console_errors: list[str] = []
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            headless=True,
-            executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        )
+        launch_options: dict[str, object] = {"headless": True}
+        executable_path = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE")
+        if executable_path:
+            launch_options["executable_path"] = executable_path
+        browser = playwright.chromium.launch(**launch_options)
         page = browser.new_page(viewport={"width": 1600, "height": 1000})
         page.on(
             "console",

@@ -3,12 +3,13 @@ SHELL := /bin/bash
 PNPM := ./scripts/pnpm
 UV := ./scripts/uv
 
-.PHONY: help runtime setup dirs hooks dev api web migrate contracts lint typecheck test build verify clean
+.PHONY: help runtime setup dirs hooks dev api web migrate contracts lint typecheck test build e2e verify clean
 
 help:
 	@echo "ReplayTutor local development"
 	@echo "  make setup      Install locked dependencies, create runtime dirs, migrate DB, install hooks"
 	@echo "  make dev        Start Vite (:5173) and FastAPI (:8788)"
+	@echo "  make e2e        Run isolated browser tests (requires Playwright Chromium)"
 	@echo "  make verify     Contract, lint, type, test, and build gate"
 
 runtime:
@@ -45,7 +46,7 @@ contracts:
 
 lint:
 	$(PNPM) lint
-	$(UV) run --project apps/api ruff check apps/api tests/backend scripts
+	$(UV) run --project apps/api ruff check apps/api tests/backend tests/e2e scripts
 
 typecheck:
 	$(PNPM) typecheck
@@ -59,6 +60,10 @@ test:
 build:
 	$(PNPM) build
 	$(UV) run --project apps/api python -c "import replaytutor.main"
+
+e2e:
+	mkdir -p test-results
+	$(UV) run --project apps/api pytest -q tests/e2e
 
 verify: contracts lint typecheck test build
 

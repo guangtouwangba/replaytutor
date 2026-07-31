@@ -2,7 +2,7 @@
 
 一个本地优先的交易训练与复盘应用：提供类似 TradingView 的专业图表体验、隐藏未来的历史回放、确定性虚拟交易，以及通过本机 Codex CLI 工作的证据化 AI Tutor。
 
-> 当前阶段：MVP 1A 的 BTCUSDT 核心纵向闭环已落地，包括 Snapshot、逐 K 回放、计划门禁、模拟订单、Decimal 账本、用户/AI 图层、确定性复盘、Playbook 和 Codex Tutor。完整绘图、证据回跳、AI 标注接受/拒绝、Playbook 确定性规则检查和发布级 E2E 仍待封板。Binance U 本位只读成交复盘作为独立切片保留。本项目不提供任何真实下单能力。
+> 当前阶段：MVP 1A 的 BTCUSDT 核心纵向闭环已落地，包括 Snapshot、逐 K 回放、计划门禁、模拟订单、Decimal 账本、用户/AI 图层、确定性复盘、Playbook、Codex Tutor 和隔离浏览器 E2E。完整绘图、证据回跳、AI 标注接受/拒绝及 Playbook 确定性规则检查仍待封板。Binance U 本位只读成交复盘作为独立切片保留。本项目不提供任何真实下单能力。
 
 ## 核心体验
 
@@ -47,10 +47,18 @@ make api         # 只启动 FastAPI
 make web         # 只启动 Vite
 make migrate     # 幂等升级 SQLite
 make verify      # contracts → lint → typecheck → test → build
+make e2e         # 隔离进程运行核心训练与 Tutor 浏览器流程
 make clean       # 只清构建缓存，不删除 data/ 和 logs/
 ```
 
-`make verify` 是当前可执行的工程质量门，覆盖契约、静态检查、前后端单元测试和生产构建。发布计划中的完整浏览器 E2E 尚未接入根命令，不能用 `make verify` 代替发布验收。
+`make verify` 覆盖契约、静态检查、前后端单元测试和生产构建；`make e2e` 使用临时数据目录、随机端口和独立服务进程，覆盖核心训练闭环、下一根 K 线成交约束、Tutor 证据标注，以及 Codex 不可用时的确定性降级。首次运行 E2E 前安装浏览器：
+
+```bash
+./scripts/uv run --project apps/api playwright install chromium
+make e2e
+```
+
+浏览器用例失败时，截图和 Playwright trace 会写入 `test-results/`。GitHub Actions 会执行两道门禁，并在失败时保留这些产物 14 天。
 
 首次启动后打开“数据中心”，点击“载入真实 BTC 样例”。系统会把仓库内经过哈希校验的 44,640 根 BTCUSDT 1m Golden Dataset 写成运行时不可变 Snapshot；首页不会用假价格或随机 K 线填充空状态。
 
@@ -137,7 +145,7 @@ MVP 不包含真实下单、跟单、收益承诺、社交社区和 Pine Script 
 - 复盘证据已有稳定 ID，但点击回跳到 K 线、价格和图层尚未实现。
 - Playbook 已版本化，逐条确定性规则检查仍待实现。
 - 设置页当前以运行状态和安全边界展示为主，训练偏好、隐私和清理功能尚未开放。
-- A 股规则、其他市场、发布硬化和完整浏览器 E2E 属于后续阶段。
+- A 股规则、其他市场和进一步发布硬化属于后续阶段。
 
 ## 工作原则
 
