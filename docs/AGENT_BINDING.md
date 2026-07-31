@@ -1,7 +1,7 @@
 # ReplayTutor 原生 Coding Agent 绑定规范
 
 状态：Implemented for MVP 1A
-更新时间：2026-07-30
+更新时间：2026-07-31
 
 ## 1. 目标
 
@@ -11,6 +11,9 @@ MVP 的 AI Tutor 只实现 Codex CLI。当前产品、健康检查、设置页�
 - Codex 可发现、可取消、可按 run ID 恢复。
 - 不暴露完整交易数据库和券商凭据。
 - Agent 失败不会影响回放、撮合与确定性分析。
+- 本地偏好将 AI 模式设为 `off` 时，在创建运行目录前拒绝 Tutor run。
+- Agent stdout/stderr 落盘前脱敏 home/workspace 路径和 key/token 类值。
+- 应用重启后将遗留的 `running` run 收敛为 failed，不伪装仍在运行。
 
 “原生绑定”指应用直接管理本机 Agent 进程和会话，而不是只把模型名称映射到另一个聊天 API。
 

@@ -20,6 +20,7 @@ from replaytutor.contracts import (
 from replaytutor.ids import new_id
 from replaytutor.modules.annotations import persist_ai_annotations
 from replaytutor.modules.evidence_review import EvidenceReviewService
+from replaytutor.modules.local_system import LocalSystemService
 from replaytutor.modules.market_data.service import utc_text
 from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import TrainingSessionService, parse_utc
@@ -54,6 +55,8 @@ class TutorRuntime:
         self.adapter = CodexAdapter()
 
     def start(self, session_id: str, request: TutorRequest) -> TutorRun:
+        if LocalSystemService(self.settings).get_preferences().ai_mode == "off":
+            raise ValueError("Codex Tutor is disabled in local preferences")
         delta = self.sessions.get(session_id)
         if delta.session.status == "completed" and request.stage != "after_action":
             raise ValueError("Completed sessions require after_action Tutor mode")

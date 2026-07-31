@@ -6,6 +6,7 @@ export type RevealedCoverageEnd = string;
 export type RevealedCoverageStart = string;
 export type SchemaVersion = "1.0";
 export type CreatedAt = string;
+export type DeletedAt = string | null;
 export type Fingerprint = string;
 export type CurrentIndex = number;
 export type FrameId = string;
@@ -53,6 +54,7 @@ export interface CompletedSession {
 }
 export interface ReplaySession {
   created_at: CreatedAt;
+  deleted_at?: DeletedAt;
   fingerprint: Fingerprint;
   frame: ReplayFrame;
   hidden_real_date: HiddenRealDate;

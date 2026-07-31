@@ -212,6 +212,7 @@ class ReplaySession(ContractModel):
     fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
 
 
 class TradePlan(ContractModel):
@@ -353,6 +354,11 @@ class SessionDelta(ContractModel):
 
 
 class SessionListResponse(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    sessions: list[ReplaySession]
+
+
+class SessionTrashResponse(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     sessions: list[ReplaySession]
 
@@ -541,6 +547,35 @@ class TrainingReviewListResponse(ContractModel):
     reviews: list[TrainingReview]
     dimensions: list[CapabilityDimension]
     recommendation: TrainingRecommendation
+
+
+class LocalPreferences(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    ai_mode: Literal["codex", "off"] = "codex"
+    privacy_mode: Literal["local_only"] = "local_only"
+    confirm_before_finish: bool = True
+    retain_agent_runs_days: int = Field(default=30, ge=1, le=365)
+    default_playbook_id: Identifier | None = None
+    updated_at: datetime | None = None
+
+
+class BackupArtifact(ContractModel):
+    backup_id: str = Field(pattern=r"^backup_[0-9]{8}T[0-9]{6}Z_[0-9a-f]{8}$")
+    created_at: datetime
+    size_bytes: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class MaintenanceStatus(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    backups: list[BackupArtifact]
+    trashed_agent_runs: int = Field(ge=0)
+
+
+class CleanupResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    moved_agent_runs: int = Field(ge=0)
+    trash_path: str
 
 
 class AgentCapability(ContractModel):

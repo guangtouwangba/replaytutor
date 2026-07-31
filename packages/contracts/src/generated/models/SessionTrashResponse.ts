@@ -1,5 +1,6 @@
 // Generated from Pydantic. Do not edit.
 
+export type SchemaVersion = "1.0";
 export type CreatedAt = string;
 export type DeletedAt = string | null;
 export type Fingerprint = string;
@@ -7,7 +8,7 @@ export type CurrentIndex = number;
 export type FrameId = string;
 export type Progress = number;
 export type Revision = number;
-export type SchemaVersion = "1.0";
+export type SchemaVersion1 = "1.0";
 export type SessionId = string;
 export type TotalBars = number;
 export type VisibleAt = string;
@@ -23,13 +24,13 @@ export type Market = "CRYPTO" | "CN";
 export type MarketRuleSetId = string;
 export type PriceScale = number;
 export type QuoteCurrency = string;
-export type SchemaVersion1 = "1.0";
+export type SchemaVersion2 = "1.0";
 export type TickSize = string;
 export type Timezone = string;
 export type Venue = string;
 export type PlaybookId = string | null;
 export type Revision1 = number;
-export type SchemaVersion2 = "1.0";
+export type SchemaVersion3 = "1.0";
 export type Seed = number;
 export type SessionId1 = string;
 export type SnapshotId = string;
@@ -38,7 +39,12 @@ export type Status = "ready" | "paused" | "completed" | "stopped";
 export type Timeframe = "1m";
 export type UpdatedAt = string;
 export type WarmupBars = number;
+export type Sessions = ReplaySession[];
 
+export interface SessionTrashResponse {
+  schema_version?: SchemaVersion;
+  sessions: Sessions;
+}
 export interface ReplaySession {
   created_at: CreatedAt;
   deleted_at?: DeletedAt;
@@ -49,7 +55,7 @@ export interface ReplaySession {
   instrument: Instrument;
   playbook_id?: PlaybookId;
   revision: Revision1;
-  schema_version?: SchemaVersion2;
+  schema_version?: SchemaVersion3;
   seed: Seed;
   session_id: SessionId1;
   snapshot_id: SnapshotId;
@@ -64,7 +70,7 @@ export interface ReplayFrame {
   frame_id: FrameId;
   progress: Progress;
   revision: Revision;
-  schema_version?: SchemaVersion;
+  schema_version?: SchemaVersion1;
   session_id: SessionId;
   total_bars: TotalBars;
   visible_at: VisibleAt;
@@ -80,7 +86,7 @@ export interface Instrument {
   market_rule_set_id: MarketRuleSetId;
   price_scale: PriceScale;
   quote_currency: QuoteCurrency;
-  schema_version?: SchemaVersion1;
+  schema_version?: SchemaVersion2;
   tick_size: TickSize;
   timezone: Timezone;
   venue: Venue;

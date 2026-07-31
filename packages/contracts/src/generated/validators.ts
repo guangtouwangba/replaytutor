@@ -556,6 +556,39 @@ const schemas = {
     "title": "AnnotationPoint",
     "type": "object"
   },
+  "BackupArtifact": {
+    "additionalProperties": false,
+    "properties": {
+      "backup_id": {
+        "pattern": "^backup_[0-9]{8}T[0-9]{6}Z_[0-9a-f]{8}$",
+        "title": "Backup Id",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Sha256",
+        "type": "string"
+      },
+      "size_bytes": {
+        "minimum": 0,
+        "title": "Size Bytes",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "backup_id",
+      "created_at",
+      "size_bytes",
+      "sha256"
+    ],
+    "title": "BackupArtifact",
+    "type": "object"
+  },
   "Bar": {
     "$defs": {
       "PriceValues": {
@@ -1132,6 +1165,32 @@ const schemas = {
     "title": "ChartAnnotation",
     "type": "object"
   },
+  "CleanupResult": {
+    "additionalProperties": false,
+    "properties": {
+      "moved_agent_runs": {
+        "minimum": 0,
+        "title": "Moved Agent Runs",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "trash_path": {
+        "title": "Trash Path",
+        "type": "string"
+      }
+    },
+    "required": [
+      "moved_agent_runs",
+      "trash_path"
+    ],
+    "title": "CleanupResult",
+    "type": "object"
+  },
   "CommitImportRequest": {
     "additionalProperties": false,
     "properties": {
@@ -1353,6 +1412,19 @@ const schemas = {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
           },
           "fingerprint": {
             "pattern": "^[0-9a-f]{64}$",
@@ -3951,6 +4023,72 @@ const schemas = {
     "title": "Instrument",
     "type": "object"
   },
+  "LocalPreferences": {
+    "additionalProperties": false,
+    "properties": {
+      "ai_mode": {
+        "default": "codex",
+        "enum": [
+          "codex",
+          "off"
+        ],
+        "title": "Ai Mode",
+        "type": "string"
+      },
+      "confirm_before_finish": {
+        "default": true,
+        "title": "Confirm Before Finish",
+        "type": "boolean"
+      },
+      "default_playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Default Playbook Id"
+      },
+      "privacy_mode": {
+        "const": "local_only",
+        "default": "local_only",
+        "title": "Privacy Mode",
+        "type": "string"
+      },
+      "retain_agent_runs_days": {
+        "default": 30,
+        "maximum": 365,
+        "minimum": 1,
+        "title": "Retain Agent Runs Days",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "updated_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Updated At"
+      }
+    },
+    "title": "LocalPreferences",
+    "type": "object"
+  },
   "LockTradePlanRequest": {
     "additionalProperties": false,
     "properties": {
@@ -4038,6 +4176,70 @@ const schemas = {
       "risk_amount"
     ],
     "title": "LockTradePlanRequest",
+    "type": "object"
+  },
+  "MaintenanceStatus": {
+    "$defs": {
+      "BackupArtifact": {
+        "additionalProperties": false,
+        "properties": {
+          "backup_id": {
+            "pattern": "^backup_[0-9]{8}T[0-9]{6}Z_[0-9a-f]{8}$",
+            "title": "Backup Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "backup_id",
+          "created_at",
+          "size_bytes",
+          "sha256"
+        ],
+        "title": "BackupArtifact",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "backups": {
+        "items": {
+          "$ref": "#/$defs/BackupArtifact"
+        },
+        "title": "Backups",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "trashed_agent_runs": {
+        "minimum": 0,
+        "title": "Trashed Agent Runs",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "backups",
+      "trashed_agent_runs"
+    ],
+    "title": "MaintenanceStatus",
     "type": "object"
   },
   "OrderResult": {
@@ -4519,6 +4721,19 @@ const schemas = {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
           },
           "fingerprint": {
             "pattern": "^[0-9a-f]{64}$",
@@ -5877,6 +6092,19 @@ const schemas = {
         "format": "date-time",
         "title": "Created At",
         "type": "string"
+      },
+      "deleted_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Deleted At"
       },
       "fingerprint": {
         "pattern": "^[0-9a-f]{64}$",
@@ -7917,6 +8145,19 @@ const schemas = {
             "title": "Created At",
             "type": "string"
           },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
+          },
           "fingerprint": {
             "pattern": "^[0-9a-f]{64}$",
             "title": "Fingerprint",
@@ -8469,6 +8710,19 @@ const schemas = {
             "title": "Created At",
             "type": "string"
           },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
+          },
           "fingerprint": {
             "pattern": "^[0-9a-f]{64}$",
             "title": "Fingerprint",
@@ -8601,6 +8855,315 @@ const schemas = {
       "sessions"
     ],
     "title": "SessionListResponse",
+    "type": "object"
+  },
+  "SessionTrashResponse": {
+    "$defs": {
+      "Instrument": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_class": {
+            "enum": [
+              "crypto_spot",
+              "crypto_perpetual",
+              "equity"
+            ],
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "base_currency": {
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "canonical_symbol": {
+            "title": "Canonical Symbol",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "instrument_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "lot_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Lot Size",
+            "type": "string"
+          },
+          "market": {
+            "enum": [
+              "CRYPTO",
+              "CN"
+            ],
+            "title": "Market",
+            "type": "string"
+          },
+          "market_rule_set_id": {
+            "title": "Market Rule Set Id",
+            "type": "string"
+          },
+          "price_scale": {
+            "maximum": 18,
+            "minimum": 0,
+            "title": "Price Scale",
+            "type": "integer"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tick_size": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Tick Size",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "asset_class",
+          "market",
+          "venue",
+          "canonical_symbol",
+          "display_name",
+          "base_currency",
+          "quote_currency",
+          "timezone",
+          "tick_size",
+          "lot_size",
+          "price_scale",
+          "market_rule_set_id"
+        ],
+        "title": "Instrument",
+        "type": "object"
+      },
+      "ReplayFrame": {
+        "additionalProperties": false,
+        "properties": {
+          "current_index": {
+            "minimum": 0,
+            "title": "Current Index",
+            "type": "integer"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "total_bars": {
+            "minimum": 1,
+            "title": "Total Bars",
+            "type": "integer"
+          },
+          "visible_at": {
+            "format": "date-time",
+            "title": "Visible At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame_id",
+          "session_id",
+          "revision",
+          "current_index",
+          "total_bars",
+          "visible_at",
+          "progress"
+        ],
+        "title": "ReplayFrame",
+        "type": "object"
+      },
+      "ReplaySession": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "frame": {
+            "$ref": "#/$defs/ReplayFrame"
+          },
+          "hidden_real_date": {
+            "title": "Hidden Real Date",
+            "type": "boolean"
+          },
+          "initial_cash": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "instrument": {
+            "$ref": "#/$defs/Instrument"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
+          "revision": {
+            "minimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "seed": {
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "start_index": {
+            "minimum": 0,
+            "title": "Start Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "paused",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1m",
+            "default": "1m",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "warmup_bars": {
+            "maximum": 500,
+            "minimum": 20,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "instrument",
+          "status",
+          "revision",
+          "frame",
+          "start_index",
+          "warmup_bars",
+          "seed",
+          "initial_cash",
+          "hidden_real_date",
+          "fingerprint",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReplaySession",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "sessions": {
+        "items": {
+          "$ref": "#/$defs/ReplaySession"
+        },
+        "title": "Sessions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "sessions"
+    ],
+    "title": "SessionTrashResponse",
     "type": "object"
   },
   "SubmitOrderRequest": {
@@ -9409,6 +9972,19 @@ const schemas = {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deleted At"
           },
           "fingerprint": {
             "pattern": "^[0-9a-f]{64}$",

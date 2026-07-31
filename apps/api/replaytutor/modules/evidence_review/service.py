@@ -252,7 +252,7 @@ class EvidenceReviewService:
             rows = connection.execute(
                 """
                 SELECT session_id FROM replay_session
-                WHERE status = 'completed'
+                WHERE status = 'completed' AND deleted_at IS NULL
                 ORDER BY completed_at DESC, created_at DESC
                 """
             ).fetchall()

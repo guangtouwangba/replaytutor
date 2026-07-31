@@ -22,6 +22,7 @@ import {
   lockTradePlan,
   submitOrder,
 } from "../api/sessions";
+import { fetchPreferences } from "../api/localSystem";
 import { ReplayChart } from "../chart/ReplayChart";
 import type { DrawingTool } from "../chart/DrawingController";
 import { evidenceReturnUrl } from "../chart/EvidenceSelectionBridge";
@@ -61,6 +62,10 @@ export function WorkbenchPage() {
     queryKey: ["session", sessionId],
     queryFn: () => fetchSession(sessionId!),
     enabled: Boolean(sessionId),
+  });
+  const preferences = useQuery({
+    queryKey: ["local-preferences"],
+    queryFn: fetchPreferences,
   });
   const dispositions = useQuery({
     queryKey: ["annotation-dispositions", sessionId],
@@ -349,7 +354,14 @@ export function WorkbenchPage() {
         ) : <button
           className="danger-action"
           disabled={finish.isPending}
-          onClick={() => { setPlaying(false); finish.mutate(); }}
+          onClick={() => {
+            if (
+              preferences.data?.confirm_before_finish !== false
+              && !window.confirm("结束后会话进入只读复盘，继续吗？")
+            ) return;
+            setPlaying(false);
+            finish.mutate();
+          }}
           type="button"
         >
           <Square size={12} />结束会话
@@ -392,6 +404,13 @@ export function WorkbenchPage() {
             onAnnotationSelect={setSelectedAnnotationId}
             evidenceTarget={evidence.data ?? null}
           />
+          <details className="chart-data-table">
+            <summary>查看可访问行情数据表</summary>
+            <table>
+              <thead><tr><th>时间</th><th>开</th><th>高</th><th>低</th><th>收</th></tr></thead>
+              <tbody>{delta.bars.slice(-20).map((bar) => <tr key={bar.bar_id}><td>{new Date(bar.close_time).toLocaleString("zh-CN", { hour12: false })}</td><td>{bar.raw.open}</td><td>{bar.raw.high}</td><td>{bar.raw.low}</td><td>{bar.raw.close}</td></tr>)}</tbody>
+            </table>
+          </details>
         </main>
         <aside className="workbench-dock">
           <div className="dock-heading"><Bot size={17} /><strong>交易决策台</strong><span>W2</span></div>
@@ -461,7 +480,7 @@ export function WorkbenchPage() {
               </div>
             ))}
           </div>
-          {!readOnly && <TutorDock
+          {!readOnly && preferences.data?.ai_mode !== "off" && <TutorDock
             sessionId={sessionId}
             onAnnotationsChanged={handleAnnotationsChanged}
           />}

@@ -11,7 +11,7 @@
   --border-strong: #344154;
   --text: #e6edf5;
   --secondary: #99a6b6;
-  --muted: #687789;
+  --muted: #8492a3;
   --blue: #3b82f6;
   --green: #21c58b;
   --red: #f05b72;
@@ -57,8 +57,8 @@ button.status-pill { cursor: pointer; }
 .home-heading h1 { max-width: 720px; font-size: 34px; }
 .home-heading p { max-width: 650px; }
 .primary-action, .secondary-action { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
-.primary-action { background: var(--blue); color: white; }
-.primary-action:hover { background: #5794f8; }
+.primary-action { background: #245fae; color: white; }
+.primary-action:hover { background: #2d6fc8; }
 .primary-action:disabled { opacity: .55; cursor: wait; }
 .secondary-action { border-color: var(--border-strong); background: var(--raised); color: var(--secondary); }
 .home-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); background: var(--panel); }
@@ -170,7 +170,7 @@ button.status-pill { cursor: pointer; }
 .drawing-rail { grid-row: 1 / 3; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 8px; border-right: 1px solid var(--border); background: #101720; }
 .drawing-rail button { width: 31px; height: 31px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); }
 .drawing-rail button.is-active { background: #183154; color: #8cbbff; }
-.chart-stage { min-width: 0; min-height: 0; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
+.chart-stage { position: relative; min-width: 0; min-height: 0; display: grid; grid-template-rows: 34px minmax(0, 1fr); }
 .chart-stage-head { display: flex; align-items: center; gap: 12px; padding: 0 10px; border-bottom: 1px solid #182331; color: var(--secondary); font: 9px "IBM Plex Mono", monospace; }
 .chart-stage-head .fingerprint { margin-left: auto; color: var(--muted); }
 .replay-chart-shell { min-width: 0; min-height: 0; position: relative; overflow: hidden; }
@@ -240,11 +240,18 @@ button.status-pill { cursor: pointer; }
 .review-page { padding: 26px 30px; }
 .sessions-page, .deterministic-review { max-width: 1180px; margin: 0 auto; }
 .session-cards { display: grid; gap: 7px; margin-top: 22px; }
-.session-card { display: grid; grid-template-columns: 24px 1fr auto 20px; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); background: var(--panel); color: var(--secondary); text-decoration: none; }
+.session-card-shell { display: grid; grid-template-columns: minmax(0, 1fr) 42px; border: 1px solid var(--border); background: var(--panel); }
+.session-card { display: grid; grid-template-columns: 24px 1fr auto 20px; align-items: center; gap: 12px; padding: 14px; color: var(--secondary); text-decoration: none; }
 .session-card:hover { border-color: #3f6fae; background: var(--raised); }
 .session-card span { display: grid; gap: 4px; }
 .session-card strong { color: var(--text); }
 .session-card small, .session-card code { color: var(--muted); font-size: 9px; }
+.session-card-shell > button { border: 0; border-left: 1px solid var(--border); background: transparent; color: var(--muted); }
+.session-card-shell > button:hover { color: #ff8795; }
+.session-trash { margin-top: 24px; padding: 14px; border: 1px solid var(--border); background: var(--panel); }
+.session-trash > div:not(.section-title) { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--border); font-size: 9px; }
+.session-trash time { color: var(--muted); }
+.session-trash button { display: flex; align-items: center; gap: 4px; }
 .review-hero { display: flex; align-items: center; gap: 16px; }
 .review-hero h1 { margin: 5px 0; }
 .review-hero p { margin: 0; color: var(--muted); }
@@ -310,6 +317,17 @@ button.status-pill { cursor: pointer; }
 .settings-grid dl div { display: grid; grid-template-columns: 100px 1fr; gap: 8px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 9px; }
 .settings-grid dt { color: var(--muted); }
 .settings-grid dd { margin: 0; overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; }
+.settings-form, .maintenance-panel { display: grid; gap: 12px; margin: 12px 0; padding: 18px; border: 1px solid var(--border); background: var(--panel); }
+.settings-form > label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; }
+.settings-form input, .settings-form select { min-height: 34px; padding: 7px; border: 1px solid var(--border); background: var(--chart); color: var(--text); }
+.backup-list { display: grid; }
+.backup-list > div { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--border); font-size: 9px; }
+.backup-list span { color: var(--muted); }
+.chart-data-table { position: absolute; z-index: 10; right: 8px; bottom: 8px; max-height: 260px; overflow: auto; padding: 6px; border: 1px solid var(--border); background: rgba(13, 20, 30, .96); font-size: 8px; }
+.chart-data-table summary { cursor: pointer; color: var(--muted); }
+.chart-data-table table { margin-top: 6px; border-collapse: collapse; }
+.chart-data-table th, .chart-data-table td { padding: 4px 7px; border: 1px solid var(--border); text-align: right; }
+.chart-data-table th:first-child, .chart-data-table td:first-child { text-align: left; }
 .review-layout { height: calc(100vh - 190px); min-height: 540px; display: grid; grid-template-columns: 250px minmax(0, 1fr); border: 1px solid var(--border); }
 .review-list { overflow: auto; border-right: 1px solid var(--border); background: var(--panel); }
 .review-list-item { width: 100%; min-height: 82px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; cursor: pointer; }
@@ -369,4 +387,7 @@ button.status-pill { cursor: pointer; }
   .after-action-review { grid-template-columns: 1fr; }
   .onboarding-banner { align-items: flex-start; flex-direction: column; }
   .dimension-list { grid-template-columns: repeat(2, 1fr); }
+  .review-detail-grid, .settings-grid, .playbook-layout { grid-template-columns: 1fr; }
+  .backup-list > div { grid-template-columns: 1fr auto; }
+  .backup-list > div span { grid-column: 1 / -1; }
 }

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 PNPM := ./scripts/pnpm
 UV := ./scripts/uv
 
-.PHONY: help runtime setup dirs hooks dev api web migrate contracts lint typecheck test build e2e verify clean
+.PHONY: help runtime setup dirs hooks dev api web migrate contracts lint typecheck test build e2e release-check verify clean
 
 help:
 	@echo "ReplayTutor local development"
@@ -61,11 +61,14 @@ build:
 	$(PNPM) build
 	$(UV) run --project apps/api python -c "import replaytutor.main"
 
+release-check: build
+	/bin/bash scripts/check-release-artifacts.sh
+
 e2e:
 	mkdir -p test-results
 	$(UV) run --project apps/api pytest -q tests/e2e
 
-verify: contracts lint typecheck test build
+verify: contracts lint typecheck test release-check
 
 clean:
 	rm -rf apps/web/dist apps/web/.vite packages/contracts/dist coverage playwright-report test-results

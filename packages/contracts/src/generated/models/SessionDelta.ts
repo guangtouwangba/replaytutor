@@ -93,6 +93,7 @@ export type SchemaVersion6 = "1.0";
 export type IdempotentReplay = boolean;
 export type SchemaVersion7 = "1.0";
 export type CreatedAt2 = string;
+export type DeletedAt = string | null;
 export type Fingerprint = string;
 export type CurrentIndex = number;
 export type FrameId3 = string;
@@ -248,6 +249,7 @@ export interface PortfolioState {
 }
 export interface ReplaySession {
   created_at: CreatedAt2;
+  deleted_at?: DeletedAt;
   fingerprint: Fingerprint;
   frame: ReplayFrame;
   hidden_real_date: HiddenRealDate;

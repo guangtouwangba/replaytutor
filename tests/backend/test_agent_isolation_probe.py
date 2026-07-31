@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from replaytutor.adapters.agents.codex import redact_agent_log
+
 
 def test_probe_dry_run_keeps_host_read_only_disabled() -> None:
     project_root = Path(__file__).resolve().parents[2]
@@ -31,3 +33,15 @@ def test_probe_commands_disable_persistence_and_never_bypass_sandbox() -> None:
     assert "--sandbox" in source and '"read-only"' in source
     assert "dangerously-bypass" not in source
     assert "dangerously-skip-permissions" not in source
+
+
+def test_agent_logs_redact_home_workspace_and_secret_values(tmp_path: Path) -> None:
+    workspace = tmp_path / "agent-run"
+    rendered = redact_agent_log(
+        f"path={workspace} home={Path.home()} api_secret=super-secret token: bearer",
+        workspace,
+    )
+    assert str(workspace) not in rendered
+    assert str(Path.home()) not in rendered
+    assert "super-secret" not in rendered
+    assert "bearer" not in rendered

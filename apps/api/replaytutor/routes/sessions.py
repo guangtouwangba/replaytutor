@@ -17,9 +17,11 @@ from replaytutor.contracts import (
     LockTradePlanRequest,
     OrderResult,
     PlaybookEvaluation,
+    ReplaySession,
     SessionCommand,
     SessionDelta,
     SessionListResponse,
+    SessionTrashResponse,
     SubmitOrderRequest,
     TradePlanResult,
     TrainingReview,
@@ -76,6 +78,30 @@ def create_session(request: Request, payload: CreateSessionSpec) -> SessionDelta
 def list_sessions(request: Request) -> SessionListResponse:
     try:
         return service(request).list()
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.get("/sessions-trash", response_model=SessionTrashResponse)
+def list_session_trash(request: Request) -> SessionTrashResponse:
+    try:
+        return service(request).trash()
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.delete("/sessions/{session_id}", response_model=ReplaySession)
+def delete_session(request: Request, session_id: str) -> ReplaySession:
+    try:
+        return service(request).soft_delete(session_id)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.post("/sessions/{session_id}/restore", response_model=ReplaySession)
+def restore_session(request: Request, session_id: str) -> ReplaySession:
+    try:
+        return service(request).restore(session_id)
     except (TrainingSessionError, MarketDataError) as error:
         raise translate(error) from error
 
@@ -200,6 +226,7 @@ def act_on_annotation(
 @router.get("/sessions/{session_id}/review", response_model=TrainingReview)
 def get_training_review(request: Request, session_id: str) -> TrainingReview:
     try:
+        service(request).ensure_available(session_id)
         settings: Settings = request.app.state.settings
         return EvidenceReviewService(settings).get(session_id)
     except (TrainingSessionError, MarketDataError) as error:
@@ -216,6 +243,7 @@ def resolve_evidence(
     evidence_id: str,
 ) -> EvidenceTarget:
     try:
+        service(request).ensure_available(session_id)
         settings: Settings = request.app.state.settings
         return EvidenceResolver(settings).resolve(session_id, evidence_id)
     except (TrainingSessionError, MarketDataError) as error:
@@ -231,6 +259,7 @@ def evaluate_playbook(
     session_id: str,
 ) -> PlaybookEvaluation:
     try:
+        service(request).ensure_available(session_id)
         settings: Settings = request.app.state.settings
         return PlaybookEvaluator(settings).evaluate(session_id)
     except (TrainingSessionError, MarketDataError) as error:

@@ -12,9 +12,11 @@ import type {
   LockTradePlanRequest,
   OrderResult,
   PlaybookEvaluation,
+  ReplaySession,
   SessionCommand,
   SessionDelta,
   SessionListResponse,
+  SessionTrashResponse,
   SubmitOrderRequest,
   TradePlanResult,
   TrainingReview,
@@ -52,6 +54,31 @@ export async function fetchSessions(): Promise<SessionListResponse> {
   return contractJson(
     await fetch(`${API_BASE_URL}/api/v1/sessions`),
     "SessionListResponse",
+  );
+}
+
+export async function fetchSessionTrash(): Promise<SessionTrashResponse> {
+  return contractJson(
+    await fetch(`${API_BASE_URL}/api/v1/sessions-trash`),
+    "SessionTrashResponse",
+  );
+}
+
+export async function deleteSession(sessionId: string): Promise<ReplaySession> {
+  return contractJson(
+    await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}`, {
+      method: "DELETE",
+    }),
+    "ReplaySession",
+  );
+}
+
+export async function restoreSession(sessionId: string): Promise<ReplaySession> {
+  return contractJson(
+    await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/restore`, {
+      method: "POST",
+    }),
+    "ReplaySession",
   );
 }
 

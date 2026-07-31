@@ -26,6 +26,12 @@ append-only 处置事件。`session_annotation` 继续保存不可变原始对�
 维度和该维度失败最多的 Playbook，不读取盈亏排名。单场复盘同时保存最多 200 点
 确定性净值曲线和可回跳操作时间线。
 
+实施注记（2026-07-31）：Alembic `0012_local_hardening` 增加会话软删除和本地
+偏好。会话回收只写 `deleted_at`，聚合与正常索引排除回收项，恢复不改变订单、
+证据或复盘。设置页支持 local-only 偏好、SQLite 在线备份/完整性校验恢复和
+Agent 运行目录的可恢复清理。应用启动会收敛遗留 running Tutor 状态，构建门禁
+扫描本机路径、数据库、日志和 secret pattern。
+
 实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
 `0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根
 激活的模拟撮合、Decimal 账本、确定性复盘、不可变 Playbook、用户/AI 图层，

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 import time
 
 from playwright.sync_api import Page, expect
@@ -22,7 +23,9 @@ def test_user_can_complete_core_training_flow(
 
     page.goto(f"{stack.web_url}/setup")
     page.get_by_role("button", name="创建训练会话").click()
-    expect(page.get_by_role("heading", name="先锁定交易计划")).to_be_visible(timeout=30_000)
+    expect(page.get_by_role("heading", name="先锁定交易计划")).to_be_visible(
+        timeout=30_000
+    )
     session_id = page.url.rstrip("/").split("/")[-1]
 
     page.get_by_label("交易逻辑").fill("顺势突破并等待下一根确认")
@@ -57,9 +60,12 @@ def test_user_can_complete_core_training_flow(
     assert any(annotation["label"] == "E2E 用户观察" for annotation in annotations)
 
     with page.expect_response(
-        lambda response: response.url.endswith(f"/api/v1/sessions/{session_id}/finish")
-        and response.ok
+        lambda response: (
+            response.url.endswith(f"/api/v1/sessions/{session_id}/finish")
+            and response.ok
+        )
     ):
+        page.once("dialog", lambda dialog: dialog.accept())
         page.get_by_role("button", name="结束会话").click()
     expect(page).to_have_url(f"{stack.web_url}/sessions/{session_id}/complete")
     expect(page.get_by_text("确定性复盘", exact=False)).to_be_visible(timeout=30_000)
@@ -96,10 +102,21 @@ def test_user_can_complete_core_training_flow(
     visible_at = datetime.fromisoformat(session["session"]["frame"]["visible_at"])
     assert session["session"]["status"] == "completed"
     assert session["execution"]["fills"]
-    assert all(datetime.fromisoformat(bar["close_time"]) <= visible_at for bar in session["bars"])
+    assert all(
+        datetime.fromisoformat(bar["close_time"]) <= visible_at
+        for bar in session["bars"]
+    )
+
+    page.goto(f"{stack.web_url}/sessions")
+    page.get_by_label(f"移入回收站 {session_id}").click()
+    expect(page.locator(".session-trash")).to_contain_text(session_id[:16])
+    page.locator(".session-trash").get_by_role("button", name="恢复").click()
+    expect(page.get_by_label(f"移入回收站 {session_id}")).to_be_visible()
 
 
-def test_order_is_not_filled_before_activation_bar(page: Page, e2e_stack_factory) -> None:
+def test_order_is_not_filled_before_activation_bar(
+    page: Page, e2e_stack_factory
+) -> None:
     stack: E2EStack = e2e_stack_factory("fake")
     response = page.request.post(f"{stack.api_url}/api/v1/datasets/golden", data={})
     assert response.ok
@@ -148,7 +165,9 @@ def test_order_is_not_filled_before_activation_bar(page: Page, e2e_stack_factory
     assert placed["execution"]["fills"] == []
 
 
-def test_drawings_and_dispositions_survive_reload(page: Page, e2e_stack_factory) -> None:
+def test_drawings_and_dispositions_survive_reload(
+    page: Page, e2e_stack_factory
+) -> None:
     stack: E2EStack = e2e_stack_factory("fake")
     client, created = create_training_session(stack.api_url)
     session_id = created["session"]["session_id"]
@@ -191,18 +210,62 @@ def test_drawings_and_dispositions_survive_reload(page: Page, e2e_stack_factory)
     )
 
     before_count = len(
-        client.get(
-            f"/api/v1/sessions/{session_id}/annotations/dispositions"
-        ).json()["dispositions"]
+        client.get(f"/api/v1/sessions/{session_id}/annotations/dispositions").json()[
+            "dispositions"
+        ]
     )
     page.get_by_title("矩形").click()
     page.mouse.click(box["x"] + box["width"] * 0.45, box["y"] + box["height"] * 0.5)
     page.keyboard.press("Escape")
     page.wait_for_timeout(250)
     after_count = len(
-        client.get(
-            f"/api/v1/sessions/{session_id}/annotations/dispositions"
-        ).json()["dispositions"]
+        client.get(f"/api/v1/sessions/{session_id}/annotations/dispositions").json()[
+            "dispositions"
+        ]
     )
     assert after_count == before_count
     client.close()
+
+
+def test_local_settings_responsive_layout_and_axe(
+    page: Page, e2e_stack_factory
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    for width in (1180, 1440, 1920):
+        page.set_viewport_size({"width": width, "height": 1000})
+        page.goto(f"{stack.web_url}/settings")
+        expect(page.get_by_role("heading", name="本地设置与恢复")).to_be_visible()
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= window.innerWidth"
+        )
+
+    page.get_by_role("button", name="创建数据库备份").click()
+    expect(page.locator(".backup-list code")).to_have_count(1)
+    page.get_by_label("AI 模式").select_option("off")
+    page.get_by_role("button", name="保存本地偏好").click()
+    expect(page.get_by_label("AI 模式")).to_have_value("off")
+
+    axe_path = (
+        Path(__file__).resolve().parents[2]
+        / "apps"
+        / "web"
+        / "node_modules"
+        / "axe-core"
+        / "axe.min.js"
+    )
+    page.add_script_tag(path=axe_path)
+    violations = page.evaluate(
+        """async () => (await axe.run(document, {
+          runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa']}
+        })).violations.filter((item) => ['serious', 'critical'].includes(item.impact))"""
+    )
+    assert violations == [], [
+        (
+            violation["id"],
+            [
+                {"target": node["target"], "html": node["html"]}
+                for node in violation["nodes"]
+            ],
+        )
+        for violation in violations
+    ]

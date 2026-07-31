@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -13,6 +14,16 @@ from replaytutor.contracts import AgentCapability, TutorResponse
 
 class CodexAdapterError(RuntimeError):
     pass
+
+
+def redact_agent_log(value: str, workspace: Path) -> str:
+    redacted = value.replace(str(Path.home()), "[HOME]")
+    redacted = redacted.replace(str(workspace), "[WORKSPACE]")
+    return re.sub(
+        r"(?i)(api[_-]?(?:key|secret)|authorization|token)([=: ]+)([^\s\"']+)",
+        r"\1\2[REDACTED]",
+        redacted,
+    )
 
 
 class CodexAdapter:
@@ -136,8 +147,14 @@ class CodexAdapter:
                 process.kill()
                 process.communicate()
                 raise TimeoutError("Codex Tutor timed out") from error
-        (workspace / "events.jsonl").write_text(stdout, encoding="utf-8")
-        (workspace / "stderr.log").write_text(stderr, encoding="utf-8")
+        (workspace / "events.jsonl").write_text(
+            redact_agent_log(stdout, workspace),
+            encoding="utf-8",
+        )
+        (workspace / "stderr.log").write_text(
+            redact_agent_log(stderr, workspace),
+            encoding="utf-8",
+        )
         if process.returncode != 0:
             diagnostic = (
                 stderr.strip().splitlines()[-1] if stderr.strip() else self._event_error(stdout)

@@ -13,6 +13,8 @@ def runtime_directories(settings: Settings) -> tuple[Path, ...]:
         root / "market" / "snapshots",
         root / "imports",
         root / "runtime" / "agent-runs",
+        root / "backups",
+        root / "trash" / "agent-runs",
         root / "exports",
         Path("logs").resolve(),
     )

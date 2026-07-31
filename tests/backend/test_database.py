@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import sqlite3
 
+from alembic import command
+
 from replaytutor.config import Settings
-from replaytutor.storage.database import inspect_database, upgrade_database
+from replaytutor.storage.database import (
+    alembic_config,
+    inspect_database,
+    upgrade_database,
+)
 
 
 def test_migration_is_idempotent_and_database_pragmas_are_enabled(
@@ -16,7 +22,7 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
     assert status.journal_mode == "wal"
     assert status.foreign_keys is True
     assert status.busy_timeout_ms == 5000
-    assert status.migration_current == status.migration_head == "0011_playbook_rules"
+    assert status.migration_current == status.migration_head == "0012_local_hardening"
 
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
@@ -27,6 +33,7 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
         }
     assert tables == {
         "alembic_version",
+        "app_preference",
         "data_import",
         "data_snapshot",
         "execution_fill",
@@ -37,10 +44,10 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
         "instrument",
         "replay_frame",
         "replay_session",
-            "session_command",
-            "session_event",
-            "session_annotation",
-            "session_annotation_event",
+        "session_command",
+        "session_event",
+        "session_annotation",
+        "session_annotation_event",
         "system_meta",
         "trade_plan",
         "training_review",
@@ -72,7 +79,7 @@ def test_initial_migration_recovers_from_sqlite_ddl_without_revision(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == status.migration_head == "0011_playbook_rules"
+    assert status.migration_current == status.migration_head == "0012_local_hardening"
 
 
 def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
@@ -86,7 +93,7 @@ def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == "0011_playbook_rules"
+    assert status.migration_current == "0012_local_hardening"
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
             row[0]
@@ -99,3 +106,26 @@ def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
         }
     assert "playbook_version" in tables
     assert "playbook_id" in columns
+
+
+def test_local_hardening_migration_downgrade_and_upgrade_drill(
+    settings: Settings,
+) -> None:
+    upgrade_database(settings)
+    command.downgrade(alembic_config(settings), "0011_playbook_rules")
+    with sqlite3.connect(settings.database_path) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(replay_session)")
+        }
+    assert "app_preference" not in tables
+    assert "deleted_at" not in columns
+
+    upgrade_database(settings)
+    status = inspect_database(settings)
+    assert status.migration_current == "0012_local_hardening"

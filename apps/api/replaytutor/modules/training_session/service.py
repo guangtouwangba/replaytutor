@@ -17,6 +17,7 @@ from replaytutor.contracts import (
     SessionDelta,
     SessionEvent,
     SessionListResponse,
+    SessionTrashResponse,
 )
 from replaytutor.ids import new_id, stable_id
 from replaytutor.modules.market_data.service import MarketDataService, utc_text
@@ -43,9 +44,7 @@ class SessionNotFoundError(TrainingSessionError):
 
 class SessionConflictError(TrainingSessionError):
     def __init__(self, current_revision: int) -> None:
-        super().__init__(
-            f"Session revision conflict; current revision is {current_revision}"
-        )
+        super().__init__(f"Session revision conflict; current revision is {current_revision}")
         self.current_revision = current_revision
 
 
@@ -147,13 +146,67 @@ class TrainingSessionService:
     def list(self) -> SessionListResponse:
         with connect_database(self.settings.database_path) as connection:
             rows = connection.execute(
-                "SELECT * FROM replay_session ORDER BY created_at DESC"
+                """SELECT * FROM replay_session
+                WHERE deleted_at IS NULL
+                ORDER BY created_at DESC"""
             ).fetchall()
-            sessions = [
-                self._session_from_row(connection, dict(row))
-                for row in rows
-            ]
+            sessions = [self._session_from_row(connection, dict(row)) for row in rows]
         return SessionListResponse(sessions=sessions)
+
+    def trash(self) -> SessionTrashResponse:
+        with connect_database(self.settings.database_path) as connection:
+            rows = connection.execute(
+                """SELECT * FROM replay_session
+                WHERE deleted_at IS NOT NULL
+                ORDER BY deleted_at DESC"""
+            ).fetchall()
+            sessions = [self._session_from_row(connection, dict(row)) for row in rows]
+        return SessionTrashResponse(sessions=sessions)
+
+    def soft_delete(self, session_id: str) -> ReplaySession:
+        now = datetime.now(UTC)
+        with connect_database(self.settings.database_path) as connection:
+            row = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                raise SessionNotFoundError("Session not found")
+            if row["deleted_at"] is None:
+                connection.execute(
+                    """UPDATE replay_session
+                    SET deleted_at = ?, updated_at = ?
+                    WHERE session_id = ?""",
+                    (utc_text(now), utc_text(now), session_id),
+                )
+            restored = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            assert restored is not None
+            return self._session_from_row(connection, dict(restored))
+
+    def restore(self, session_id: str) -> ReplaySession:
+        now = datetime.now(UTC)
+        with connect_database(self.settings.database_path) as connection:
+            row = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                raise SessionNotFoundError("Session not found")
+            connection.execute(
+                """UPDATE replay_session
+                SET deleted_at = NULL, updated_at = ?
+                WHERE session_id = ?""",
+                (utc_text(now), session_id),
+            )
+            restored = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            assert restored is not None
+            return self._session_from_row(connection, dict(restored))
 
     def get(
         self,
@@ -178,6 +231,10 @@ class TrainingSessionService:
             annotations=annotations,
         )
 
+    def ensure_available(self, session_id: str) -> None:
+        with connect_database(self.settings.database_path) as connection:
+            self._session_row(connection, session_id)
+
     def apply(self, session_id: str, command: SessionCommand) -> SessionDelta:
         connection = connect_database(self.settings.database_path)
         try:
@@ -188,18 +245,14 @@ class TrainingSessionService:
             ).fetchone()
             if existing is not None:
                 if str(existing["session_id"]) != session_id:
-                    raise TrainingSessionError(
-                        "Command id was already used by another session"
-                    )
+                    raise TrainingSessionError("Command id was already used by another session")
                 connection.rollback()
                 stored = SessionDelta.model_validate_json(existing["result_json"])
                 return stored.model_copy(update={"idempotent_replay": True})
 
             row = self._session_row(connection, session_id)
             if row["status"] in {"completed", "stopped"}:
-                raise InvalidSessionStateError(
-                    f"Cannot advance a {row['status']} session"
-                )
+                raise InvalidSessionStateError(f"Cannot advance a {row['status']} session")
             if int(row["revision"]) != command.expected_revision:
                 raise SessionConflictError(int(row["revision"]))
 
@@ -343,9 +396,7 @@ class TrainingSessionService:
                     str(existing["session_id"]) != session_id
                     or str(existing["command_type"]) != "finish"
                 ):
-                    raise TrainingSessionError(
-                        "Command id was already used by another operation"
-                    )
+                    raise TrainingSessionError("Command id was already used by another operation")
                 connection.rollback()
                 stored = CompletedSession.model_validate_json(existing["result_json"])
                 return stored.model_copy(update={"idempotent_replay": True})
@@ -454,6 +505,8 @@ class TrainingSessionService:
         ).fetchone()
         if row is None:
             raise SessionNotFoundError("Session not found")
+        if row["deleted_at"] is not None:
+            raise SessionNotFoundError("Session is in trash")
         return dict(row)
 
     def _session_from_row(
@@ -510,14 +563,13 @@ class TrainingSessionService:
             seed=int(row["seed"]),
             initial_cash=str(row["initial_cash"]),
             hidden_real_date=bool(row["hidden_real_date"]),
-            playbook_id=(
-                str(row["playbook_id"])
-                if row.get("playbook_id") is not None
-                else None
-            ),
+            playbook_id=(str(row["playbook_id"]) if row.get("playbook_id") is not None else None),
             fingerprint=str(row["fingerprint"]),
             created_at=parse_utc(str(row["created_at"])),
             updated_at=parse_utc(str(row["updated_at"])),
+            deleted_at=(
+                parse_utc(str(row["deleted_at"])) if row.get("deleted_at") is not None else None
+            ),
         )
 
     def _visible_bars(self, session: ReplaySession) -> list[Bar]:

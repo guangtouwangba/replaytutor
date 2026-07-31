@@ -197,7 +197,6 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
 
 def test_five_session_scores_and_recommendation_use_rules_not_profit(
     client: TestClient,
-    settings: Settings,
 ) -> None:
     snapshot = client.post("/api/v1/datasets/golden", json={}).json()
     playbooks = client.get("/api/v1/playbooks").json()["playbooks"]
@@ -283,11 +282,8 @@ def test_five_session_scores_and_recommendation_use_rules_not_profit(
     assert aggregate["recommendation"]["playbook_id"] == trend["playbook_id"]
     assert "不使用盈利排名" in aggregate["recommendation"]["reason"]
 
-    with connect_database(settings.database_path) as connection:
-        connection.execute(
-            "UPDATE replay_session SET status = 'stopped' WHERE session_id = ?",
-            (session_ids[0],),
-        )
+    deleted = client.delete(f"/api/v1/sessions/{session_ids[0]}")
+    assert deleted.status_code == 200
     recomputed = client.get("/api/v1/training-reviews").json()
     assert all(
         item["status"] == "insufficient" and item["sample_count"] == 4
