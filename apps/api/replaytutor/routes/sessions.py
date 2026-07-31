@@ -4,6 +4,9 @@ from fastapi import APIRouter, Request
 
 from replaytutor.config import Settings
 from replaytutor.contracts import (
+    AnnotationActionRequest,
+    AnnotationDisposition,
+    AnnotationDispositionListResponse,
     CancelOrderRequest,
     ChartAnnotation,
     CompletedSession,
@@ -154,6 +157,39 @@ def create_annotation(
     try:
         settings: Settings = request.app.state.settings
         return AnnotationService(settings).create(session_id, payload)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.get(
+    "/sessions/{session_id}/annotations/dispositions",
+    response_model=AnnotationDispositionListResponse,
+)
+def list_annotation_dispositions(
+    request: Request,
+    session_id: str,
+) -> AnnotationDispositionListResponse:
+    try:
+        settings: Settings = request.app.state.settings
+        dispositions = AnnotationService(settings).list_dispositions(session_id)
+        return AnnotationDispositionListResponse(dispositions=dispositions)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.post(
+    "/sessions/{session_id}/annotations/{annotation_id}/actions",
+    response_model=AnnotationDisposition,
+)
+def act_on_annotation(
+    request: Request,
+    session_id: str,
+    annotation_id: str,
+    payload: AnnotationActionRequest,
+) -> AnnotationDisposition:
+    try:
+        settings: Settings = request.app.state.settings
+        return AnnotationService(settings).act(session_id, annotation_id, payload)
     except (TrainingSessionError, MarketDataError) as error:
         raise translate(error) from error
 

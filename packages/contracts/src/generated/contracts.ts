@@ -1,5 +1,8 @@
 // Generated from Pydantic. Do not edit.
 export type { AgentCapability } from "./models/AgentCapability";
+export type { AnnotationActionRequest } from "./models/AnnotationActionRequest";
+export type { AnnotationDisposition } from "./models/AnnotationDisposition";
+export type { AnnotationDispositionListResponse } from "./models/AnnotationDispositionListResponse";
 export type { AnnotationPoint } from "./models/AnnotationPoint";
 export type { Bar } from "./models/Bar";
 export type { BarListResponse } from "./models/BarListResponse";

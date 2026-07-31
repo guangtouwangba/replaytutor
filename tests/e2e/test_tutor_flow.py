@@ -23,6 +23,12 @@ def test_tutor_response_uses_visible_evidence_and_separate_ai_layer(
     page.get_by_role("button", name="让 Codex 检查").click()
     expect(page.get_by_text("事实观察", exact=True)).to_be_visible(timeout=30_000)
     expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible()
+    expect(page.locator(".annotation-list", has_text="proposed")).to_be_visible()
+    page.locator(".annotation-list button", has_text="E2E Tutor 标注").click()
+    page.locator(".annotation-inspector").get_by_role("button", name="接受").click()
+    expect(page.locator(".annotation-list", has_text="accepted")).to_be_visible()
+    page.reload()
+    expect(page.locator(".annotation-list", has_text="accepted")).to_be_visible()
 
     deadline = time.monotonic() + 10
     annotations = []

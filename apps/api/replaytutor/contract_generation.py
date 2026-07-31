@@ -5,6 +5,9 @@ from pathlib import Path
 
 from replaytutor.contracts import (
     AgentCapability,
+    AnnotationActionRequest,
+    AnnotationDisposition,
+    AnnotationDispositionListResponse,
     AnnotationPoint,
     Bar,
     BarListResponse,
@@ -110,6 +113,9 @@ def render_contracts() -> str:
         CompletedSession,
         ChartAnnotation,
         CreateAnnotationRequest,
+        AnnotationActionRequest,
+        AnnotationDisposition,
+        AnnotationDispositionListResponse,
         ReviewMetric,
         EvidenceRef,
         TrainingReview,

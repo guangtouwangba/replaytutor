@@ -72,6 +72,465 @@
       "title": "AgentCapability",
       "type": "object"
     },
+    "AnnotationActionRequest": {
+      "$defs": {
+        "AnnotationPoint": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "time",
+            "price"
+          ],
+          "title": "AnnotationPoint",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "revised",
+            "deleted"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "command_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "points": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/AnnotationPoint"
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Points"
+        }
+      },
+      "required": [
+        "command_id",
+        "expected_revision",
+        "action"
+      ],
+      "title": "AnnotationActionRequest",
+      "type": "object"
+    },
+    "AnnotationDisposition": {
+      "$defs": {
+        "AnnotationPoint": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "time",
+            "price"
+          ],
+          "title": "AnnotationPoint",
+          "type": "object"
+        },
+        "ChartAnnotation": {
+          "additionalProperties": false,
+          "properties": {
+            "annotation_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Annotation Id",
+              "type": "string"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "frame_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Frame Id",
+              "type": "string"
+            },
+            "label": {
+              "title": "Label",
+              "type": "string"
+            },
+            "layer": {
+              "enum": [
+                "user",
+                "ai"
+              ],
+              "title": "Layer",
+              "type": "string"
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/AnnotationPoint"
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "title": "Points",
+              "type": "array"
+            },
+            "provenance_run_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Provenance Run Id"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "shape": {
+              "enum": [
+                "line",
+                "zone",
+                "marker",
+                "label"
+              ],
+              "title": "Shape",
+              "type": "string"
+            }
+          },
+          "required": [
+            "annotation_id",
+            "session_id",
+            "frame_id",
+            "layer",
+            "shape",
+            "label",
+            "points",
+            "created_at"
+          ],
+          "title": "ChartAnnotation",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "annotation_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Annotation Id",
+          "type": "string"
+        },
+        "effective_label": {
+          "title": "Effective Label",
+          "type": "string"
+        },
+        "effective_points": {
+          "items": {
+            "$ref": "#/$defs/AnnotationPoint"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Effective Points",
+          "type": "array"
+        },
+        "latest_event_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Event Id"
+        },
+        "original_annotation": {
+          "$ref": "#/$defs/ChartAnnotation"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "active",
+            "proposed",
+            "accepted",
+            "rejected",
+            "deleted"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "annotation_id",
+        "state",
+        "effective_label",
+        "effective_points",
+        "original_annotation"
+      ],
+      "title": "AnnotationDisposition",
+      "type": "object"
+    },
+    "AnnotationDispositionListResponse": {
+      "$defs": {
+        "AnnotationDisposition": {
+          "additionalProperties": false,
+          "properties": {
+            "annotation_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Annotation Id",
+              "type": "string"
+            },
+            "effective_label": {
+              "title": "Effective Label",
+              "type": "string"
+            },
+            "effective_points": {
+              "items": {
+                "$ref": "#/$defs/AnnotationPoint"
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "title": "Effective Points",
+              "type": "array"
+            },
+            "latest_event_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Latest Event Id"
+            },
+            "original_annotation": {
+              "$ref": "#/$defs/ChartAnnotation"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "active",
+                "proposed",
+                "accepted",
+                "rejected",
+                "deleted"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          "required": [
+            "annotation_id",
+            "state",
+            "effective_label",
+            "effective_points",
+            "original_annotation"
+          ],
+          "title": "AnnotationDisposition",
+          "type": "object"
+        },
+        "AnnotationPoint": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "time",
+            "price"
+          ],
+          "title": "AnnotationPoint",
+          "type": "object"
+        },
+        "ChartAnnotation": {
+          "additionalProperties": false,
+          "properties": {
+            "annotation_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Annotation Id",
+              "type": "string"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "frame_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Frame Id",
+              "type": "string"
+            },
+            "label": {
+              "title": "Label",
+              "type": "string"
+            },
+            "layer": {
+              "enum": [
+                "user",
+                "ai"
+              ],
+              "title": "Layer",
+              "type": "string"
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/AnnotationPoint"
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "title": "Points",
+              "type": "array"
+            },
+            "provenance_run_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Provenance Run Id"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "shape": {
+              "enum": [
+                "line",
+                "zone",
+                "marker",
+                "label"
+              ],
+              "title": "Shape",
+              "type": "string"
+            }
+          },
+          "required": [
+            "annotation_id",
+            "session_id",
+            "frame_id",
+            "layer",
+            "shape",
+            "label",
+            "points",
+            "created_at"
+          ],
+          "title": "ChartAnnotation",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "dispositions": {
+          "items": {
+            "$ref": "#/$defs/AnnotationDisposition"
+          },
+          "title": "Dispositions",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dispositions"
+      ],
+      "title": "AnnotationDispositionListResponse",
+      "type": "object"
+    },
     "AnnotationPoint": {
       "additionalProperties": false,
       "properties": {

@@ -189,6 +189,14 @@ button.status-pill { cursor: pointer; }
 .dock-card h2 { margin: 8px 0 4px; font-size: 13px; }
 .dock-card p { font-size: 10px; }
 .dock-card .secondary-action { width: 100%; }
+.annotation-list, .annotation-inspector { display: grid; gap: 8px; }
+.annotation-list > button, .annotation-inspector-head, .annotation-actions, .annotation-point-editor { display: flex; gap: 8px; }
+.annotation-list > button, .annotation-inspector-head { align-items: center; justify-content: space-between; }
+.annotation-list > button { text-align: left; }
+.annotation-list > button small { color: var(--muted); }
+.annotation-point-editor > label { flex: 1; min-width: 0; }
+.annotation-actions { flex-wrap: wrap; }
+.annotation-inspector details code { display: block; overflow-wrap: anywhere; }
 .decision-form { display: grid; gap: 9px; }
 .decision-form label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; }
 .decision-form input, .decision-form select, .decision-form textarea { width: 100%; padding: 7px 8px; border: 1px solid var(--border); border-radius: 3px; background: #09111a; color: var(--text); font: 10px "IBM Plex Mono", monospace; }

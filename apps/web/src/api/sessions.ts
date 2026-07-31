@@ -1,4 +1,7 @@
 import type {
+  AnnotationActionRequest,
+  AnnotationDisposition,
+  AnnotationDispositionListResponse,
   CompletedSession,
   CancelOrderRequest,
   ChartAnnotation,
@@ -149,6 +152,35 @@ export async function createAnnotation(
       body: JSON.stringify(payload),
     }),
     "ChartAnnotation",
+  );
+}
+
+export async function fetchAnnotationDispositions(
+  sessionId: string,
+): Promise<AnnotationDispositionListResponse> {
+  return contractJson(
+    await fetch(
+      `${API_BASE_URL}/api/v1/sessions/${sessionId}/annotations/dispositions`,
+    ),
+    "AnnotationDispositionListResponse",
+  );
+}
+
+export async function actOnAnnotation(
+  sessionId: string,
+  annotationId: string,
+  payload: AnnotationActionRequest,
+): Promise<AnnotationDisposition> {
+  return contractJson(
+    await fetch(
+      `${API_BASE_URL}/api/v1/sessions/${sessionId}/annotations/${annotationId}/actions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    ),
+    "AnnotationDisposition",
   );
 }
 

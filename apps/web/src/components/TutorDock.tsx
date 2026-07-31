@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Bot, LoaderCircle, Square } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   cancelTutorRun,
   discoverCodex,
@@ -11,9 +11,11 @@ import {
 export function TutorDock({
   sessionId,
   afterAction = false,
+  onAnnotationsChanged,
 }: {
   readonly sessionId: string;
   readonly afterAction?: boolean;
+  readonly onAnnotationsChanged?: () => void;
 }) {
   const [question, setQuestion] = useState("");
   const [stage, setStage] = useState<"environment" | "plan" | "position" | "exit" | "after_action">(
@@ -45,6 +47,11 @@ export function TutorDock({
     },
   });
   const current = run.data;
+  useEffect(() => {
+    if (current?.status === "completed" && (current.response?.annotations?.length ?? 0) > 0) {
+      onAnnotationsChanged?.();
+    }
+  }, [current?.response?.annotations?.length, current?.status, onAnnotationsChanged]);
   return (
     <section className="dock-card tutor-card">
       <div className="tutor-title"><Bot size={15} /><span className="page-kicker">CODEX TUTOR</span><strong>{capability.data?.available ? capability.data.version : "不可用"}</strong></div>

@@ -1,7 +1,13 @@
 # ReplayTutor 系统架构
 
 状态：Implemented through MVP 1A
-更新时间：2026-07-30
+更新时间：2026-07-31
+
+实施注记（2026-07-31）：Alembic `0010_annotation_events` 为用户和 AI 标注增加
+append-only 处置事件。`session_annotation` 继续保存不可变原始对象；接受、拒绝、
+修改和删除只追加事件，由 `AnnotationService` 解析有效形状。AI 标注默认
+`proposed`，用户接受后仍保持 `layer=ai` 与 `provenance_run_id`，不得伪装成用户
+原始判断。
 
 实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
 `0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根

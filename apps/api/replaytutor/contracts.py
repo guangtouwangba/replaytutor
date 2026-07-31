@@ -544,6 +544,29 @@ class CreateAnnotationRequest(ContractModel):
     points: list[AnnotationPoint] = Field(min_length=1, max_length=4)
 
 
+class AnnotationActionRequest(ContractModel):
+    command_id: Identifier
+    expected_revision: int = Field(ge=0)
+    action: Literal["accepted", "rejected", "revised", "deleted"]
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    points: list[AnnotationPoint] | None = Field(default=None, min_length=1, max_length=4)
+
+
+class AnnotationDisposition(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    annotation_id: Identifier
+    state: Literal["active", "proposed", "accepted", "rejected", "deleted"]
+    effective_label: str
+    effective_points: list[AnnotationPoint] = Field(min_length=1, max_length=4)
+    original_annotation: ChartAnnotation
+    latest_event_id: Identifier | None = None
+
+
+class AnnotationDispositionListResponse(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    dispositions: list[AnnotationDisposition]
+
+
 class BinanceConnectionStatus(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     readable: bool

@@ -1,19 +1,36 @@
+import type {
+  AnnotationActionRequest,
+  AnnotationPoint,
+  ChartAnnotation,
+  CreateAnnotationRequest,
+} from "@replaytutor/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, ChevronRight, MapPin, Pause, Play, Square, StepForward } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   applySessionCommand,
+  actOnAnnotation,
   cancelOrder,
   commandId,
   createAnnotation,
+  fetchAnnotationDispositions,
   fetchSession,
   finishSession,
   lockTradePlan,
   submitOrder,
 } from "../api/sessions";
 import { ReplayChart } from "../chart/ReplayChart";
+import type { DrawingTool } from "../chart/DrawingController";
+import { AnnotationInspector } from "../components/AnnotationInspector";
 import { TutorDock } from "../components/TutorDock";
+
+function boundedPoints(points: AnnotationPoint[]): CreateAnnotationRequest["points"] {
+  if (points.length < 1 || points.length > 4) {
+    throw new Error("Annotations require between one and four points");
+  }
+  return points as CreateAnnotationRequest["points"];
+}
 
 export function WorkbenchPage() {
   const { sessionId } = useParams();
@@ -31,9 +48,17 @@ export function WorkbenchPage() {
   const [takeProfit, setTakeProfit] = useState("");
   const [protectiveStop, setProtectiveStop] = useState("");
   const [annotationLabel, setAnnotationLabel] = useState("我的观察");
+  const [drawingTool, setDrawingTool] = useState<DrawingTool>("select");
+  const [drawingRequest, setDrawingRequest] = useState(0);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const session = useQuery({
     queryKey: ["session", sessionId],
     queryFn: () => fetchSession(sessionId!),
+    enabled: Boolean(sessionId),
+  });
+  const dispositions = useQuery({
+    queryKey: ["annotation-dispositions", sessionId],
+    queryFn: () => fetchAnnotationDispositions(sessionId!),
     enabled: Boolean(sessionId),
   });
   const advance = useMutation({
@@ -148,8 +173,99 @@ export function WorkbenchPage() {
         ["session", sessionId],
         { ...session.data!, annotations: [...(session.data?.annotations ?? []), annotation] },
       );
+      setSelectedAnnotationId(annotation.annotation_id);
+      void queryClient.invalidateQueries({ queryKey: ["annotation-dispositions", sessionId] });
     },
   });
+  const createDrawing = useMutation({
+    mutationFn: async ({
+      shape,
+      points,
+    }: {
+      shape: ChartAnnotation["shape"];
+      points: AnnotationPoint[];
+    }) => {
+      if (!sessionId || !session.data) throw new Error("Session is not ready");
+      return createAnnotation(sessionId, {
+        command_id: commandId(),
+        expected_revision: session.data.session.revision,
+        shape,
+        label: annotationLabel,
+        points: boundedPoints(points),
+      });
+    },
+    onSuccess: (annotation) => {
+      queryClient.setQueryData(
+        ["session", sessionId],
+        { ...session.data!, annotations: [...(session.data?.annotations ?? []), annotation] },
+      );
+      setDrawingTool("select");
+      setSelectedAnnotationId(annotation.annotation_id);
+      void queryClient.invalidateQueries({ queryKey: ["annotation-dispositions", sessionId] });
+    },
+  });
+  const annotationAction = useMutation({
+    mutationFn: async ({
+      annotationId,
+      action,
+      label,
+      points,
+    }: {
+      annotationId: string;
+      action: "accepted" | "rejected" | "revised" | "deleted";
+      label?: string;
+      points?: AnnotationPoint[];
+    }) => {
+      if (!sessionId || !session.data) throw new Error("Session is not ready");
+      return actOnAnnotation(sessionId, annotationId, {
+        command_id: commandId(),
+        expected_revision: session.data.session.revision,
+        action,
+        label,
+        points: points ? boundedPoints(points) as AnnotationActionRequest["points"] : undefined,
+      });
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(
+        ["annotation-dispositions", sessionId],
+        {
+          schema_version: "1.0",
+          dispositions: (dispositions.data?.dispositions ?? []).map((item) => (
+            item.annotation_id === updated.annotation_id ? updated : item
+          )),
+        },
+      );
+    },
+  });
+
+  const effectiveAnnotations = useMemo(
+    () => (dispositions.data?.dispositions ?? [])
+      .filter((item) => !["rejected", "deleted"].includes(item.state))
+      .map((item) => ({
+        ...item.original_annotation,
+        label: item.effective_label,
+        points: item.effective_points,
+      })),
+    [dispositions.data],
+  );
+  const selectedDisposition = dispositions.data?.dispositions.find(
+    (item) => item.annotation_id === selectedAnnotationId,
+  ) ?? null;
+  const handleDrawingComplete = useCallback(
+    (shape: ChartAnnotation["shape"], points: AnnotationPoint[]) => {
+      createDrawing.mutate({ shape, points });
+    },
+    [createDrawing],
+  );
+  const startDrawing = (tool: Exclude<DrawingTool, "select">) => {
+    setDrawingTool(tool);
+    setDrawingRequest((value) => value + 1);
+  };
+  const handleAnnotationsChanged = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: ["annotation-dispositions", sessionId],
+    });
+  }, [queryClient, sessionId]);
 
   useEffect(() => {
     if (!playing || advance.isPending || !session.data) return;
@@ -200,13 +316,13 @@ export function WorkbenchPage() {
 
       <div className="workbench-grid">
         <aside className="drawing-rail" aria-label="绘图工具">
-          <button className="is-active" title="选择" type="button">↖</button>
-          <button disabled title="W3 开放趋势线" type="button">╱</button>
-          <button disabled title="W3 开放矩形" type="button">□</button>
+          <button className={drawingTool === "select" ? "is-active" : ""} onClick={() => setDrawingTool("select")} title="选择" type="button">↖</button>
+          <button className={drawingTool === "line" ? "is-active" : ""} onClick={() => startDrawing("line")} title="趋势线" type="button">╱</button>
+          <button className={drawingTool === "zone" ? "is-active" : ""} onClick={() => startDrawing("zone")} title="矩形" type="button">□</button>
           <button
-            className={markCurrent.isPending ? "is-active" : ""}
-            onClick={() => markCurrent.mutate()}
-            title="在当前 K 线标记观察"
+            className={drawingTool === "marker" ? "is-active" : ""}
+            onClick={() => startDrawing("marker")}
+            title="在图上标记观察"
             type="button"
           >
             <MapPin size={15} />
@@ -226,7 +342,11 @@ export function WorkbenchPage() {
             hideRealDate={state.hidden_real_date}
             orders={execution?.orders}
             fills={execution?.fills}
-            annotations={delta.annotations}
+            annotations={effectiveAnnotations}
+            drawingTool={drawingTool}
+            drawingRequest={drawingRequest}
+            onDrawingComplete={handleDrawingComplete}
+            onAnnotationSelect={setSelectedAnnotationId}
           />
         </main>
         <aside className="workbench-dock">
@@ -281,7 +401,25 @@ export function WorkbenchPage() {
               <div><dt>Progress</dt><dd>{(state.frame.progress * 100).toFixed(2)}%</dd></div>
             </dl>
           </div>
-          <TutorDock sessionId={sessionId} />
+          <TutorDock
+            sessionId={sessionId}
+            onAnnotationsChanged={handleAnnotationsChanged}
+          />
+          <div className="dock-card annotation-list">
+            <span className="page-kicker">图层对象</span>
+            {(dispositions.data?.dispositions ?? []).map((item) => (
+              <button className={selectedAnnotationId === item.annotation_id ? "is-active" : ""} key={item.annotation_id} onClick={() => setSelectedAnnotationId(item.annotation_id)} type="button">
+                <span>{item.effective_label}</span><small>{item.original_annotation.layer} · {item.state}</small>
+              </button>
+            ))}
+          </div>
+          <AnnotationInspector
+            disposition={selectedDisposition}
+            pending={annotationAction.isPending}
+            onAction={(action, label, points) => {
+              if (selectedAnnotationId) annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
+            }}
+          />
         </aside>
         <footer className="replay-controls">
           <button

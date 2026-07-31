@@ -6,7 +6,7 @@ import time
 from playwright.sync_api import Page, expect
 
 from .conftest import E2EStack
-from .helpers import command_id
+from .helpers import command_id, create_training_session
 
 
 def test_user_can_complete_core_training_flow(
@@ -116,3 +116,63 @@ def test_order_is_not_filled_before_activation_bar(page: Page, e2e_stack_factory
     placed = placed_response.json()
     assert placed["order"]["status"] == "PENDING"
     assert placed["execution"]["fills"] == []
+
+
+def test_drawings_and_dispositions_survive_reload(page: Page, e2e_stack_factory) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    page.goto(f"{stack.web_url}/sessions/{session_id}")
+    expect(page.get_by_role("button", name="下一根 K 线")).to_be_visible()
+
+    page.get_by_label("标注文字").first.fill("E2E 趋势线")
+    page.get_by_title("趋势线").click()
+    chart = page.locator(".replay-chart")
+    box = chart.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] * 0.35, box["y"] + box["height"] * 0.45)
+    page.mouse.click(box["x"] + box["width"] * 0.55, box["y"] + box["height"] * 0.35)
+    expect(page.locator(".annotation-list", has_text="E2E 趋势线")).to_be_visible(
+        timeout=15_000
+    )
+
+    page.locator(".annotation-list button", has_text="E2E 趋势线").click()
+    page.locator(".annotation-inspector input").first.fill("E2E 修订趋势线")
+    page.get_by_role("button", name="保存修改").click()
+    expect(page.locator(".annotation-list", has_text="E2E 修订趋势线")).to_be_visible()
+    page.reload()
+    expect(page.locator(".annotation-list", has_text="E2E 修订趋势线")).to_be_visible()
+
+    page.locator(".annotation-list button", has_text="E2E 修订趋势线").click()
+    page.locator(".annotation-inspector").get_by_role("button", name="删除").click()
+    expect(page.locator(".annotation-list", has_text="deleted")).to_be_visible()
+
+    page.get_by_label("标注文字").first.fill("E2E 矩形")
+    page.get_by_title("矩形").click()
+    page.mouse.click(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.4)
+    page.mouse.click(box["x"] + box["width"] * 0.62, box["y"] + box["height"] * 0.62)
+    expect(page.locator(".annotation-list", has_text="E2E 矩形")).to_be_visible()
+    rectangle_dispositions = client.get(
+        f"/api/v1/sessions/{session_id}/annotations/dispositions"
+    ).json()["dispositions"]
+    assert any(
+        item["original_annotation"]["shape"] == "zone"
+        for item in rectangle_dispositions
+    )
+
+    before_count = len(
+        client.get(
+            f"/api/v1/sessions/{session_id}/annotations/dispositions"
+        ).json()["dispositions"]
+    )
+    page.get_by_title("矩形").click()
+    page.mouse.click(box["x"] + box["width"] * 0.45, box["y"] + box["height"] * 0.5)
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(250)
+    after_count = len(
+        client.get(
+            f"/api/v1/sessions/{session_id}/annotations/dispositions"
+        ).json()["dispositions"]
+    )
+    assert after_count == before_count
+    client.close()

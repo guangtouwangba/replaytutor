@@ -16,7 +16,7 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
     assert status.journal_mode == "wal"
     assert status.foreign_keys is True
     assert status.busy_timeout_ms == 5000
-    assert status.migration_current == status.migration_head == "0009_annotations"
+    assert status.migration_current == status.migration_head == "0010_annotation_events"
 
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
@@ -40,6 +40,7 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
             "session_command",
             "session_event",
             "session_annotation",
+            "session_annotation_event",
         "system_meta",
         "trade_plan",
         "training_review",
@@ -71,7 +72,7 @@ def test_initial_migration_recovers_from_sqlite_ddl_without_revision(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == status.migration_head == "0009_annotations"
+    assert status.migration_current == status.migration_head == "0010_annotation_events"
 
 
 def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
@@ -85,7 +86,7 @@ def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == "0009_annotations"
+    assert status.migration_current == "0010_annotation_events"
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
             row[0]

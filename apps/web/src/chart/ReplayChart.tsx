@@ -1,6 +1,7 @@
-import type { Bar, ChartAnnotation, PaperFill, PaperOrder } from "@replaytutor/contracts";
+import type { AnnotationPoint, Bar, ChartAnnotation, PaperFill, PaperOrder } from "@replaytutor/contracts";
 import { dispose, init, type Chart, type KLineData } from "klinecharts";
-import { useEffect, useRef } from "react";
+import { type MouseEvent as ReactMouseEvent, useEffect, useRef } from "react";
+import { overlayName, type DrawingTool } from "./DrawingController";
 
 interface ReplayChartProps {
   readonly bars: readonly Bar[];
@@ -11,6 +12,13 @@ interface ReplayChartProps {
   readonly orders?: readonly PaperOrder[];
   readonly fills?: readonly PaperFill[];
   readonly annotations?: readonly ChartAnnotation[];
+  readonly drawingTool?: DrawingTool;
+  readonly drawingRequest?: number;
+  readonly onDrawingComplete?: (
+    shape: ChartAnnotation["shape"],
+    points: AnnotationPoint[],
+  ) => void;
+  readonly onAnnotationSelect?: (annotationId: string) => void;
 }
 
 function toKLineData(bar: Bar): KLineData {
@@ -33,11 +41,17 @@ export function ReplayChart({
   orders = [],
   fills = [],
   annotations = [],
+  drawingTool = "select",
+  drawingRequest = 0,
+  onDrawingComplete,
+  onAnnotationSelect,
 }: ReplayChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const barsRef = useRef<KLineData[]>([]);
   const executionOverlayIds = useRef<string[]>([]);
+  const draftOverlayId = useRef<string | null>(null);
+  const draftPoints = useRef<AnnotationPoint[]>([]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -85,6 +99,65 @@ export function ReplayChart({
     });
     chart.resetData();
   }, [bars, pricePrecision, symbol]);
+
+  useEffect(() => {
+    if (drawingTool === "select" || drawingRequest === 0) return;
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (draftOverlayId.current) {
+      chart.removeOverlay({ id: draftOverlayId.current });
+      draftOverlayId.current = null;
+    }
+    draftPoints.current = [];
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (draftOverlayId.current) chart.removeOverlay({ id: draftOverlayId.current });
+      draftOverlayId.current = null;
+      draftPoints.current = [];
+    };
+    window.addEventListener("keydown", cancel);
+    return () => window.removeEventListener("keydown", cancel);
+  }, [drawingRequest, drawingTool]);
+
+  const handleChartClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (drawingTool === "select" || drawingRequest === 0) return;
+    const chart = chartRef.current;
+    const host = hostRef.current;
+    if (!chart || !host) return;
+    const bounds = host.getBoundingClientRect();
+    const converted = chart.convertFromPixel(
+      [{ x: event.clientX - bounds.left, y: event.clientY - bounds.top }],
+      { paneId: "candle_pane" },
+    );
+    const point = Array.isArray(converted) ? converted[0] : converted;
+    if (point?.timestamp === undefined || point.value === undefined) return;
+    const next = [
+      ...draftPoints.current,
+      { time: new Date(point.timestamp).toISOString(), price: String(point.value) },
+    ];
+    const requiredPoints = drawingTool === "marker" ? 1 : 2;
+    if (next.length >= requiredPoints) {
+      if (draftOverlayId.current) chart.removeOverlay({ id: draftOverlayId.current });
+      draftOverlayId.current = null;
+      draftPoints.current = [];
+      onDrawingComplete?.(drawingTool, next);
+      return;
+    }
+    draftPoints.current = next;
+    const id = `draft-${drawingRequest}`;
+    if (draftOverlayId.current) chart.removeOverlay({ id: draftOverlayId.current });
+    chart.createOverlay({
+      id,
+      name: overlayName(drawingTool),
+      lock: true,
+      points: next.map((item) => ({
+        timestamp: new Date(item.time).getTime(),
+        value: Number(item.price),
+      })),
+      extendData: "绘图草稿",
+    });
+    draftOverlayId.current = id;
+  };
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -150,15 +223,16 @@ export function ReplayChart({
           point: { color, borderColor: color },
           text: { color, backgroundColor: "#101722" },
         },
+        onClick: () => onAnnotationSelect?.(annotation.annotation_id),
       });
       if (created === id) ids.push(id);
     }
     executionOverlayIds.current = ids;
-  }, [annotations, fills, orders]);
+  }, [annotations, fills, onAnnotationSelect, orders]);
 
   return (
     <div className="replay-chart-shell">
-      <div className="replay-chart" ref={hostRef} aria-label={`${symbol} 回放 K 线图`} />
+      <div className="replay-chart" onClick={handleChartClick} ref={hostRef} aria-label={`${symbol} 回放 K 线图`} />
       <div className="visible-boundary" aria-hidden="true">
         <span>{hideRealDate ? "Visible to 当前帧" : `Visible to ${new Date(visibleAt).toLocaleString("zh-CN", { hour12: false })}`}</span>
       </div>
