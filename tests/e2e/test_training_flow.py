@@ -32,6 +32,10 @@ def test_user_can_complete_core_training_flow(
 
     page.get_by_role("button", name="提交 · 下一根激活").click()
     expect(page.get_by_text("PENDING", exact=True)).to_be_visible()
+    expect(page.locator(".rule-checklist")).to_contain_text("risk amount within limit")
+    expect(page.locator(".rule-checklist .rule-status.passed")).to_have_count(4)
+    expect(page.locator(".rule-checklist .rule-status.failed")).to_have_count(1)
+    expect(page.locator(".rule-checklist .rule-status.unknown")).to_have_count(1)
 
     page.get_by_role("button", name="下一根 K 线").click()
     expect(page.get_by_text("FILLED", exact=True)).to_be_visible()
@@ -59,6 +63,9 @@ def test_user_can_complete_core_training_flow(
         page.get_by_role("button", name="结束会话").click()
     expect(page).to_have_url(f"{stack.web_url}/sessions/{session_id}/complete")
     expect(page.get_by_text("确定性复盘", exact=False)).to_be_visible(timeout=30_000)
+    expect(page.locator(".review-rule-checks")).to_contain_text("evaluator 1.0")
+    expect(page.locator(".review-rule-checks .rule-status.passed")).to_have_count(5)
+    expect(page.locator(".review-rule-checks .rule-status.failed")).to_have_count(1)
     page.get_by_role("link", name="打开完整复盘").click()
     evidence_link = page.locator(".evidence-row").first
     evidence_dom_id = evidence_link.get_attribute("id")

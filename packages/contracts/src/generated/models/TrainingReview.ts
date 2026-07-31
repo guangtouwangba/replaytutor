@@ -25,10 +25,18 @@ export type Label = string;
 export type Unit = string | null;
 export type Value = string;
 export type Metrics = ReviewMetric[];
+export type PlaybookEvaluatorVersion = string;
+export type PlaybookId = string | null;
 export type ProcessOutcome =
   "good_process_profit" | "good_process_loss" | "bad_process_profit" | "bad_process_loss" | "insufficient_evidence";
 export type ReviewHash = string;
 export type ReviewId = string;
+export type EvidenceIds = string[];
+export type ReasonCode = string;
+export type RuleId = string;
+export type Status = "passed" | "failed" | "unknown";
+export type Summary1 = string;
+export type RuleChecks = PlaybookRuleCheck[];
 export type SchemaVersion = "1.0";
 export type SessionId = string;
 
@@ -37,9 +45,12 @@ export interface TrainingReview {
   evidence: Evidence;
   findings: Findings;
   metrics: Metrics;
+  playbook_evaluator_version?: PlaybookEvaluatorVersion;
+  playbook_id?: PlaybookId;
   process_outcome: ProcessOutcome;
   review_hash: ReviewHash;
   review_id: ReviewId;
+  rule_checks?: RuleChecks;
   schema_version?: SchemaVersion;
   session_id: SessionId;
 }
@@ -56,4 +67,11 @@ export interface ReviewMetric {
   label: Label;
   unit?: Unit;
   value: Value;
+}
+export interface PlaybookRuleCheck {
+  evidence_ids?: EvidenceIds;
+  reason_code: ReasonCode;
+  rule_id: RuleId;
+  status: Status;
+  summary: Summary1;
 }

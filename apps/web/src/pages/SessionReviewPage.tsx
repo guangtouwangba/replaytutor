@@ -34,6 +34,25 @@ export function SessionReviewPage({ complete = false }: { readonly complete?: bo
         <article><h2>过程发现</h2>{data.findings.map((finding) => <p key={finding}>{finding}</p>)}</article>
         <article><h2>证据索引</h2>{data.evidence.map((item) => <Link className="evidence-row" id={`evidence-${item.evidence_id}`} key={item.evidence_id} tabIndex={-1} to={evidenceWorkbenchUrl(sessionId!, item.evidence_id)}><span>{item.kind}</span><strong>{item.summary}</strong><code>{item.evidence_id.slice(0, 12)}</code></Link>)}</article>
       </div>
+      <article className="review-rule-checks">
+        <div className="review-section-heading">
+          <div><div className="page-kicker">DETERMINISTIC PLAYBOOK</div><h2>规则检查</h2></div>
+          <code>evaluator {data.playbook_evaluator_version}</code>
+        </div>
+        {(data.rule_checks ?? []).length === 0 ? <p>当前会话未绑定可评估规则。</p> : (data.rule_checks ?? []).map((check) => (
+          <div className="review-rule-row" key={check.rule_id}>
+            <span className={`rule-status ${check.status}`}>{check.status}</span>
+            <div><strong>{check.rule_id.replaceAll("_", " ")}</strong><p>{check.summary}</p></div>
+            <div className="rule-evidence-links">
+              {(check.evidence_ids ?? []).map((evidenceId) => (
+                <Link key={evidenceId} to={evidenceWorkbenchUrl(sessionId!, evidenceId)}>
+                  {evidenceId.slice(0, 10)}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </article>
       {!complete && (
         <div className="after-action-review">
           <div>

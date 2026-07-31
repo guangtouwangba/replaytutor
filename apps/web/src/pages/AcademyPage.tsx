@@ -5,7 +5,12 @@ import { fetchPlaybooks } from "../api/playbooks";
 
 export function AcademyPage() {
   const playbooks = useQuery({ queryKey: ["playbooks"], queryFn: fetchPlaybooks });
-  return <section className="page academy-page"><div className="page-kicker">STRATEGY ACADEMY</div><h1>用规则训练，不用结果倒推</h1><p>三个官方策略都是不可变版本；每次训练会绑定当时版本。</p><div className="academy-grid">{playbooks.data?.playbooks.filter((item) => item.official).map((item) => <Link className="academy-card" key={item.playbook_id} to={`/academy/${item.slug}`}><BookOpenCheck size={22} /><span>OFFICIAL · V{item.version}</span><h2>{item.name}</h2><p>{item.description}</p><strong>查看规则 <ArrowRight size={13} /></strong></Link>)}</div></section>;
+  const latestOfficialPlaybooks = playbooks.data?.playbooks.filter(
+    (item, _, all) => item.official && !all.some(
+      (candidate) => candidate.slug === item.slug && candidate.version > item.version,
+    ),
+  ) ?? [];
+  return <section className="page academy-page"><div className="page-kicker">STRATEGY ACADEMY</div><h1>用规则训练，不用结果倒推</h1><p>三个官方策略都是不可变版本；每次训练会绑定当时版本。</p><div className="academy-grid">{latestOfficialPlaybooks.map((item) => <Link className="academy-card" key={item.playbook_id} to={`/academy/${item.slug}`}><BookOpenCheck size={22} /><span>OFFICIAL · V{item.version}</span><h2>{item.name}</h2><p>{item.description}</p><strong>查看规则 <ArrowRight size={13} /></strong></Link>)}</div></section>;
 }
 
 export function StrategyDetailPage() {

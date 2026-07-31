@@ -11,6 +11,7 @@ import type {
   FinishSessionRequest,
   LockTradePlanRequest,
   OrderResult,
+  PlaybookEvaluation,
   SessionCommand,
   SessionDelta,
   SessionListResponse,
@@ -203,6 +204,15 @@ export async function fetchEvidenceTarget(
       `${API_BASE_URL}/api/v1/sessions/${sessionId}/evidence/${evidenceId}`,
     ),
     "EvidenceTarget",
+  );
+}
+
+export async function fetchPlaybookEvaluation(
+  sessionId: string,
+): Promise<PlaybookEvaluation> {
+  return contractJson(
+    await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/playbook-checks`),
+    "PlaybookEvaluation",
   );
 }
 

@@ -16,6 +16,7 @@ from replaytutor.contracts import (
     FinishSessionRequest,
     LockTradePlanRequest,
     OrderResult,
+    PlaybookEvaluation,
     SessionCommand,
     SessionDelta,
     SessionListResponse,
@@ -30,6 +31,7 @@ from replaytutor.modules.evidence_review import EvidenceResolver, EvidenceReview
 from replaytutor.modules.execution.service import ExecutionService
 from replaytutor.modules.market_data.service import MarketDataError
 from replaytutor.modules.market_rules import RuleViolation
+from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import (
     InvalidSessionStateError,
     SessionConflictError,
@@ -216,6 +218,21 @@ def resolve_evidence(
     try:
         settings: Settings = request.app.state.settings
         return EvidenceResolver(settings).resolve(session_id, evidence_id)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.get(
+    "/sessions/{session_id}/playbook-checks",
+    response_model=PlaybookEvaluation,
+)
+def evaluate_playbook(
+    request: Request,
+    session_id: str,
+) -> PlaybookEvaluation:
+    try:
+        settings: Settings = request.app.state.settings
+        return PlaybookEvaluator(settings).evaluate(session_id)
     except (TrainingSessionError, MarketDataError) as error:
         raise translate(error) from error
 

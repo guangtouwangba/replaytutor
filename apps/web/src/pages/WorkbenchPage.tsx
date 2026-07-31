@@ -16,6 +16,7 @@ import {
   createAnnotation,
   fetchAnnotationDispositions,
   fetchEvidenceTarget,
+  fetchPlaybookEvaluation,
   fetchSession,
   finishSession,
   lockTradePlan,
@@ -71,6 +72,14 @@ export function WorkbenchPage() {
     queryFn: () => fetchEvidenceTarget(sessionId!, evidenceId!),
     enabled: Boolean(sessionId && evidenceId && reviewMode),
   });
+  const playbookEvaluation = useQuery({
+    queryKey: ["playbook-evaluation", sessionId],
+    queryFn: () => fetchPlaybookEvaluation(sessionId!),
+    enabled: Boolean(sessionId),
+  });
+  const refreshPlaybookEvaluation = () => queryClient.invalidateQueries({
+    queryKey: ["playbook-evaluation", sessionId],
+  });
   const advance = useMutation({
     mutationFn: async (bars: number) => {
       if (!sessionId || !session.data) throw new Error("Session is not ready");
@@ -83,6 +92,7 @@ export function WorkbenchPage() {
     },
     onSuccess: (delta) => {
       queryClient.setQueryData(["session", sessionId], delta);
+      void refreshPlaybookEvaluation();
       if (delta.session.frame.current_index === delta.session.frame.total_bars - 1) {
         setPlaying(false);
       }
@@ -125,6 +135,7 @@ export function WorkbenchPage() {
         ["session", sessionId],
         { ...session.data!, session: result.session, execution: result.execution },
       );
+      void refreshPlaybookEvaluation();
     },
   });
   const placeOrder = useMutation({
@@ -147,6 +158,7 @@ export function WorkbenchPage() {
         ["session", sessionId],
         { ...session.data!, session: result.session, execution: result.execution },
       );
+      void refreshPlaybookEvaluation();
     },
   });
   const cancelPending = useMutation({
@@ -163,6 +175,7 @@ export function WorkbenchPage() {
         ["session", sessionId],
         { ...session.data!, session: result.session, execution: result.execution },
       );
+      void refreshPlaybookEvaluation();
     },
   });
   const markCurrent = useMutation({
@@ -431,6 +444,22 @@ export function WorkbenchPage() {
               <div><dt>Index</dt><dd>{state.frame.current_index} / {state.frame.total_bars - 1}</dd></div>
               <div><dt>Progress</dt><dd>{(state.frame.progress * 100).toFixed(2)}%</dd></div>
             </dl>
+          </div>
+          <div className="dock-card rule-checklist">
+            <span className="page-kicker">
+              PLAYBOOK CHECKS · {playbookEvaluation.data?.evaluator_version ?? "—"}
+            </span>
+            {playbookEvaluation.isLoading && <p>正在计算当前规则状态…</p>}
+            {playbookEvaluation.data?.checks.length === 0 && <p>当前会话未绑定可评估规则。</p>}
+            {playbookEvaluation.data?.checks.map((check) => (
+              <div className="rule-check-row" key={check.rule_id}>
+                <span className={`rule-status ${check.status}`}>{check.status}</span>
+                <div>
+                  <strong>{check.rule_id.replaceAll("_", " ")}</strong>
+                  <small>{check.summary}</small>
+                </div>
+              </div>
+            ))}
           </div>
           {!readOnly && <TutorDock
             sessionId={sessionId}

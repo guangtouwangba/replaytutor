@@ -4964,8 +4964,136 @@ const schemas = {
     "title": "PaperOrder",
     "type": "object"
   },
+  "PlaybookEvaluation": {
+    "$defs": {
+      "PlaybookRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason_code",
+          "summary"
+        ],
+        "title": "PlaybookRuleCheck",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "checks": {
+        "items": {
+          "$ref": "#/$defs/PlaybookRuleCheck"
+        },
+        "title": "Checks",
+        "type": "array"
+      },
+      "evaluator_version": {
+        "title": "Evaluator Version",
+        "type": "string"
+      },
+      "playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Playbook Id"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "evaluator_version",
+      "checks"
+    ],
+    "title": "PlaybookEvaluation",
+    "type": "object"
+  },
   "PlaybookListResponse": {
     "$defs": {
+      "PlaybookRuleDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "evaluator_kind": {
+            "enum": [
+              "plan_locked_before_first_order",
+              "order_activated_on_next_bar",
+              "risk_amount_within_limit",
+              "protective_stop_present",
+              "no_order_after_session_complete",
+              "entry_side_matches_locked_plan",
+              "free_text"
+            ],
+            "title": "Evaluator Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "rule_id": {
+            "pattern": "^[a-z][a-z0-9_]{2,63}$",
+            "title": "Rule Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "label",
+          "evaluator_kind"
+        ],
+        "title": "PlaybookRuleDefinition",
+        "type": "object"
+      },
       "PlaybookVersion": {
         "additionalProperties": false,
         "properties": {
@@ -4976,6 +5104,10 @@ const schemas = {
           },
           "description": {
             "title": "Description",
+            "type": "string"
+          },
+          "evaluator_version": {
+            "title": "Evaluator Version",
             "type": "string"
           },
           "name": {
@@ -4993,6 +5125,13 @@ const schemas = {
             "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
             "title": "Playbook Id",
             "type": "string"
+          },
+          "rule_definitions": {
+            "items": {
+              "$ref": "#/$defs/PlaybookRuleDefinition"
+            },
+            "title": "Rule Definitions",
+            "type": "array"
           },
           "rules": {
             "items": {
@@ -5026,6 +5165,7 @@ const schemas = {
           "version",
           "description",
           "rules",
+          "evaluator_version",
           "created_at"
         ],
         "title": "PlaybookVersion",
@@ -5054,7 +5194,137 @@ const schemas = {
     "title": "PlaybookListResponse",
     "type": "object"
   },
+  "PlaybookRuleCheck": {
+    "additionalProperties": false,
+    "properties": {
+      "evidence_ids": {
+        "items": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "type": "string"
+        },
+        "title": "Evidence Ids",
+        "type": "array"
+      },
+      "reason_code": {
+        "title": "Reason Code",
+        "type": "string"
+      },
+      "rule_id": {
+        "title": "Rule Id",
+        "type": "string"
+      },
+      "status": {
+        "enum": [
+          "passed",
+          "failed",
+          "unknown"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "summary": {
+        "title": "Summary",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rule_id",
+      "status",
+      "reason_code",
+      "summary"
+    ],
+    "title": "PlaybookRuleCheck",
+    "type": "object"
+  },
+  "PlaybookRuleDefinition": {
+    "additionalProperties": false,
+    "properties": {
+      "evaluator_kind": {
+        "enum": [
+          "plan_locked_before_first_order",
+          "order_activated_on_next_bar",
+          "risk_amount_within_limit",
+          "protective_stop_present",
+          "no_order_after_session_complete",
+          "entry_side_matches_locked_plan",
+          "free_text"
+        ],
+        "title": "Evaluator Kind",
+        "type": "string"
+      },
+      "label": {
+        "maxLength": 200,
+        "minLength": 2,
+        "title": "Label",
+        "type": "string"
+      },
+      "params": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "title": "Params",
+        "type": "object"
+      },
+      "rule_id": {
+        "pattern": "^[a-z][a-z0-9_]{2,63}$",
+        "title": "Rule Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "rule_id",
+      "label",
+      "evaluator_kind"
+    ],
+    "title": "PlaybookRuleDefinition",
+    "type": "object"
+  },
   "PlaybookVersion": {
+    "$defs": {
+      "PlaybookRuleDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "evaluator_kind": {
+            "enum": [
+              "plan_locked_before_first_order",
+              "order_activated_on_next_bar",
+              "risk_amount_within_limit",
+              "protective_stop_present",
+              "no_order_after_session_complete",
+              "entry_side_matches_locked_plan",
+              "free_text"
+            ],
+            "title": "Evaluator Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "rule_id": {
+            "pattern": "^[a-z][a-z0-9_]{2,63}$",
+            "title": "Rule Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "label",
+          "evaluator_kind"
+        ],
+        "title": "PlaybookRuleDefinition",
+        "type": "object"
+      }
+    },
     "additionalProperties": false,
     "properties": {
       "created_at": {
@@ -5064,6 +5334,10 @@ const schemas = {
       },
       "description": {
         "title": "Description",
+        "type": "string"
+      },
+      "evaluator_version": {
+        "title": "Evaluator Version",
         "type": "string"
       },
       "name": {
@@ -5081,6 +5355,13 @@ const schemas = {
         "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
         "title": "Playbook Id",
         "type": "string"
+      },
+      "rule_definitions": {
+        "items": {
+          "$ref": "#/$defs/PlaybookRuleDefinition"
+        },
+        "title": "Rule Definitions",
+        "type": "array"
       },
       "rules": {
         "items": {
@@ -5114,6 +5395,7 @@ const schemas = {
       "version",
       "description",
       "rules",
+      "evaluator_version",
       "created_at"
     ],
     "title": "PlaybookVersion",
@@ -9401,6 +9683,48 @@ const schemas = {
         "title": "EvidenceRef",
         "type": "object"
       },
+      "PlaybookRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason_code",
+          "summary"
+        ],
+        "title": "PlaybookRuleCheck",
+        "type": "object"
+      },
       "ReviewMetric": {
         "additionalProperties": false,
         "properties": {
@@ -9479,6 +9803,24 @@ const schemas = {
         "title": "Metrics",
         "type": "array"
       },
+      "playbook_evaluator_version": {
+        "default": "none",
+        "title": "Playbook Evaluator Version",
+        "type": "string"
+      },
+      "playbook_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Playbook Id"
+      },
       "process_outcome": {
         "enum": [
           "good_process_profit",
@@ -9499,6 +9841,13 @@ const schemas = {
         "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
         "title": "Review Id",
         "type": "string"
+      },
+      "rule_checks": {
+        "items": {
+          "$ref": "#/$defs/PlaybookRuleCheck"
+        },
+        "title": "Rule Checks",
+        "type": "array"
       },
       "schema_version": {
         "const": "1.0",
@@ -9653,6 +10002,48 @@ const schemas = {
         "title": "EvidenceRef",
         "type": "object"
       },
+      "PlaybookRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason_code",
+          "summary"
+        ],
+        "title": "PlaybookRuleCheck",
+        "type": "object"
+      },
       "ReviewMetric": {
         "additionalProperties": false,
         "properties": {
@@ -9731,6 +10122,24 @@ const schemas = {
             "title": "Metrics",
             "type": "array"
           },
+          "playbook_evaluator_version": {
+            "default": "none",
+            "title": "Playbook Evaluator Version",
+            "type": "string"
+          },
+          "playbook_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook Id"
+          },
           "process_outcome": {
             "enum": [
               "good_process_profit",
@@ -9751,6 +10160,13 @@ const schemas = {
             "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
             "title": "Review Id",
             "type": "string"
+          },
+          "rule_checks": {
+            "items": {
+              "$ref": "#/$defs/PlaybookRuleCheck"
+            },
+            "title": "Rule Checks",
+            "type": "array"
           },
           "schema_version": {
             "const": "1.0",

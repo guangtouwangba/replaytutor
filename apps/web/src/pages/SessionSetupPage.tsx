@@ -14,8 +14,15 @@ export function SessionSetupPage() {
   const [startMode, setStartMode] = useState<"beginning" | "random">("beginning");
   const [hiddenRealDate, setHiddenRealDate] = useState(true);
   const [playbookId, setPlaybookId] = useState("");
+  const latestOfficialPlaybooks = playbooks.data?.playbooks.filter(
+    (item, _, all) => item.official && !all.some(
+      (candidate) => candidate.slug === item.slug && candidate.version > item.version,
+    ),
+  ) ?? [];
   const activePlaybook = playbooks.data?.playbooks.find(
-    (item) => item.playbook_id === (playbookId || playbooks.data?.playbooks[0]?.playbook_id),
+    (item) => item.playbook_id === (
+      playbookId || latestOfficialPlaybooks[0]?.playbook_id
+    ),
   );
   const activeSnapshotId = snapshotId || datasets.data?.datasets[0]?.snapshot_id || "";
   const activeSnapshot = datasets.data?.datasets.find(
@@ -73,7 +80,7 @@ export function SessionSetupPage() {
           <section className="setup-section">
             <div className="setup-section-title"><Target size={16} /><span>本次训练约束</span></div>
             <div className="segmented">
-              {playbooks.data?.playbooks.filter((item) => item.official).map((item) => <button className={activePlaybook?.playbook_id === item.playbook_id ? "is-active" : ""} key={item.playbook_id} onClick={() => setPlaybookId(item.playbook_id)} type="button">{item.name}</button>)}
+              {latestOfficialPlaybooks.map((item) => <button className={activePlaybook?.playbook_id === item.playbook_id ? "is-active" : ""} key={item.playbook_id} onClick={() => setPlaybookId(item.playbook_id)} type="button">{item.name}</button>)}
             </div>
             <div className="constraint-grid">
               <span><small>策略</small><strong>{activePlaybook ? `${activePlaybook.name} · v${activePlaybook.version}` : "载入中"}</strong></span>

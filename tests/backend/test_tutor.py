@@ -13,14 +13,24 @@ from replaytutor.contracts import (
     TutorChartInstruction,
     TutorObservation,
     TutorResponse,
+    TutorRuleCheck,
 )
 
 
 def create_session(client: TestClient) -> dict:
     snapshot = client.post("/api/v1/datasets/golden", json={}).json()
+    playbook = next(
+        item
+        for item in client.get("/api/v1/playbooks").json()["playbooks"]
+        if item["slug"] == "trend-pullback" and item["version"] == 2
+    )
     return client.post(
         "/api/v1/sessions",
-        json={"snapshot_id": snapshot["snapshot_id"], "warmup_bars": 20},
+        json={
+            "snapshot_id": snapshot["snapshot_id"],
+            "warmup_bars": 20,
+            "playbook_id": playbook["playbook_id"],
+        },
     ).json()
 
 
@@ -78,7 +88,21 @@ def test_tutor_context_is_future_safe_and_fake_run_is_persisted(
             "later_orders",
             "later_fills",
         }
-        return response(visible_bar_id)
+        assert context["deterministic_rule_checks"]["evaluator_version"] == "1.0"
+        assert len(context["deterministic_rule_checks"]["checks"]) == 6
+        result = response(visible_bar_id)
+        return result.model_copy(
+            update={
+                "rule_checks": [
+                    TutorRuleCheck(
+                        rule_id="risk_amount_within_limit",
+                        status="passed",
+                        reason="模型尝试覆盖确定性状态",
+                        evidence_ids=[visible_bar_id],
+                    )
+                ]
+            }
+        )
 
     monkeypatch.setattr(CodexAdapter, "run", fake_run)
     started = client.post(
@@ -89,6 +113,12 @@ def test_tutor_context_is_future_safe_and_fake_run_is_persisted(
     run = wait_for_run(client, started.json()["run_id"])
     assert run["status"] == "completed", run["error"]
     assert run["response"]["observations"][0]["evidence_ids"] == [visible_bar_id]
+    assert len(run["response"]["rule_checks"]) == 6
+    assert all(check["status"] == "unknown" for check in run["response"]["rule_checks"])
+    assert all(
+        check["reason"] != "模型尝试覆盖确定性状态"
+        for check in run["response"]["rule_checks"]
+    )
 
     workspace = settings.resolved_data_dir / "runtime" / "agent-runs" / run["run_id"]
     assert workspace.is_dir()

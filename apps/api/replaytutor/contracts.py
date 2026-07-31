@@ -429,6 +429,39 @@ class EvidenceTarget(ContractModel):
     fill_id: Identifier | None = None
 
 
+PlaybookEvaluatorKind = Literal[
+    "plan_locked_before_first_order",
+    "order_activated_on_next_bar",
+    "risk_amount_within_limit",
+    "protective_stop_present",
+    "no_order_after_session_complete",
+    "entry_side_matches_locked_plan",
+    "free_text",
+]
+
+
+class PlaybookRuleDefinition(ContractModel):
+    rule_id: str = Field(pattern=r"^[a-z][a-z0-9_]{2,63}$")
+    label: str = Field(min_length=2, max_length=200)
+    evaluator_kind: PlaybookEvaluatorKind
+    params: dict[str, str] = Field(default_factory=dict)
+
+
+class PlaybookRuleCheck(ContractModel):
+    rule_id: str
+    status: Literal["passed", "failed", "unknown"]
+    reason_code: str
+    summary: str
+    evidence_ids: list[Identifier] = Field(default_factory=list)
+
+
+class PlaybookEvaluation(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    playbook_id: Identifier | None = None
+    evaluator_version: str
+    checks: list[PlaybookRuleCheck]
+
+
 class TrainingReview(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     review_id: Identifier
@@ -441,8 +474,11 @@ class TrainingReview(ContractModel):
         "bad_process_loss",
         "insufficient_evidence",
     ]
+    playbook_id: Identifier | None = None
+    playbook_evaluator_version: str = "none"
     metrics: list[ReviewMetric]
     evidence: list[EvidenceRef]
+    rule_checks: list[PlaybookRuleCheck] = Field(default_factory=list)
     findings: list[str]
     created_at: datetime
 
@@ -537,6 +573,8 @@ class PlaybookVersion(ContractModel):
     version: int = Field(ge=1)
     description: str
     rules: list[str] = Field(min_length=1)
+    rule_definitions: list[PlaybookRuleDefinition] = Field(default_factory=list)
+    evaluator_version: str
     official: bool = False
     created_at: datetime
 

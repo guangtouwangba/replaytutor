@@ -310,6 +310,10 @@ base_tutor
 
 市场规则和用户 Playbook 以结构化数据提供，不靠模型记忆。模板升级后记录版本；旧报告仍能重现当时使用的指令。
 
+Playbook 检查由宿主的确定性评估器完成。Tutor Context 中的
+`deterministic_rule_checks` 为只读输入；Agent 不能新增、覆盖或重新计算其状态、
+原因和证据。运行时在持久化前用确定性结果替换 Agent 返回的 `rule_checks`。
+
 为支持 Coding Agent 原生扩展，项目后续可以提供：
 
 - 项目级 `AGENTS.md` / `CLAUDE.md`，说明 Tutor 证据纪律。

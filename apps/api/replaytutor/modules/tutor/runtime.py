@@ -10,11 +10,18 @@ from typing import Literal, cast
 
 from replaytutor.adapters.agents import CodexAdapter
 from replaytutor.config import Settings
-from replaytutor.contracts import TutorRequest, TutorResponse, TutorRun
+from replaytutor.contracts import (
+    PlaybookEvaluation,
+    TutorRequest,
+    TutorResponse,
+    TutorRuleCheck,
+    TutorRun,
+)
 from replaytutor.ids import new_id
 from replaytutor.modules.annotations import persist_ai_annotations
 from replaytutor.modules.evidence_review import EvidenceReviewService
 from replaytutor.modules.market_data.service import utc_text
+from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import TrainingSessionService, parse_utc
 from replaytutor.modules.tutor.context import build_tutor_context
 from replaytutor.modules.tutor.validation import strict_output_schema, validate_evidence
@@ -28,6 +35,7 @@ INSTRUCTIONS = """# ReplayTutor Codex Tutor
 You are a read-only trading-process coach. Use only tutor_context.json.
 Separate observations from inferences. Never invent prices, fills, rules, or evidence ids.
 Only cite ids listed in allowed_evidence_ids. Do not calculate or alter orders or account state.
+deterministic_rule_checks is read-only. Never change its status, reason, or evidence.
 Chart annotations are optional. Use only line, zone, marker, or label; every annotation
 must cite allowed evidence ids and every point must be at or before visible_at.
 The market is hidden after visible_at. Treat forbidden_fields as unavailable, not unknown files.
@@ -58,7 +66,13 @@ class TutorRuntime:
             if request.stage == "after_action"
             else None
         )
-        context, evidence_ids = build_tutor_context(delta, request, review)
+        playbook_evaluation = PlaybookEvaluator(self.settings).evaluate(session_id)
+        context, evidence_ids = build_tutor_context(
+            delta,
+            request,
+            review,
+            playbook_evaluation,
+        )
         run_id = new_id("run")
         workspace = self.settings.resolved_data_dir / "runtime" / "agent-runs" / run_id
         workspace.mkdir(parents=True, exist_ok=False)
@@ -91,7 +105,7 @@ class TutorRuntime:
             )
         thread = threading.Thread(
             target=self._execute,
-            args=(run_id, workspace, evidence_ids),
+            args=(run_id, workspace, evidence_ids, playbook_evaluation),
             daemon=True,
             name=f"tutor-{run_id}",
         )
@@ -146,6 +160,7 @@ class TutorRuntime:
         run_id: str,
         workspace: Path,
         evidence_ids: set[str],
+        playbook_evaluation: PlaybookEvaluation,
     ) -> None:
         try:
             if self.get(run_id).status != "running":
@@ -161,6 +176,19 @@ class TutorRuntime:
                 on_process=register,
             )
             response = validate_evidence(response, evidence_ids)
+            response = response.model_copy(
+                update={
+                    "rule_checks": [
+                        TutorRuleCheck(
+                            rule_id=check.rule_id,
+                            status=check.status,
+                            reason=check.summary,
+                            evidence_ids=check.evidence_ids,
+                        )
+                        for check in playbook_evaluation.checks
+                    ]
+                }
+            )
             if self.get(run_id).status == "running":
                 self._finish(run_id, status="completed", response=response)
         except TimeoutError as error:

@@ -189,6 +189,15 @@ button.status-pill { cursor: pointer; }
 .dock-card h2 { margin: 8px 0 4px; font-size: 13px; }
 .dock-card p { font-size: 10px; }
 .dock-card .secondary-action { width: 100%; }
+.rule-checklist { display: grid; gap: 8px; }
+.rule-check-row { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; padding-top: 8px; border-top: 1px solid var(--border); }
+.rule-check-row div { display: grid; gap: 3px; }
+.rule-check-row strong { font-size: 9px; text-transform: uppercase; }
+.rule-check-row small { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.rule-status { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; padding: 3px 5px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--muted); font: 8px "IBM Plex Mono", monospace; text-transform: uppercase; }
+.rule-status.passed { border-color: #276447; color: #72d6a4; }
+.rule-status.failed { border-color: #733d45; color: #ff8795; }
+.rule-status.unknown { border-color: #735e33; color: #d9b96d; }
 .annotation-list, .annotation-inspector { display: grid; gap: 8px; }
 .annotation-list > button, .annotation-inspector-head, .annotation-actions, .annotation-point-editor { display: flex; gap: 8px; }
 .annotation-list > button, .annotation-inspector-head { align-items: center; justify-content: space-between; }
@@ -257,6 +266,15 @@ button.status-pill { cursor: pointer; }
 .evidence-focus-card code { overflow-wrap: anywhere; }
 .review-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .review-actions > code { color: var(--muted); font-size: 9px; }
+.review-rule-checks { margin-top: 10px; padding: 16px; border: 1px solid var(--border); background: var(--panel); }
+.review-section-heading { display: flex; align-items: center; justify-content: space-between; }
+.review-section-heading h2 { margin: 5px 0 12px; font-size: 13px; }
+.review-section-heading code { color: var(--muted); font-size: 9px; }
+.review-rule-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.review-rule-row strong { font-size: 10px; text-transform: uppercase; }
+.review-rule-row p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+.rule-evidence-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.rule-evidence-links a { color: #8db9ff; font: 8px "IBM Plex Mono", monospace; }
 .academy-page, .playbooks-page, .settings-page, .strategy-page { max-width: 1120px; margin: 0 auto; }
 .academy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; }
 .academy-card { min-height: 220px; padding: 18px; border: 1px solid var(--border); background: var(--panel); color: var(--secondary); text-decoration: none; }
@@ -272,6 +290,9 @@ button.status-pill { cursor: pointer; }
 .playbook-row { padding: 14px; border: 1px solid var(--border); background: var(--panel); }
 .playbook-row span, .playbook-row code { color: var(--muted); font-size: 8px; }
 .playbook-row h2 { margin: 6px 0; font-size: 14px; }
+.playbook-rule-list { display: grid; gap: 5px; margin: 10px 0; }
+.playbook-rule-list > div { display: flex; align-items: center; gap: 7px; }
+.playbook-rule-list strong { font-size: 9px; font-weight: 500; }
 .playbook-editor { display: grid; align-self: start; gap: 10px; padding: 16px; border: 1px solid var(--border); background: var(--panel); }
 .playbook-editor label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; }
 .playbook-editor input, .playbook-editor textarea { padding: 8px; border: 1px solid var(--border); background: var(--chart); color: var(--text); }

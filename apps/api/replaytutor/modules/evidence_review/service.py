@@ -19,6 +19,7 @@ from replaytutor.ids import new_id
 from replaytutor.modules.annotations import load_dispositions
 from replaytutor.modules.execution.service import load_execution
 from replaytutor.modules.market_data.service import MarketDataService, utc_text
+from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import (
     InvalidSessionStateError,
     SessionNotFoundError,
@@ -130,6 +131,7 @@ class EvidenceReviewService:
                 execution,
                 load_dispositions(connection, session_id),
             )
+            playbook_evaluation = PlaybookEvaluator(self.settings).evaluate(session_id)
             good_process = execution.plan is not None
             if not execution.fills:
                 outcome: Literal[
@@ -157,6 +159,11 @@ class EvidenceReviewService:
                 "outcome": outcome,
                 "metrics": [item.model_dump(mode="json") for item in metrics],
                 "evidence": [item.model_dump(mode="json") for item in evidence],
+                "playbook_id": playbook_evaluation.playbook_id,
+                "playbook_evaluator_version": playbook_evaluation.evaluator_version,
+                "rule_checks": [
+                    item.model_dump(mode="json") for item in playbook_evaluation.checks
+                ],
                 "findings": findings,
             }
             review_hash = hashlib.sha256(
@@ -168,8 +175,11 @@ class EvidenceReviewService:
                 session_id=session_id,
                 review_hash=review_hash,
                 process_outcome=outcome,
+                playbook_id=playbook_evaluation.playbook_id,
+                playbook_evaluator_version=playbook_evaluation.evaluator_version,
                 metrics=metrics,
                 evidence=evidence,
+                rule_checks=playbook_evaluation.checks,
                 findings=findings,
                 created_at=now,
             )

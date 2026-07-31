@@ -14,6 +14,12 @@ append-only 处置事件。`session_annotation` 继续保存不可变原始对�
 `/sessions/{session_id}?mode=review&evidence={evidence_id}`；REVIEW 工作台禁止
 推进回放或写入业务状态，只负责定位时间、价格和实体图层。
 
+实施注记（2026-07-31）：Alembic `0011_playbook_rules` 为不可变 Playbook 版本
+增加结构化规则定义和评估器版本。`PlaybookEvaluator` 只消费确定性会话、计划和
+订单事实，输出 `passed/failed/unknown`、原因码和证据 ID；最终结果进入复盘哈希。
+自由文本规则保持 `unknown`。Tutor 只能读取并原样转述这些检查，服务端会覆盖模型
+自行生成的规则状态。
+
 实施注记（2026-07-30）：训练纵向闭环已实现到 Alembic
 `0009_annotations`：服务端 `frame_id`/`visible_at`、命令幂等与恢复、下一根
 激活的模拟撮合、Decimal 账本、确定性复盘、不可变 Playbook、用户/AI 图层，
