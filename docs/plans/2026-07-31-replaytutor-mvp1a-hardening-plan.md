@@ -492,7 +492,7 @@ H2 与 H3 可以在 H1 契约稳定后并行，但在同一工作区实施时仍
 MVP 1A 封板必须同时满足：
 
 - [x] `make verify` 与 `make e2e` 全绿。
-- [ ] GitHub CI 在全新环境通过（等待本次需求审计提交的 CI）。
+- [x] GitHub CI 在全新环境通过。
 - [x] 用户能完成趋势线、矩形和标记的创建、修改与删除。
 - [x] AI 标注可以接受、拒绝和修改，且原始 provenance 不丢失。
 - [x] 五类 evidence 可以回跳到只读图表。
@@ -517,6 +517,8 @@ MVP 1A 封板必须同时满足：
   review hash 不变。
 - 成功 E2E 生成浏览器截图、Playwright trace 和机器可读测试摘要，CI 始终
   上传 `release-acceptance-artifacts`。
+- 审计提交 `0b05a94` 的 push/PR 两套 GitHub Actions 均通过，耗时分别为
+  3m06s 和 3m29s；发布验收产物上传步骤成功。
 
 ## 13. 首个执行任务
 
