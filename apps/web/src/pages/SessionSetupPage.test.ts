@@ -111,7 +111,20 @@ describe("automatic market data selection", () => {
     ];
     api.fetchDatasets.mockResolvedValue({ schema_version: "1.0", datasets: snapshots });
     api.fetchDatasetDownloadJobs.mockResolvedValue({ schema_version: "1.0", jobs: [] });
-    api.fetchPlaybooks.mockResolvedValue({ schema_version: "1.0", playbooks: [] });
+    api.fetchPlaybooks.mockResolvedValue({
+      schema_version: "1.0",
+      playbooks: [{
+        created_at: "2026-08-02T00:00:00Z",
+        description: "Deterministic E2E rules",
+        evaluator_version: "1.0",
+        name: "趋势回调",
+        official: true,
+        playbook_id: "pbk_trend",
+        rules: ["Lock the plan before ordering"],
+        slug: "trend-pullback",
+        version: 1,
+      }],
+    });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
@@ -122,8 +135,12 @@ describe("automatic market data selection", () => {
       createElement(MemoryRouter, null, createElement(SessionSetupPage)),
     ));
 
-    const snapshotSelect = await screen.findByLabelText("Snapshot 版本");
-    fireEvent.change(snapshotSelect, { target: { value: "old-perp" } });
+    const snapshotGroup = await screen.findByRole("radiogroup", { name: "选择数据集 Snapshot" });
+    expect(snapshotGroup).toBeVisible();
+    expect(screen.queryByText("账户与风险引擎")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "请先选择数据集" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /old-perp/ }));
+    expect(screen.getByText("账户与风险引擎")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "选择日期" }));
     fireEvent.change(screen.getByLabelText("回放开始时间（UTC）"), {
       target: { value: "2026-07-15T12:30" },
@@ -136,6 +153,7 @@ describe("automatic market data selection", () => {
         start_mode: "specific",
         start_time: "2026-07-15T12:30:00.000Z",
         hidden_real_date: false,
+        playbook_id: "pbk_trend",
       }),
     ));
   });

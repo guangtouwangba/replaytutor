@@ -37,6 +37,42 @@ def test_home_supports_english_locale_and_lazy_demo(
     expect(page.locator(".demo-media video")).to_be_visible()
 
 
+def test_workbench_shortcuts_and_order_draft_support_english_locale(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    page.add_init_script(
+        "localStorage.setItem('replaytutor:locale', 'en-US'); "
+        "localStorage.setItem('replaytutor:locale-preference', 'en-US');"
+    )
+    page.goto(f"{stack.web_url}/sessions/{session_id}")
+    expect(page.get_by_role("heading", name="Lock the trading plan first")).to_be_visible()
+
+    page.keyboard.press("?")
+    expect(
+        page.get_by_role("dialog", name="ReplayTutor keyboard shortcuts")
+    ).to_be_visible()
+    expect(page.get_by_text("Replay safety boundary")).to_be_visible()
+    expect(page.get_by_text("Paper-order drafts")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    page.keyboard.press("Control+K")
+    expect(page.get_by_role("dialog", name="Search commands and tools")).to_be_visible()
+    expect(page.get_by_placeholder("Search tools, timeframes, or actions…")).to_be_visible()
+    page.keyboard.press("Escape")
+
+    page.get_by_label("Trade thesis").fill("Breakout continuation after confirmation")
+    page.get_by_label("Invalidation").fill("Price loses the visible structure low")
+    page.get_by_role("button", name="Lock plan").click()
+    expect(page.get_by_role("heading", name="Submit paper order")).to_be_visible()
+    expect(page.get_by_label("Order type")).to_be_visible()
+    expect(page.get_by_role("button", name="Submit · activates on next bar")).to_be_visible()
+    client.close()
+
+
 def test_user_can_complete_core_training_flow(
     page: Page,
     e2e_stack_factory,
@@ -58,6 +94,10 @@ def test_user_can_complete_core_training_flow(
 
     page.goto(f"{stack.web_url}/setup")
     page.get_by_role("button", name="现货", exact=True).click()
+    snapshot_group = page.get_by_role("radiogroup", name="选择数据集 Snapshot")
+    expect(snapshot_group).to_be_visible()
+    expect(page.get_by_text("后续配置尚未展开")).to_be_visible()
+    snapshot_group.get_by_role("radio").first.click()
     expect(page.get_by_text("已选择本地数据", exact=True)).to_be_visible()
     page.get_by_role("button", name="使用所选数据开始").click()
     expect(page.get_by_role("heading", name="先锁定交易计划")).to_be_visible(

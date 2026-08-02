@@ -18,6 +18,7 @@ describe("WorkbenchShortcuts", () => {
 
   it("supports platform primary modifiers", () => {
     expect(resolveWorkbenchShortcut(keyboard("k", { metaKey: true }))).toEqual({ kind: "command_palette" });
+    expect(resolveWorkbenchShortcut(keyboard("s", { metaKey: true }))).toEqual({ kind: "save_layout" });
     expect(resolveWorkbenchShortcut(keyboard("z", { ctrlKey: true }))).toEqual({ kind: "undo" });
     expect(resolveWorkbenchShortcut(keyboard("Z", { metaKey: true, shiftKey: true }))).toEqual({ kind: "redo" });
   });

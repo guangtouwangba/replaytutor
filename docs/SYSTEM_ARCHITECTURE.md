@@ -459,7 +459,7 @@ M0 本地入口已经固定为 `make setup` 与 `make dev`：Vite 仅监听 `127
 ## 13. 建议仓库结构
 
 ```text
-ai-trading-replay/
+replaytutor/
   apps/
     web/                    # React/Vite
     api/
