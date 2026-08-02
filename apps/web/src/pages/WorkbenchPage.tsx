@@ -58,6 +58,30 @@ import {
 const REPLAY_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 type ReplayTimeframe = typeof REPLAY_TIMEFRAMES[number];
 
+interface SavedChartLayout {
+  readonly timeframe?: ReplayTimeframe;
+  readonly annotationsVisible?: boolean;
+  readonly annotationsLocked?: boolean;
+  readonly magnetEnabled?: boolean;
+  readonly continuousDrawing?: boolean;
+}
+
+function savedChartLayout(): SavedChartLayout {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem("replaytutor:chart-layout") ?? "{}") as SavedChartLayout;
+    return {
+      timeframe: REPLAY_TIMEFRAMES.includes(parsed.timeframe as ReplayTimeframe) ? parsed.timeframe : undefined,
+      annotationsVisible: typeof parsed.annotationsVisible === "boolean" ? parsed.annotationsVisible : undefined,
+      annotationsLocked: typeof parsed.annotationsLocked === "boolean" ? parsed.annotationsLocked : undefined,
+      magnetEnabled: typeof parsed.magnetEnabled === "boolean" ? parsed.magnetEnabled : undefined,
+      continuousDrawing: typeof parsed.continuousDrawing === "boolean" ? parsed.continuousDrawing : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function boundedPoints(points: AnnotationPoint[]): CreateAnnotationRequest["points"] {
   if (points.length < 1 || points.length > 16) {
     throw new Error("Annotations require between one and sixteen points");
@@ -147,7 +171,8 @@ export function WorkbenchPage() {
   const queryClient = useQueryClient();
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [timeframe, setTimeframe] = useState<ReplayTimeframe>("1m");
+  const initialChartLayout = useMemo(savedChartLayout, []);
+  const [timeframe, setTimeframe] = useState<ReplayTimeframe>(initialChartLayout.timeframe ?? "1m");
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [thesis, setThesis] = useState("");
   const [invalidation, setInvalidation] = useState("");
@@ -168,10 +193,10 @@ export function WorkbenchPage() {
   const [annotationLabel, setAnnotationLabel] = useState(() => english ? "My observation" : "我的观察");
   const [drawingTool, setDrawingTool] = useState<DrawingTool>("select");
   const [drawingRequest, setDrawingRequest] = useState(0);
-  const [magnetEnabled, setMagnetEnabled] = useState(true);
-  const [continuousDrawing, setContinuousDrawing] = useState(false);
-  const [annotationsVisible, setAnnotationsVisible] = useState(true);
-  const [annotationsLocked, setAnnotationsLocked] = useState(false);
+  const [magnetEnabled, setMagnetEnabled] = useState(initialChartLayout.magnetEnabled ?? true);
+  const [continuousDrawing, setContinuousDrawing] = useState(initialChartLayout.continuousDrawing ?? false);
+  const [annotationsVisible, setAnnotationsVisible] = useState(initialChartLayout.annotationsVisible ?? true);
+  const [annotationsLocked, setAnnotationsLocked] = useState(initialChartLayout.annotationsLocked ?? false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [contextAnnotationIds, setContextAnnotationIds] = useState<string[]>([]);
   const [chartHistory, setChartHistory] = useState<ChartHistoryEntry[]>([]);
@@ -899,27 +924,27 @@ export function WorkbenchPage() {
   const commandActions: WorkbenchCommandAction[] = [
     ...DRAWING_DEFINITIONS.map((definition) => ({
       id: `draw-${definition.tool}`,
-      label: definition.label,
-      detail: definition.instruction,
-      keywords: `${definition.tool} 画线 绘图`,
+      label: english ? definition.tool.replaceAll("_", " ") : definition.label,
+      detail: english ? "Create this chart object using visible market data only." : definition.instruction,
+      keywords: `${definition.tool} drawing 画线 绘图`,
       disabled: readOnly || !chartToolRegistryReady,
       run: () => startDrawing(definition.tool),
     })),
     ...REPLAY_TIMEFRAMES.map((item) => ({
       id: `timeframe-${item}`,
-      label: `切换周期 · ${item}`,
-      detail: "只聚合 visible_at 以内的可见行情",
+      label: `${l("Switch timeframe", "切换周期")} · ${item}`,
+      detail: l("Aggregate only bars visible at visible_at.", "只聚合 visible_at 以内的可见行情"),
       keywords: "周期 timeframe",
       run: () => setTimeframe(item),
     })),
-    { id: "play", label: playing ? "暂停回放" : "播放回放", detail: "保持单飞 advance 命令", shortcut: "Space", disabled: readOnly, run: () => setPlaying((value) => !value) },
-    { id: "advance", label: "前进一根 K 线", detail: "只向前推进服务端签发的回放帧", shortcut: "→", disabled: readOnly || advance.isPending, run: () => advance.mutate(1) },
-    { id: "reset", label: "复位图表视口", detail: "回到当前可见数据最右侧", shortcut: "⌥/Alt + R", run: () => setChartResetRequest((value) => value + 1) },
-    { id: "toggle-drawings", label: annotationsVisible ? "隐藏全部绘图" : "显示全部绘图", detail: "不删除对象，只切换可见性", shortcut: "⌘/Ctrl + ⌥/Alt + H", run: () => setAnnotationsVisible((value) => !value) },
-    { id: "shortcuts", label: "查看快捷键", detail: "显示已接入操作和安全限制", shortcut: "?", run: () => setShortcutHelpOpen(true) },
-    { id: "indicators", label: "指标", detail: "指标管理模块尚未接入，当前不创建假操作", keywords: "indicator 指标", disabled: true, run: () => undefined },
-    { id: "symbol", label: "切换品种", detail: "会话品种属于确定性契约，请从训练配置创建新会话", keywords: "symbol 品种 代码", disabled: true, run: () => undefined },
-    { id: "date", label: "定位到指定日期", detail: "回放内禁用，避免越过 visible_at 查看未来数据", keywords: "date 日期", disabled: true, run: () => undefined },
+    { id: "play", label: playing ? l("Pause replay", "暂停回放") : l("Play replay", "播放回放"), detail: l("Keep one advance command in flight.", "保持单飞 advance 命令"), shortcut: "Space", disabled: readOnly, run: () => setPlaying((value) => !value) },
+    { id: "advance", label: l("Advance one bar", "前进一根 K 线"), detail: l("Advance only the server-signed replay frame.", "只向前推进服务端签发的回放帧"), shortcut: "→", disabled: readOnly || advance.isPending, run: () => advance.mutate(1) },
+    { id: "reset", label: l("Reset chart viewport", "复位图表视口"), detail: l("Return to the right edge of visible data.", "回到当前可见数据最右侧"), shortcut: "⌥/Alt + R", run: () => setChartResetRequest((value) => value + 1) },
+    { id: "toggle-drawings", label: annotationsVisible ? l("Hide all drawings", "隐藏全部绘图") : l("Show all drawings", "显示全部绘图"), detail: l("Toggle visibility without deleting objects.", "不删除对象，只切换可见性"), shortcut: "⌘/Ctrl + ⌥/Alt + H", run: () => setAnnotationsVisible((value) => !value) },
+    { id: "shortcuts", label: l("View keyboard shortcuts", "查看快捷键"), detail: l("Show available actions and safety limits.", "显示已接入操作和安全限制"), shortcut: "?", run: () => setShortcutHelpOpen(true) },
+    { id: "indicators", label: l("Indicators", "指标"), detail: l("Indicator management is not connected; no fake action is provided.", "指标管理模块尚未接入，当前不创建假操作"), keywords: "indicator 指标", disabled: true, run: () => undefined },
+    { id: "symbol", label: l("Switch instrument", "切换品种"), detail: l("The instrument is part of the deterministic session contract. Create a new session from Training setup.", "会话品种属于确定性契约，请从训练配置创建新会话"), keywords: "symbol 品种 代码", disabled: true, run: () => undefined },
+    { id: "date", label: l("Go to date", "定位到指定日期"), detail: l("Disabled in replay to prevent crossing visible_at into future data.", "回放内禁用，避免越过 visible_at 查看未来数据"), keywords: "date 日期", disabled: true, run: () => undefined },
   ];
 
   return (
@@ -1021,7 +1046,7 @@ export function WorkbenchPage() {
               <Keyboard aria-hidden="true" size={14} />
               <kbd>?</kbd>
             </button>
-            {!chartToolRegistryReady && <span className="timeframe-error">绘图注册表未就绪</span>}
+            {!chartToolRegistryReady && <span className="timeframe-error">{l("Chart tool registry is not ready", "绘图注册表未就绪")}</span>}
           </div>
           <ReplayChart
             bars={chartBars}
@@ -1077,30 +1102,30 @@ export function WorkbenchPage() {
           ) : (
             <form className="dock-card decision-form" onSubmit={(event) => { event.preventDefault(); placeOrder.mutate(); }} ref={orderTicketRef}>
               <span className="page-kicker">PLAN LOCKED · {execution.plan.side}</span>
-              <h2>提交模拟订单</h2>
+              <h2>{l("Submit paper order", "提交模拟订单")}</h2>
               <p>{execution.plan.thesis}</p>
-              {perpetual && <div className="account-risk-strip"><strong>{state.leverage}×</strong><span>{state.margin_mode === "ISOLATED" ? "逐仓" : "全仓"}</span><span>{state.position_mode === "ONEWAY" ? "单向" : "双向"}</span></div>}
-              <label>订单类型<select onChange={(event) => setOrderType(event.target.value as typeof orderType)} value={orderType}>
-                <option value="MARKET">市价</option>
-                <option value="LIMIT">限价</option>
-                <option value="STOP_MARKET">止损市价</option>
-                <option value="STOP_LIMIT">止损限价</option>
-                <option value="TAKE_PROFIT_MARKET">止盈市价</option>
-                <option value="TAKE_PROFIT_LIMIT">止盈限价</option>
-                <option value="TRAILING_STOP_MARKET">追踪止损</option>
+              {perpetual && <div className="account-risk-strip"><strong>{state.leverage}×</strong><span>{state.margin_mode === "ISOLATED" ? l("Isolated", "逐仓") : l("Cross", "全仓")}</span><span>{state.position_mode === "ONEWAY" ? l("One-way", "单向") : l("Hedge", "双向")}</span></div>}
+              <label>{l("Order type", "订单类型")}<select onChange={(event) => setOrderType(event.target.value as typeof orderType)} value={orderType}>
+                <option value="MARKET">{l("Market", "市价")}</option>
+                <option value="LIMIT">{l("Limit", "限价")}</option>
+                <option value="STOP_MARKET">{l("Stop market", "止损市价")}</option>
+                <option value="STOP_LIMIT">{l("Stop limit", "止损限价")}</option>
+                <option value="TAKE_PROFIT_MARKET">{l("Take-profit market", "止盈市价")}</option>
+                <option value="TAKE_PROFIT_LIMIT">{l("Take-profit limit", "止盈限价")}</option>
+                <option value="TRAILING_STOP_MARKET">{l("Trailing stop", "追踪止损")}</option>
               </select></label>
-              <label>数量<input min="0.00001" onChange={(event) => setQuantity(event.target.value)} step="0.00001" type="number" value={quantity} /></label>
-              {needsTrigger && <label>{orderType === "LIMIT" ? "委托价" : orderType === "TRAILING_STOP_MARKET" ? "激活价（可选）" : "触发价"}<input min="0.01" onChange={(event) => setTriggerPrice(event.target.value)} step="0.01" type="number" value={triggerPrice} /></label>}
-              {needsSecondaryLimit && <label>限价<input min="0.01" onChange={(event) => setLimitPrice(event.target.value)} step="0.01" type="number" value={limitPrice} /></label>}
-              {orderType === "TRAILING_STOP_MARKET" && <label>回调比例<input max="0.1" min="0.001" onChange={(event) => setCallbackRate(event.target.value)} step="0.001" type="number" value={callbackRate} /></label>}
-              <label>有效方式<select onChange={(event) => setTimeInForce(event.target.value as typeof timeInForce)} value={timeInForce}><option value="GTC">GTC · 持续有效</option><option value="IOC">IOC · 立即成交否则撤销</option><option value="FOK">FOK · 全成否则撤销</option><option value="GTD">GTD · 指定 K 线前有效</option></select></label>
-              {timeInForce === "GTD" && <label>到期 K 线 Index<input min={state.frame.current_index + 1} onChange={(event) => setGoodTillIndex(event.target.value)} step="1" type="number" value={goodTillIndex} /></label>}
-              {perpetual && state.position_mode === "HEDGE" && <label>持仓方向<select onChange={(event) => setPositionSide(event.target.value as typeof positionSide)} value={positionSide}><option value="LONG">多头仓</option><option value="SHORT">空头仓</option></select></label>}
-              {perpetual && <label className="check-row"><input checked={reduceOnly} onChange={(event) => setReduceOnly(event.target.checked)} type="checkbox" /><span><strong>只减仓</strong><small>禁止订单增加或反向打开持仓。</small></span></label>}
-              {perpetual && <label className="check-row"><input checked={closePosition} onChange={(event) => setClosePosition(event.target.checked)} type="checkbox" /><span><strong>平掉该方向全部持仓</strong><small>成交时按可平数量计算，不依赖输入数量。</small></span></label>}
-              {["LIMIT", "STOP_LIMIT", "TAKE_PROFIT_LIMIT"].includes(orderType) && <label className="check-row"><input checked={postOnly} onChange={(event) => setPostOnly(event.target.checked)} type="checkbox" /><span><strong>Post-only</strong><small>只作为挂单进入订单簿。</small></span></label>}
-              <label>止盈价（可选）<input min="0.01" onChange={(event) => setTakeProfit(event.target.value)} step="0.01" type="number" value={takeProfit} /></label><label>保护止损（可选）<input min="0.01" onChange={(event) => setProtectiveStop(event.target.value)} step="0.01" type="number" value={protectiveStop} /></label>
-              <button className="primary-action" disabled={readOnly || placeOrder.isPending || (needsTrigger && orderType !== "TRAILING_STOP_MARKET" && !triggerPrice) || (needsSecondaryLimit && !limitPrice) || (timeInForce === "GTD" && !goodTillIndex)} type="submit">提交 · 下一根激活</button>
+              <label>{l("Quantity", "数量")}<input min="0.00001" onChange={(event) => setQuantity(event.target.value)} step="0.00001" type="number" value={quantity} /></label>
+              {needsTrigger && <label>{orderType === "LIMIT" ? l("Limit price", "委托价") : orderType === "TRAILING_STOP_MARKET" ? l("Activation price (optional)", "激活价（可选）") : l("Trigger price", "触发价")}<input min="0.01" onChange={(event) => setTriggerPrice(event.target.value)} step="0.01" type="number" value={triggerPrice} /></label>}
+              {needsSecondaryLimit && <label>{l("Limit price", "限价")}<input min="0.01" onChange={(event) => setLimitPrice(event.target.value)} step="0.01" type="number" value={limitPrice} /></label>}
+              {orderType === "TRAILING_STOP_MARKET" && <label>{l("Callback rate", "回调比例")}<input max="0.1" min="0.001" onChange={(event) => setCallbackRate(event.target.value)} step="0.001" type="number" value={callbackRate} /></label>}
+              <label>{l("Time in force", "有效方式")}<select onChange={(event) => setTimeInForce(event.target.value as typeof timeInForce)} value={timeInForce}><option value="GTC">GTC · {l("Good till canceled", "持续有效")}</option><option value="IOC">IOC · {l("Immediate or cancel", "立即成交否则撤销")}</option><option value="FOK">FOK · {l("Fill or kill", "全成否则撤销")}</option><option value="GTD">GTD · {l("Good till bar", "指定 K 线前有效")}</option></select></label>
+              {timeInForce === "GTD" && <label>{l("Expiry bar index", "到期 K 线 Index")}<input min={state.frame.current_index + 1} onChange={(event) => setGoodTillIndex(event.target.value)} step="1" type="number" value={goodTillIndex} /></label>}
+              {perpetual && state.position_mode === "HEDGE" && <label>{l("Position side", "持仓方向")}<select onChange={(event) => setPositionSide(event.target.value as typeof positionSide)} value={positionSide}><option value="LONG">{l("Long", "多头仓")}</option><option value="SHORT">{l("Short", "空头仓")}</option></select></label>}
+              {perpetual && <label className="check-row"><input checked={reduceOnly} onChange={(event) => setReduceOnly(event.target.checked)} type="checkbox" /><span><strong>{l("Reduce only", "只减仓")}</strong><small>{l("Prevent the order from increasing or reversing a position.", "禁止订单增加或反向打开持仓。")}</small></span></label>}
+              {perpetual && <label className="check-row"><input checked={closePosition} onChange={(event) => setClosePosition(event.target.checked)} type="checkbox" /><span><strong>{l("Close the entire side", "平掉该方向全部持仓")}</strong><small>{l("Use the closable quantity at execution instead of the input quantity.", "成交时按可平数量计算，不依赖输入数量。")}</small></span></label>}
+              {["LIMIT", "STOP_LIMIT", "TAKE_PROFIT_LIMIT"].includes(orderType) && <label className="check-row"><input checked={postOnly} onChange={(event) => setPostOnly(event.target.checked)} type="checkbox" /><span><strong>Post-only</strong><small>{l("Enter the order book only as a maker order.", "只作为挂单进入订单簿。")}</small></span></label>}
+              <label>{l("Take-profit price (optional)", "止盈价（可选）")}<input min="0.01" onChange={(event) => setTakeProfit(event.target.value)} step="0.01" type="number" value={takeProfit} /></label><label>{l("Protective stop (optional)", "保护止损（可选）")}<input min="0.01" onChange={(event) => setProtectiveStop(event.target.value)} step="0.01" type="number" value={protectiveStop} /></label>
+              <button className="primary-action" disabled={readOnly || placeOrder.isPending || (needsTrigger && orderType !== "TRAILING_STOP_MARKET" && !triggerPrice) || (needsSecondaryLimit && !limitPrice) || (timeInForce === "GTD" && !goodTillIndex)} type="submit">{l("Submit · activates on next bar", "提交 · 下一根激活")}</button>
             </form>
           )}
           <div className="dock-card">
@@ -1161,14 +1186,14 @@ export function WorkbenchPage() {
           {reviewMode && (
             <div className="dock-card evidence-focus-card" role="status">
               <span className="page-kicker">EVIDENCE FOCUS</span>
-              {evidence.isLoading && <p>正在定位证据…</p>}
-              {evidence.isError && <p>无法定位：{evidence.error.message}</p>}
+              {evidence.isLoading && <p>{l("Locating evidence…", "正在定位证据…")}</p>}
+              {evidence.isError && <p>{l("Could not locate evidence: ", "无法定位：")}{evidence.error.message}</p>}
               {evidence.data && (
                 <>
                   <strong>{evidence.data.kind}</strong>
                   <code>{evidence.data.evidence_id}</code>
-                  <p>{evidence.data.occurred_at ?? "该证据没有时间坐标"}</p>
-                  <p>{evidence.data.price ? `价格 ${evidence.data.price}` : "该证据没有价格坐标"}</p>
+                  <p>{evidence.data.occurred_at ?? l("This evidence has no time coordinate", "该证据没有时间坐标")}</p>
+                  <p>{evidence.data.price ? `${l("Price", "价格")} ${evidence.data.price}` : l("This evidence has no price coordinate", "该证据没有价格坐标")}</p>
                 </>
               )}
             </div>
@@ -1181,10 +1206,10 @@ export function WorkbenchPage() {
                   <span>{item.effective_label}</span><small>{item.original_annotation.tool} · {item.state}</small>
                 </button>
                 {!['rejected', 'deleted'].includes(item.state) && <button
-                  aria-label={contextAnnotationIds.includes(item.annotation_id) ? `从 AI 上下文移除 ${item.effective_label}` : `加入 AI 上下文 ${item.effective_label}`}
+                  aria-label={contextAnnotationIds.includes(item.annotation_id) ? `${l("Remove from AI context", "从 AI 上下文移除")} ${item.effective_label}` : `${l("Add to AI context", "加入 AI 上下文")} ${item.effective_label}`}
                   className={contextAnnotationIds.includes(item.annotation_id) ? "context-toggle is-active" : "context-toggle"}
                   onClick={() => toggleContextAnnotation(item.annotation_id)}
-                  title={contextAnnotationIds.includes(item.annotation_id) ? "从 AI 上下文移除" : "加入 AI 上下文"}
+                  title={contextAnnotationIds.includes(item.annotation_id) ? l("Remove from AI context", "从 AI 上下文移除") : l("Add to AI context", "加入 AI 上下文")}
                   type="button"
                 >
                   {contextAnnotationIds.includes(item.annotation_id) ? "AI ✓" : "+ AI"}
@@ -1228,7 +1253,7 @@ export function WorkbenchPage() {
             {perpetual && <><span>{l("Available margin", "可用保证金")}</span><strong>{execution?.portfolio.available_balance ?? "0"} USDT</strong><span>{l("Unrealized P&L", "未实现盈亏")}</span><strong>{execution?.portfolio.unrealized_pnl ?? "0"} USDT</strong></>}
             <span>{l("Latest order", "最新订单")}</span><strong>{execution?.orders?.at(-1)?.status ?? l("None", "无")}</strong>
           </div>
-          {!readOnly && execution?.orders?.some((order) => order.status === "PENDING" && !order.parent_order_id) && <button className="cancel-pending" disabled={cancelPending.isPending} onClick={() => { const pending = execution.orders?.find((order) => order.status === "PENDING" && !order.parent_order_id); if (pending) cancelPending.mutate(pending.order_id); }} type="button">取消待成交订单</button>}
+          {!readOnly && execution?.orders?.some((order) => order.status === "PENDING" && !order.parent_order_id) && <button className="cancel-pending" disabled={cancelPending.isPending} onClick={() => { const pending = execution.orders?.find((order) => order.status === "PENDING" && !order.parent_order_id); if (pending) cancelPending.mutate(pending.order_id); }} type="button">{l("Cancel pending order", "取消待成交订单")}</button>}
           {(advance.isError || finish.isError || lockPlan.isError || placeOrder.isError || createDrawing.isError || annotationAction.isError || chartHistoryAction.isError || chartEditError) && <div className="inline-error">{advance.error?.message ?? finish.error?.message ?? lockPlan.error?.message ?? placeOrder.error?.message ?? createDrawing.error?.message ?? annotationAction.error?.message ?? chartHistoryAction.error?.message ?? chartEditError}</div>}
         </section>
       </div>

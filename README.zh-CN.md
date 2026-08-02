@@ -36,7 +36,7 @@ make demo
 
 ## 自动行情数据
 
-训练配置支持 BTCUSDT、ETHUSDT 的现货和 USDT 永续合约。本地覆盖足够时直接复用；没有数据或覆盖不足时，通过 Binance 公共行情接口补齐。默认下载 30 天，也可选择一年。每次导入都会生成新的不可变 Parquet Snapshot。
+训练配置支持 BTCUSDT、ETHUSDT 的现货和 USDT 永续合约。本地覆盖足够时会列出候选版本并标记推荐项，由用户明确确认用于本次训练的不可变 Snapshot；没有数据或覆盖不足时，通过 Binance 公共行情接口补齐。默认下载 30 天，也可选择一年。每次导入都会生成新的不可变 Parquet Snapshot。
 
 Binance 私有成交复盘是可选的只读能力。不要向 ReplayTutor 提供交易、提现、杠杆或账户管理权限。
 

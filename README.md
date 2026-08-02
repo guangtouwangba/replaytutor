@@ -40,7 +40,7 @@ If startup reports a busy port, `make dev` now prints the owning process before 
 
 Training setup supports BTCUSDT and ETHUSDT spot or USDT perpetual contracts.
 
-- Local snapshots are reused when they cover the requested range.
+- Matching local snapshots are listed with a recommended version; the user explicitly confirms which immutable Snapshot starts the session.
 - Missing coverage is downloaded from Binance public market-data endpoints.
 - The default range is 30 days; one-year downloads are available.
 - No Binance key is required for public OHLCV history.

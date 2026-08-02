@@ -116,7 +116,7 @@ export function SessionSetupPage() {
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [marketType, setMarketType] = useState<MarketType>("USDT_PERPETUAL");
   const [historyDays, setHistoryDays] = useState<HistoryDays>(30);
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState(() => searchParams.get("snapshot_id") ?? "");
   const [startMode, setStartMode] = useState<StartMode>("beginning");
   const [selectedStartTime, setSelectedStartTime] = useState("");
   const [hiddenRealDate, setHiddenRealDate] = useState(true);
@@ -140,12 +140,11 @@ export function SessionSetupPage() {
   const availableSnapshots = selectableLocalSnapshots(
     datasets.data?.datasets ?? [], symbol, marketType,
   );
-  const activeSnapshot = selectLocalSnapshot(
-    availableSnapshots,
-    symbol,
-    marketType,
-    historyDays,
-    selectedSnapshotId,
+  const recommendedSnapshot = selectLocalSnapshot(
+    availableSnapshots, symbol, marketType, historyDays,
+  );
+  const activeSnapshot = availableSnapshots.find(
+    (snapshot) => snapshot.snapshot_id === selectedSnapshotId,
   );
   const startBounds = specificStartBounds(activeSnapshot);
   const effectiveStartTime = selectedStartTime && startBounds
@@ -194,6 +193,8 @@ export function SessionSetupPage() {
     ? t("setup.creating")
     : activeSnapshot
       ? t("setup.startLocal")
+      : availableSnapshots.length > 0
+        ? t("setup.selectSnapshotRequired")
       : matchingJob
         ? t("setup.downloadingProgress", { progress: Math.round(matchingJob.progress * 100) })
         : download.isPending
@@ -211,9 +212,9 @@ export function SessionSetupPage() {
       </header>
 
       <ol className="setup-progress" aria-label={t("setup.stepsLabel")}>
-        <li className="is-complete"><span>1</span><div><strong>{t("setup.chooseInstrument")}</strong><small>{t("setup.localFirst")}</small></div></li>
-        <li className={activePlaybook ? "is-complete" : "is-current"}><span>2</span><div><strong>{t("setup.bindPlaybook")}</strong><small>{t("setup.defineConstraints")}</small></div></li>
-        <li className="is-current"><span>3</span><div><strong>{t("setup.startTraining")}</strong><small>{t("setup.noLookaheadWorkbench")}</small></div></li>
+        <li className={activeSnapshot ? "is-complete" : "is-current"}><span>1</span><div><strong>{t("setup.chooseInstrument")}</strong><small>{t("setup.localFirst")}</small></div></li>
+        <li className={activeSnapshot ? (activePlaybook ? "is-complete" : "is-current") : ""}><span>2</span><div><strong>{t("setup.bindPlaybook")}</strong><small>{t("setup.defineConstraints")}</small></div></li>
+        <li className={activeSnapshot && activePlaybook ? "is-current" : ""}><span>3</span><div><strong>{t("setup.startTraining")}</strong><small>{t("setup.noLookaheadWorkbench")}</small></div></li>
       </ol>
 
       <div className="setup-layout">
@@ -222,14 +223,14 @@ export function SessionSetupPage() {
             <div className="setup-section-title"><Database size={16} /><span>{t("setup.instrumentData")}</span></div>
             <div className="segmented setup-symbols" aria-label={t("setup.trainingInstrument")}>
               {TRAINING_SYMBOLS.map((item) => (
-                <button className={symbol === item.symbol ? "is-active" : ""} key={item.symbol} onClick={() => setSymbol(item.symbol)} type="button">
+                <button className={symbol === item.symbol ? "is-active" : ""} key={item.symbol} onClick={() => { setSymbol(item.symbol); setSelectedSnapshotId(""); setSelectedStartTime(""); }} type="button">
                   {item.label}
                 </button>
               ))}
             </div>
             <div className="segmented setup-market-type" aria-label={t("setup.marketType")}>
-              <button className={marketType === "USDT_PERPETUAL" ? "is-active" : ""} onClick={() => setMarketType("USDT_PERPETUAL")} type="button">{t("setup.usdtPerpetual")}</button>
-              <button className={marketType === "SPOT" ? "is-active" : ""} onClick={() => setMarketType("SPOT")} type="button">{t("setup.spot")}</button>
+              <button className={marketType === "USDT_PERPETUAL" ? "is-active" : ""} onClick={() => { setMarketType("USDT_PERPETUAL"); setSelectedSnapshotId(""); setSelectedStartTime(""); }} type="button">{t("setup.usdtPerpetual")}</button>
+              <button className={marketType === "SPOT" ? "is-active" : ""} onClick={() => { setMarketType("SPOT"); setSelectedSnapshotId(""); setSelectedStartTime(""); }} type="button">{t("setup.spot")}</button>
             </div>
             <div className="setup-range-label"><span>{t("setup.historyRange")}</span><small>{t("setup.default30")}</small></div>
             <div className="segmented setup-history-range" aria-label={t("setup.historyRange")}>
@@ -244,24 +245,45 @@ export function SessionSetupPage() {
             {datasets.isError && <div className="inline-error">{t("setup.localError", { message: datasets.error.message })}</div>}
             {!datasets.isLoading && !datasets.isError && availableSnapshots.length > 0 && (
               <>
-                <label className="setup-snapshot-picker">
-                  <small>{t("setup.snapshotVersion")}</small>
-                  <select
-                    aria-label={t("setup.snapshotVersion")}
-                    onChange={(event) => {
-                      setSelectedSnapshotId(event.target.value);
-                      setSelectedStartTime("");
-                    }}
-                    value={activeSnapshot?.snapshot_id ?? ""}
-                  >
-                    {!activeSnapshot && <option value="">{t("setup.snapshotNoCoverage")}</option>}
-                    {availableSnapshots.map((snapshot) => (
-                      <option key={snapshot.snapshot_id} value={snapshot.snapshot_id}>
-                        {snapshot.coverage_start.slice(0, 10)} → {snapshot.coverage_end.slice(0, 10)} · {snapshot.snapshot_id.slice(-8)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="setup-snapshot-picker">
+                  <div className="setup-snapshot-heading">
+                    <span><strong>{t("setup.snapshotVersion")}</strong><small>{t("setup.selectSnapshotHint")}</small></span>
+                    <b>{availableSnapshots.length}</b>
+                  </div>
+                  <div aria-label={t("setup.snapshotVersion")} className="setup-snapshot-options" role="radiogroup">
+                    {availableSnapshots.map((snapshot) => {
+                      const selected = snapshot.snapshot_id === selectedSnapshotId;
+                      const recommended = snapshot.snapshot_id === recommendedSnapshot?.snapshot_id;
+                      return (
+                        <button
+                          aria-checked={selected}
+                          className={selected ? "snapshot-choice is-active" : "snapshot-choice"}
+                          key={snapshot.snapshot_id}
+                          onClick={() => {
+                            setSelectedSnapshotId(snapshot.snapshot_id);
+                            setSelectedStartTime("");
+                          }}
+                          role="radio"
+                          type="button"
+                        >
+                          <span className="snapshot-choice-main">
+                            <strong>{snapshot.coverage_start.slice(0, 10)} → {snapshot.coverage_end.slice(0, 10)}</strong>
+                            <small>{snapshot.quality.row_count.toLocaleString(locale)} bars · {snapshot.quality.status}</small>
+                          </span>
+                          <span className="snapshot-choice-meta">
+                            {recommended && <em>{t("setup.snapshotRecommended")}</em>}
+                            <code>{snapshot.snapshot_id.slice(-12)}</code>
+                            <small>{new Date(snapshot.created_at).toLocaleString(locale, { hour12: false })}</small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {!activeSnapshot && <div className="inline-notice data-resolution is-selection-required">
+                  <Database size={15} />
+                  <span><strong>{t("setup.selectSnapshotRequired")}</strong><small>{t("setup.selectSnapshotBeforeConfig")}</small></span>
+                </div>}
                 {activeSnapshot && <div className="inline-notice data-resolution is-local">
                   <HardDrive size={15} />
                   <span>
@@ -272,7 +294,7 @@ export function SessionSetupPage() {
                 </div>}
               </>
             )}
-            {!datasets.isLoading && !datasets.isError && !activeSnapshot && (
+            {!datasets.isLoading && !datasets.isError && availableSnapshots.length === 0 && (
               <div className="inline-notice data-resolution">
                 <DownloadCloud size={15} />
                 <span><strong>{matchingJob ? t("setup.downloading") : t("setup.localMissing")}</strong><small>{matchingJob ? t("setup.downloadingHint", { progress: Math.round(matchingJob.progress * 100) }) : t("setup.downloadHint", { range: t(historyDays === 365 ? "setup.range365" : "setup.range30") })}</small></span>
@@ -280,7 +302,8 @@ export function SessionSetupPage() {
             )}
           </section>
 
-          <section className="setup-section">
+          {activeSnapshot ? <>
+          <section className="setup-section setup-section-revealed">
             <div className="setup-section-title"><Target size={16} /><span>{t("setup.accountRisk")}</span></div>
             <div className="constraint-grid">
               <label><small>{t("setup.initialEquity")}</small><input min="1" onChange={(event) => setInitialCash(event.target.value)} step="1" type="number" value={initialCash} /></label>
@@ -339,6 +362,12 @@ export function SessionSetupPage() {
               <span><small>{t("setup.aiMode")}</small><strong>{t("setup.codexConnected")}</strong></span>
             </div>
           </section>
+          </> : !datasets.isLoading && availableSnapshots.length > 0 ? (
+            <section className="setup-section setup-locked-sections" aria-live="polite">
+              <HardDrive size={18} />
+              <div><strong>{t("setup.configurationLocked")}</strong><p>{t("setup.selectSnapshotBeforeConfig")}</p></div>
+            </section>
+          ) : null}
         </div>
 
         <aside className="setup-summary">
@@ -347,17 +376,17 @@ export function SessionSetupPage() {
           <p>{t("setup.contractHint")}</p>
           <dl>
             <div><dt>{t("setup.market")}</dt><dd>{perpetual ? t("setup.binancePerpetual") : t("setup.binanceSpot")}</dd></div>
-            <div><dt>{t("setup.data")}</dt><dd>{activeSnapshot ? t("setup.localSnapshot", { start: activeSnapshot.coverage_start.slice(0, 10), end: activeSnapshot.coverage_end.slice(0, 10) }) : t("setup.autoDownload", { range: t(historyDays === 365 ? "setup.range365" : "setup.range30") })}</dd></div>
+            <div><dt>{t("setup.data")}</dt><dd>{activeSnapshot ? t("setup.localSnapshot", { start: activeSnapshot.coverage_start.slice(0, 10), end: activeSnapshot.coverage_end.slice(0, 10) }) : availableSnapshots.length > 0 ? t("setup.selectSnapshotRequired") : t("setup.autoDownload", { range: t(historyDays === 365 ? "setup.range365" : "setup.range30") })}</dd></div>
             {activeSnapshot && <div><dt>Snapshot</dt><dd><code>{activeSnapshot.snapshot_id.slice(-12)}</code></dd></div>}
-            <div><dt>{t("setup.replayStart")}</dt><dd>{startMode === "specific" ? `${effectiveStartTime.replace("T", " ")} UTC` : startMode === "random" ? t("setup.randomSegment") : activeSnapshot?.coverage_start.slice(0, 16).replace("T", " ")}</dd></div>
+            <div><dt>{t("setup.replayStart")}</dt><dd>{!activeSnapshot ? "—" : startMode === "specific" ? `${effectiveStartTime.replace("T", " ")} UTC` : startMode === "random" ? t("setup.randomSegment") : activeSnapshot.coverage_start.slice(0, 16).replace("T", " ")}</dd></div>
             <div><dt>{t("setup.rules")}</dt><dd>{perpetual ? "binance_usdm_perpetual_v1" : "crypto_spot_v1"}</dd></div>
             <div><dt>{t("setup.quality")}</dt><dd>{activeSnapshot?.quality.status ?? t("setup.verifyAfterDownload")}</dd></div>
           </dl>
           {(download.isError || create.isError) && <div className="inline-error">{t("setup.prepareFailed", { message: download.error?.message ?? create.error?.message })}</div>}
           <button
             className="primary-action setup-submit"
-            disabled={datasets.isLoading || datasets.isError || create.isPending || download.isPending || Boolean(matchingJob) || (startMode === "specific" && !effectiveStartTime)}
-            onClick={() => activeSnapshot ? create.mutate() : download.mutate()}
+            disabled={datasets.isLoading || datasets.isError || create.isPending || download.isPending || Boolean(matchingJob) || (availableSnapshots.length > 0 && !activeSnapshot) || (startMode === "specific" && !effectiveStartTime)}
+            onClick={() => activeSnapshot ? create.mutate() : availableSnapshots.length === 0 ? download.mutate() : undefined}
             type="button"
           >
             {actionLabel}<ArrowRight size={15} />
