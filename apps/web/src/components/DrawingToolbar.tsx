@@ -32,15 +32,21 @@ import {
   Type,
   Undo2,
   Unlock,
+  ZoomIn,
+  ZoomOut,
   type LucideIcon,
 } from "lucide-react";
 import { type FocusEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 import {
   DRAWING_DEFINITIONS,
-  ADVANCED_TOOL_IDS,
-  ADVANCED_TOOL_SECTIONS,
+  FIBONACCI_TOOL_IDS,
+  FIBONACCI_TOOL_SECTIONS,
   LINE_TOOL_IDS,
   LINE_TOOL_SECTIONS,
+  PATTERN_TOOL_IDS,
+  PATTERN_TOOL_SECTIONS,
+  PREDICTION_TOOL_IDS,
+  PREDICTION_TOOL_SECTIONS,
   drawingDefinition,
   type DrawingGroup,
   type DrawingTool,
@@ -66,6 +72,8 @@ interface DrawingToolbarProps {
   readonly onDelete: () => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
+  readonly onZoomIn: () => void;
+  readonly onZoomOut: () => void;
 }
 
 const TOOL_ICONS: Record<DrawingTool, LucideIcon> = {
@@ -131,16 +139,20 @@ export function DrawingToolbar({
   onDelete,
   onUndo,
   onRedo,
+  onZoomIn,
+  onZoomOut,
 }: DrawingToolbarProps) {
   const lineLauncherRef = useRef<HTMLButtonElement>(null);
   const linePanelRef = useRef<HTMLDivElement>(null);
-  const advancedLauncherRef = useRef<HTMLButtonElement>(null);
-  const advancedPanelRef = useRef<HTMLDivElement>(null);
+  const groupLauncherRef = useRef<HTMLButtonElement>(null);
+  const groupPanelRef = useRef<HTMLDivElement>(null);
   const [lineMenuOpen, setLineMenuOpen] = useState(false);
-  const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<"fibonacci" | "prediction" | "pattern" | null>(null);
   const [lineMenuPosition, setLineMenuPosition] = useState({ left: 0, top: 0 });
   const [lastLineTool, setLastLineTool] = useState<Exclude<DrawingTool, "select">>("trend_line");
-  const [lastAdvancedTool, setLastAdvancedTool] = useState<Exclude<DrawingTool, "select">>("fibonacci_retracement");
+  const [lastFibonacciTool, setLastFibonacciTool] = useState<Exclude<DrawingTool, "select">>("fibonacci_retracement");
+  const [lastPredictionTool, setLastPredictionTool] = useState<Exclude<DrawingTool, "select">>("measure");
+  const [lastPatternTool, setLastPatternTool] = useState<Exclude<DrawingTool, "select">>("head_shoulders");
   const [tooltip, setTooltip] = useState<{
     label: string;
     detail?: string;
@@ -153,9 +165,9 @@ export function DrawingToolbar({
     }
   }, [activeTool]);
   useEffect(() => {
-    if (ADVANCED_TOOL_IDS.some((tool) => tool === activeTool)) {
-      setLastAdvancedTool(activeTool as Exclude<DrawingTool, "select">);
-    }
+    if (FIBONACCI_TOOL_IDS.some((tool) => tool === activeTool)) setLastFibonacciTool(activeTool as Exclude<DrawingTool, "select">);
+    if (PREDICTION_TOOL_IDS.some((tool) => tool === activeTool)) setLastPredictionTool(activeTool as Exclude<DrawingTool, "select">);
+    if (PATTERN_TOOL_IDS.some((tool) => tool === activeTool)) setLastPatternTool(activeTool as Exclude<DrawingTool, "select">);
   }, [activeTool]);
   useEffect(() => {
     if (!lineMenuOpen) return;
@@ -175,14 +187,14 @@ export function DrawingToolbar({
     };
   }, [lineMenuOpen]);
   useEffect(() => {
-    if (!advancedMenuOpen) return;
+    if (!openGroup) return;
     const close = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (advancedLauncherRef.current?.contains(target) || advancedPanelRef.current?.contains(target)) return;
-      setAdvancedMenuOpen(false);
+      if (groupLauncherRef.current?.contains(target) || groupPanelRef.current?.contains(target)) return;
+      setOpenGroup(null);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setAdvancedMenuOpen(false);
+      if (event.key === "Escape") setOpenGroup(null);
     };
     window.addEventListener("pointerdown", close);
     window.addEventListener("keydown", closeOnEscape);
@@ -190,7 +202,7 @@ export function DrawingToolbar({
       window.removeEventListener("pointerdown", close);
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [advancedMenuOpen]);
+  }, [openGroup]);
   const tooltipProps = (label: string, detail?: string) => ({
     "aria-describedby": "drawing-tool-tooltip",
     onMouseEnter: (event: MouseEvent<HTMLButtonElement>) => {
@@ -223,7 +235,7 @@ export function DrawingToolbar({
       });
     }
     setTooltip(null);
-    setAdvancedMenuOpen(false);
+    setOpenGroup(null);
     setLineMenuOpen((value) => !value);
   };
   const selectLineTool = (tool: Exclude<DrawingTool, "select">) => {
@@ -232,9 +244,22 @@ export function DrawingToolbar({
     onSelect(tool);
   };
   const activeLineTool = LINE_TOOL_IDS.some((tool) => tool === activeTool);
-  const activeAdvancedTool = ADVANCED_TOOL_IDS.some((tool) => tool === activeTool);
   const LineLauncherIcon = TOOL_ICONS[lastLineTool];
-  const AdvancedLauncherIcon = TOOL_ICONS[lastAdvancedTool];
+  const groupConfig = openGroup === "fibonacci"
+    ? { label: "斐波那契工具", detail: "波段、扩展与时间分析", sections: FIBONACCI_TOOL_SECTIONS }
+    : openGroup === "prediction"
+      ? { label: "预测与测量", detail: "仓位预测、成交量与区间测量", sections: PREDICTION_TOOL_SECTIONS }
+      : openGroup === "pattern"
+        ? { label: "图形形态", detail: "标注当前可见行情中的结构", sections: PATTERN_TOOL_SECTIONS }
+        : null;
+  const openToolGroup = (group: "fibonacci" | "prediction" | "pattern", event: MouseEvent<HTMLButtonElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setLineMenuPosition({ left: bounds.right + 8, top: Math.max(8, Math.min(bounds.top, window.innerHeight - 560)) });
+    groupLauncherRef.current = event.currentTarget;
+    setTooltip(null);
+    setLineMenuOpen(false);
+    setOpenGroup((value) => value === group ? null : group);
+  };
   let previousGroup: DrawingGroup | null = "analysis";
   return (
     <>
@@ -269,30 +294,58 @@ export function DrawingToolbar({
         <ChevronRight aria-hidden="true" className="grouped-tool-chevron" size={10} strokeWidth={1.8} />
       </button>
       <button
-        {...tooltipProps("分析工具", `${drawingDefinition(lastAdvancedTool).label}及扩展分析工具`)}
-        aria-controls="advanced-tool-panel"
-        aria-expanded={advancedMenuOpen}
+        {...tooltipProps("斐波那契工具", drawingDefinition(lastFibonacciTool).label)}
+        aria-controls="group-tool-panel"
+        aria-expanded={openGroup === "fibonacci"}
         aria-haspopup="menu"
-        aria-label="分析工具"
-        aria-pressed={activeAdvancedTool}
-        className={`${activeAdvancedTool ? "is-active" : ""} grouped-tool`}
+        aria-label="斐波那契工具"
+        aria-pressed={FIBONACCI_TOOL_IDS.some((tool) => tool === activeTool)}
+        className={`${FIBONACCI_TOOL_IDS.some((tool) => tool === activeTool) ? "is-active" : ""} grouped-tool`}
         disabled={disabled}
-        onClick={() => {
-          const bounds = advancedLauncherRef.current?.getBoundingClientRect();
-          if (bounds) setLineMenuPosition({ left: bounds.right + 8, top: Math.max(8, Math.min(bounds.top, window.innerHeight - 560)) });
-          setLineMenuOpen(false);
-          setAdvancedMenuOpen((value) => !value);
-        }}
-        ref={advancedLauncherRef}
-        title={drawingDefinition(lastAdvancedTool).label}
+        onClick={(event) => openToolGroup("fibonacci", event)}
+        title={drawingDefinition(lastFibonacciTool).label}
         type="button"
       >
-        <AdvancedLauncherIcon aria-hidden="true" size={19} strokeWidth={1.7} />
+        {(() => { const Icon = TOOL_ICONS[lastFibonacciTool]; return <Icon aria-hidden="true" size={19} strokeWidth={1.7} />; })()}
+        <ChevronRight aria-hidden="true" className="grouped-tool-chevron" size={10} strokeWidth={1.8} />
+      </button>
+      <button
+        {...tooltipProps("预测与测量", "多空仓位、盈亏比、成交量与范围测量")}
+        aria-controls="group-tool-panel"
+        aria-expanded={openGroup === "prediction"}
+        aria-haspopup="menu"
+        aria-label="预测与测量"
+        aria-pressed={PREDICTION_TOOL_IDS.some((tool) => tool === activeTool)}
+        className={`${PREDICTION_TOOL_IDS.some((tool) => tool === activeTool) ? "is-active" : ""} grouped-tool`}
+        disabled={disabled}
+        onClick={(event) => openToolGroup("prediction", event)}
+        title={drawingDefinition(lastPredictionTool).label}
+        type="button"
+      >
+        <Ruler aria-hidden="true" size={19} strokeWidth={1.7} />
+        <ChevronRight aria-hidden="true" className="grouped-tool-chevron" size={10} strokeWidth={1.8} />
+      </button>
+      <button
+        {...tooltipProps("图形形态", "头肩、三角、平顶平底与自由形状")}
+        aria-controls="group-tool-panel"
+        aria-expanded={openGroup === "pattern"}
+        aria-haspopup="menu"
+        aria-label="图形形态"
+        aria-pressed={PATTERN_TOOL_IDS.some((tool) => tool === activeTool)}
+        className={`${PATTERN_TOOL_IDS.some((tool) => tool === activeTool) ? "is-active" : ""} grouped-tool`}
+        disabled={disabled}
+        onClick={(event) => openToolGroup("pattern", event)}
+        title={drawingDefinition(lastPatternTool).label}
+        type="button"
+      >
+        <GitBranch aria-hidden="true" size={19} strokeWidth={1.7} />
         <ChevronRight aria-hidden="true" className="grouped-tool-chevron" size={10} strokeWidth={1.8} />
       </button>
       {DRAWING_DEFINITIONS.filter((definition) => (
         !LINE_TOOL_IDS.some((tool) => tool === definition.tool)
-        && !ADVANCED_TOOL_IDS.some((tool) => tool === definition.tool)
+        && !FIBONACCI_TOOL_IDS.some((tool) => tool === definition.tool)
+        && !PREDICTION_TOOL_IDS.some((tool) => tool === definition.tool)
+        && !PATTERN_TOOL_IDS.some((tool) => tool === definition.tool)
       )).map((definition) => {
         const Icon = TOOL_ICONS[definition.tool];
         const startsGroup = previousGroup !== definition.group;
@@ -313,6 +366,22 @@ export function DrawingToolbar({
           </button>
         );
       })}
+      <button
+        {...tooltipProps("放大", "放大当前活动图表")}
+        aria-label="放大当前图表"
+        className="utility-tool zoom-tool tool-group-start"
+        onClick={onZoomIn}
+        title="放大"
+        type="button"
+      ><ZoomIn aria-hidden="true" size={20} strokeWidth={1.7} /></button>
+      <button
+        {...tooltipProps("缩小", "缩小当前活动图表")}
+        aria-label="缩小当前图表"
+        className="utility-tool zoom-tool"
+        onClick={onZoomOut}
+        title="缩小"
+        type="button"
+      ><ZoomOut aria-hidden="true" size={20} strokeWidth={1.7} /></button>
       <div className="drawing-rail-spacer" />
       <button
         {...tooltipProps("撤销", "撤销上一次图表对象操作")}
@@ -452,17 +521,17 @@ export function DrawingToolbar({
           ))}
         </div>
       )}
-      {advancedMenuOpen && (
+      {groupConfig && (
         <div
-          aria-label="分析工具"
+          aria-label={groupConfig.label}
           className="drawing-tool-panel"
-          id="advanced-tool-panel"
-          ref={advancedPanelRef}
+          id="group-tool-panel"
+          ref={groupPanelRef}
           role="menu"
           style={{ left: lineMenuPosition.left, top: lineMenuPosition.top }}
         >
-          <header><strong>专业分析工具</strong><span>所有工具均保存为可编辑图表对象</span></header>
-          {ADVANCED_TOOL_SECTIONS.map((section) => (
+          <header><strong>{groupConfig.label}</strong><span>{groupConfig.detail}</span></header>
+          {groupConfig.sections.map((section) => (
             <section key={section.label}>
               <h3>{section.label}</h3>
               <div>{section.tools.map((tool) => {
@@ -474,8 +543,10 @@ export function DrawingToolbar({
                     className={activeTool === tool ? "is-active" : ""}
                     key={tool}
                     onClick={() => {
-                      setLastAdvancedTool(tool);
-                      setAdvancedMenuOpen(false);
+                      if (FIBONACCI_TOOL_IDS.some((item) => item === tool)) setLastFibonacciTool(tool);
+                      if (PREDICTION_TOOL_IDS.some((item) => item === tool)) setLastPredictionTool(tool);
+                      if (PATTERN_TOOL_IDS.some((item) => item === tool)) setLastPatternTool(tool);
+                      setOpenGroup(null);
                       onSelect(tool);
                     }}
                     role="menuitemradio"

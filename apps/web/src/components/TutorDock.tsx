@@ -1,4 +1,4 @@
-import type { ChartAnnotation } from "@replaytutor/contracts";
+import type { ChartAnnotation, IndicatorSpec, TutorRequest } from "@replaytutor/contracts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Bot, LoaderCircle, Square, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -15,16 +15,20 @@ export function TutorDock({
   sessionId,
   afterAction = false,
   contextAnnotations = [],
+  contextIndicators = [],
   onContextRemove,
   onContextClear,
+  onIndicatorContextRemove,
   onEvidenceSelect,
   onAnnotationsChanged,
 }: {
   readonly sessionId: string;
   readonly afterAction?: boolean;
   readonly contextAnnotations?: readonly ChartAnnotation[];
+  readonly contextIndicators?: readonly IndicatorSpec[];
   readonly onContextRemove?: (annotationId: string) => void;
   readonly onContextClear?: () => void;
+  readonly onIndicatorContextRemove?: (instanceId: string) => void;
   readonly onEvidenceSelect?: (evidenceId: string) => void;
   readonly onAnnotationsChanged?: () => void;
 }) {
@@ -52,6 +56,7 @@ export function TutorDock({
       stage,
       locale: currentLocale(),
       context_annotation_ids: contextAnnotations.map((item) => item.annotation_id),
+      context_indicators: [...contextIndicators] as NonNullable<TutorRequest["context_indicators"]>,
     }),
     onSuccess: (created) => setRunId(created.run_id),
   });
@@ -74,11 +79,12 @@ export function TutorDock({
       {!current && <form onSubmit={(event) => { event.preventDefault(); start.mutate(); }}>
         <div className="context-tray" aria-label={l("Chart context sent to Codex", "发送给 Codex 的图表上下文")}>
           <div className="context-tray-head">
-            <span>{l("Chart context", "图表上下文")} · {contextAnnotations.length}</span>
-            {contextAnnotations.length > 0 && <button onClick={onContextClear} type="button">{l("Clear", "清空")}</button>}
+            <span>{l("Chart context", "图表上下文")} · {contextAnnotations.length + contextIndicators.length}</span>
+            {(contextAnnotations.length + contextIndicators.length) > 0 && <button onClick={onContextClear} type="button">{l("Clear", "清空")}</button>}
           </div>
-          {contextAnnotations.length === 0 ? <p>{l("Use + AI in Layer Objects to attach trend lines, entries, and stops to this question.", "在“图层对象”中点击 + AI，把趋势线、开仓、止损等加入本轮问题。")}</p> : <div className="context-chips">
+          {(contextAnnotations.length + contextIndicators.length) === 0 ? <p>{l("Use + AI in Layer Objects or the indicator panel to attach explicit evidence to this question.", "在“图层对象”或指标面板中点击 AI，把明确证据加入本轮问题。")}</p> : <div className="context-chips">
             {contextAnnotations.map((annotation) => <button className={`context-chip role-${annotation.semantic_role}`} key={annotation.annotation_id} onClick={() => onContextRemove?.(annotation.annotation_id)} title="从本轮上下文移除" type="button"><span>{annotation.label}</span><small>{annotation.tool}</small><X size={11} /></button>)}
+            {contextIndicators.map((indicator) => <button className="context-chip role-analysis" key={indicator.instance_id} onClick={() => onIndicatorContextRemove?.(indicator.instance_id)} title={l("Remove indicator from this question", "从本轮问题移除指标")} type="button"><span>{indicator.definition_id}</span><small>{indicator.timeframe} · {l("server evidence", "服务端证据")}</small><X size={11} /></button>)}
           </div>}
         </div>
         {!afterAction && <label>{l("Review stage", "检查阶段")}<select onChange={(event) => setStage(event.target.value as typeof stage)} value={stage}><option value="environment">{l("Market context", "市场环境")}</option><option value="plan">{l("Trade plan", "交易计划")}</option><option value="position">{l("Position management", "持仓管理")}</option><option value="exit">{l("Exit decision", "退出决策")}</option></select></label>}

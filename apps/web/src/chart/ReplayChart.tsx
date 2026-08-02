@@ -11,9 +11,13 @@ import { Copy, EyeOff, Lock, Save, Trash2, Unlock } from "lucide-react";
 import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { draftPreviewPoints, drawingDefinition, isDrawingTool, type DrawingTool } from "./DrawingController";
+import type { IndicatorInstance } from "./IndicatorCatalog";
+import { syncChartIndicators } from "./IndicatorController";
+import { registerReplayIndicators } from "./IndicatorRegistry";
 import { registerReplayOverlays } from "./OverlayRegistry";
 
 registerReplayOverlays();
+registerReplayIndicators();
 
 interface ReplayChartProps {
   readonly bars: readonly Bar[];
@@ -53,6 +57,7 @@ interface ReplayChartProps {
   ) => void;
   readonly onAnnotationSaveTemplate?: (annotationId: string) => void;
   readonly evidenceTarget?: EvidenceTarget | null;
+  readonly indicators?: readonly IndicatorInstance[];
 }
 
 export type ReplayTimeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
@@ -170,6 +175,7 @@ export function ReplayChart({
   onAnnotationPropertiesChange,
   onAnnotationSaveTemplate,
   evidenceTarget = null,
+  indicators = [],
 }: ReplayChartProps) {
   const { i18n } = useTranslation();
   const english = !i18n.resolvedLanguage?.startsWith("zh");
@@ -250,6 +256,12 @@ export function ReplayChart({
     chart.resetData();
     setVisibleBoundaryX(visibleBoundaryCoordinate(chart, barsRef.current.at(-1)));
   }, [bars, pricePrecision, symbol]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    syncChartIndicators(chart, indicators);
+  }, [indicators]);
 
   useEffect(() => {
     if (resetRequest === 0) return;

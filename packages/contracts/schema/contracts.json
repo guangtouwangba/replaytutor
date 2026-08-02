@@ -7586,6 +7586,212 @@
       "title": "ImportPreview",
       "type": "object"
     },
+    "IndicatorEvidence": {
+      "$defs": {
+        "IndicatorEvidencePoint": {
+          "additionalProperties": false,
+          "properties": {
+            "bar_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Bar Id",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Values",
+              "type": "object"
+            }
+          },
+          "required": [
+            "bar_id",
+            "time"
+          ],
+          "title": "IndicatorEvidencePoint",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "calculation_version": {
+          "title": "Calculation Version",
+          "type": "string"
+        },
+        "definition_id": {
+          "enum": [
+            "MA",
+            "EMA",
+            "VOL",
+            "OBV",
+            "VWAP",
+            "ATR",
+            "BAR_COUNT",
+            "ORDER_BLOCK"
+          ],
+          "title": "Definition Id",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "instance_id": {
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "params": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Params",
+          "type": "array"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/IndicatorEvidencePoint"
+          },
+          "maxItems": 50,
+          "title": "Points",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "insufficient_data"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "timeframe": {
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Timeframe",
+          "type": "string"
+        },
+        "visible_at": {
+          "format": "date-time",
+          "title": "Visible At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "frame_id",
+        "visible_at",
+        "instance_id",
+        "definition_id",
+        "timeframe",
+        "status",
+        "calculation_version"
+      ],
+      "title": "IndicatorEvidence",
+      "type": "object"
+    },
+    "IndicatorEvidencePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "bar_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Bar Id",
+          "type": "string"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "bar_id",
+        "time"
+      ],
+      "title": "IndicatorEvidencePoint",
+      "type": "object"
+    },
+    "IndicatorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "definition_id": {
+          "enum": [
+            "MA",
+            "EMA",
+            "VOL",
+            "OBV",
+            "VWAP",
+            "ATR",
+            "BAR_COUNT",
+            "ORDER_BLOCK"
+          ],
+          "title": "Definition Id",
+          "type": "string"
+        },
+        "instance_id": {
+          "pattern": "^indicator-[A-Za-z0-9-]+$",
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "params": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 8,
+          "title": "Params",
+          "type": "array"
+        },
+        "timeframe": {
+          "default": "1m",
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Timeframe",
+          "type": "string"
+        }
+      },
+      "required": [
+        "instance_id",
+        "definition_id"
+      ],
+      "title": "IndicatorSpec",
+      "type": "object"
+    },
     "Instrument": {
       "additionalProperties": false,
       "properties": {
@@ -7907,6 +8113,504 @@
         "trashed_agent_runs"
       ],
       "title": "MaintenanceStatus",
+      "type": "object"
+    },
+    "MarketDepthImportRequest": {
+      "$defs": {
+        "MarketDepthInputLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity"
+          ],
+          "title": "MarketDepthInputLevel",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "asks": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthInputLevel"
+          },
+          "maxItems": 5000,
+          "minItems": 1,
+          "title": "Asks",
+          "type": "array"
+        },
+        "bids": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthInputLevel"
+          },
+          "maxItems": 5000,
+          "minItems": 1,
+          "title": "Bids",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "last_update_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Update Id"
+        }
+      },
+      "required": [
+        "captured_at",
+        "bids",
+        "asks"
+      ],
+      "title": "MarketDepthImportRequest",
+      "type": "object"
+    },
+    "MarketDepthInputLevel": {
+      "additionalProperties": false,
+      "properties": {
+        "price": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Price",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Quantity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price",
+        "quantity"
+      ],
+      "title": "MarketDepthInputLevel",
+      "type": "object"
+    },
+    "MarketDepthLevel": {
+      "additionalProperties": false,
+      "properties": {
+        "cumulative_notional": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cumulative Notional",
+          "type": "string"
+        },
+        "cumulative_quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cumulative Quantity",
+          "type": "string"
+        },
+        "notional": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Notional",
+          "type": "string"
+        },
+        "price": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Price",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Quantity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price",
+        "quantity",
+        "cumulative_quantity",
+        "notional",
+        "cumulative_notional"
+      ],
+      "title": "MarketDepthLevel",
+      "type": "object"
+    },
+    "MarketDepthResponse": {
+      "$defs": {
+        "MarketDepthLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "cumulative_notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Notional",
+              "type": "string"
+            },
+            "cumulative_quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Quantity",
+              "type": "string"
+            },
+            "notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Notional",
+              "type": "string"
+            },
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity",
+            "cumulative_quantity",
+            "notional",
+            "cumulative_notional"
+          ],
+          "title": "MarketDepthLevel",
+          "type": "object"
+        },
+        "MarketDepthSnapshot": {
+          "additionalProperties": false,
+          "properties": {
+            "asks": {
+              "items": {
+                "$ref": "#/$defs/MarketDepthLevel"
+              },
+              "title": "Asks",
+              "type": "array"
+            },
+            "best_ask": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Best Ask",
+              "type": "string"
+            },
+            "best_bid": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Best Bid",
+              "type": "string"
+            },
+            "bids": {
+              "items": {
+                "$ref": "#/$defs/MarketDepthLevel"
+              },
+              "title": "Bids",
+              "type": "array"
+            },
+            "captured_at": {
+              "format": "date-time",
+              "title": "Captured At",
+              "type": "string"
+            },
+            "depth_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Depth Id",
+              "type": "string"
+            },
+            "instrument_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Instrument Id",
+              "type": "string"
+            },
+            "last_update_id": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Update Id"
+            },
+            "midpoint": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Midpoint",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "snapshot_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            },
+            "source_kind": {
+              "enum": [
+                "binance_rest",
+                "file_import"
+              ],
+              "title": "Source Kind",
+              "type": "string"
+            },
+            "spread": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Spread",
+              "type": "string"
+            }
+          },
+          "required": [
+            "depth_id",
+            "snapshot_id",
+            "instrument_id",
+            "captured_at",
+            "source_kind",
+            "bids",
+            "asks",
+            "best_bid",
+            "best_ask",
+            "spread",
+            "midpoint"
+          ],
+          "title": "MarketDepthSnapshot",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "age_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Seconds"
+        },
+        "depth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketDepthSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frame_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "historical_depth_not_captured",
+                "depth_snapshot_is_stale"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "stale",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "visible_at": {
+          "format": "date-time",
+          "title": "Visible At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "frame_id",
+        "visible_at",
+        "status"
+      ],
+      "title": "MarketDepthResponse",
+      "type": "object"
+    },
+    "MarketDepthSnapshot": {
+      "$defs": {
+        "MarketDepthLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "cumulative_notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Notional",
+              "type": "string"
+            },
+            "cumulative_quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Quantity",
+              "type": "string"
+            },
+            "notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Notional",
+              "type": "string"
+            },
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity",
+            "cumulative_quantity",
+            "notional",
+            "cumulative_notional"
+          ],
+          "title": "MarketDepthLevel",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "asks": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthLevel"
+          },
+          "title": "Asks",
+          "type": "array"
+        },
+        "best_ask": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Best Ask",
+          "type": "string"
+        },
+        "best_bid": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Best Bid",
+          "type": "string"
+        },
+        "bids": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthLevel"
+          },
+          "title": "Bids",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "depth_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Depth Id",
+          "type": "string"
+        },
+        "instrument_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Instrument Id",
+          "type": "string"
+        },
+        "last_update_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Update Id"
+        },
+        "midpoint": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Midpoint",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "binance_rest",
+            "file_import"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "spread": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread",
+          "type": "string"
+        }
+      },
+      "required": [
+        "depth_id",
+        "snapshot_id",
+        "instrument_id",
+        "captured_at",
+        "source_kind",
+        "bids",
+        "asks",
+        "best_bid",
+        "best_ask",
+        "spread",
+        "midpoint"
+      ],
+      "title": "MarketDepthSnapshot",
       "type": "object"
     },
     "OrderResult": {
@@ -17024,6 +17728,60 @@
       "type": "object"
     },
     "TutorRequest": {
+      "$defs": {
+        "IndicatorSpec": {
+          "additionalProperties": false,
+          "properties": {
+            "definition_id": {
+              "enum": [
+                "MA",
+                "EMA",
+                "VOL",
+                "OBV",
+                "VWAP",
+                "ATR",
+                "BAR_COUNT",
+                "ORDER_BLOCK"
+              ],
+              "title": "Definition Id",
+              "type": "string"
+            },
+            "instance_id": {
+              "pattern": "^indicator-[A-Za-z0-9-]+$",
+              "title": "Instance Id",
+              "type": "string"
+            },
+            "params": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 8,
+              "title": "Params",
+              "type": "array"
+            },
+            "timeframe": {
+              "default": "1m",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance_id",
+            "definition_id"
+          ],
+          "title": "IndicatorSpec",
+          "type": "object"
+        }
+      },
       "additionalProperties": false,
       "properties": {
         "context_annotation_ids": {
@@ -17033,6 +17791,14 @@
           },
           "maxItems": 32,
           "title": "Context Annotation Ids",
+          "type": "array"
+        },
+        "context_indicators": {
+          "items": {
+            "$ref": "#/$defs/IndicatorSpec"
+          },
+          "maxItems": 8,
+          "title": "Context Indicators",
           "type": "array"
         },
         "locale": {

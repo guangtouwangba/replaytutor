@@ -21,6 +21,7 @@ from replaytutor.ids import new_id
 from replaytutor.modules.annotations import persist_ai_annotations
 from replaytutor.modules.chart_context import ChartContextBuilder
 from replaytutor.modules.evidence_review import EvidenceReviewService
+from replaytutor.modules.indicators import IndicatorService
 from replaytutor.modules.local_system import LocalSystemService
 from replaytutor.modules.market_data.service import utc_text
 from replaytutor.modules.playbook import PlaybookEvaluator
@@ -46,6 +47,9 @@ Chart annotations are optional. Use only line, zone, marker, or label; every ann
 must cite allowed evidence ids and every point must be at or before visible_at.
 chart_context contains chart objects explicitly selected by the user. First restate the
 relationship between those objects, then assess the user's question from cited evidence.
+indicators contains deterministic, server-evaluated values explicitly selected by the user.
+Treat calculation_version and parameters as fixed facts; cite their source bar ids, never
+recalculate them or infer values for missing warmup points.
 The market is hidden after visible_at. Treat forbidden_fields as unavailable, not unknown files.
 Use the locale declared in tutor_context.json for all explanatory prose and match
 tutor_response.schema.json exactly. Preserve evidence ids, rule ids, and structured values.
@@ -82,12 +86,22 @@ class TutorRuntime:
             delta,
             request.context_annotation_ids,
         )
+        indicator_service = IndicatorService()
+        indicator_evidence = [
+            indicator_service.evaluate(
+                delta.session.frame,
+                spec,
+                self.sessions.visible_bars(session_id, spec.timeframe).bars,
+            )
+            for spec in request.context_indicators
+        ]
         context, evidence_ids = build_tutor_context(
             delta,
             request,
             review,
             playbook_evaluation,
             chart_context,
+            indicator_evidence,
         )
         run_id = new_id("run")
         workspace = self.settings.resolved_data_dir / "runtime" / "agent-runs" / run_id

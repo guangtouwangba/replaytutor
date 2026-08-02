@@ -19,8 +19,8 @@ def test_health_reports_local_runtime(client: TestClient) -> None:
     }
     assert payload["database"]["journal_mode"] == "wal"
     assert payload["database"]["foreign_keys"] is True
-    assert payload["database"]["migration_current"] == "0017_chart_objects_v2"
-    assert payload["database"]["migration_head"] == "0017_chart_objects_v2"
+    assert payload["database"]["migration_current"] == "0018_market_depth"
+    assert payload["database"]["migration_head"] == "0018_market_depth"
     assert [agent["agent_id"] for agent in payload["agents"]] == ["codex-local"]
     assert all(agent["authentication"] == "not_checked" for agent in payload["agents"])
 

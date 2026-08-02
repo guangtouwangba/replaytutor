@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -14,9 +15,18 @@ class BinanceAdapterError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class BinanceDepthSnapshot:
+    captured_at: datetime
+    last_update_id: int
+    bids: list[tuple[str, str]]
+    asks: list[tuple[str, str]]
+
+
 class BinancePublicAdapter:
     base_url = "https://data-api.binance.vision"
     endpoint = "/api/v3/klines"
+    depth_endpoint = "/api/v3/depth"
 
     def __init__(self, client: httpx.AsyncClient | None = None) -> None:
         self._client = client
@@ -73,6 +83,51 @@ class BinancePublicAdapter:
                 await client.aclose()
         return bars
 
+    async def fetch_depth(self, symbol: str, limit: int = 100) -> BinanceDepthSnapshot:
+        if limit not in {5, 10, 20, 50, 100, 500, 1000, 5000}:
+            raise ValueError("Unsupported Binance depth limit")
+        owns_client = self._client is None
+        client = self._client or httpx.AsyncClient(base_url=self.base_url, timeout=30)
+        try:
+            response = await client.get(
+                self.depth_endpoint,
+                params={"symbol": symbol, "limit": limit},
+            )
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as error:
+                raise BinanceAdapterError(
+                    f"Binance returned HTTP {response.status_code} for market depth"
+                ) from error
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise BinanceAdapterError("Binance returned an invalid depth payload")
+            bids = self._depth_side(payload.get("bids"))
+            asks = self._depth_side(payload.get("asks"))
+            last_update_id = payload.get("lastUpdateId")
+            if not isinstance(last_update_id, int) or not bids or not asks:
+                raise BinanceAdapterError("Binance depth snapshot is incomplete")
+            return BinanceDepthSnapshot(
+                captured_at=datetime.now(UTC),
+                last_update_id=last_update_id,
+                bids=bids,
+                asks=asks,
+            )
+        finally:
+            if owns_client:
+                await client.aclose()
+
+    @staticmethod
+    def _depth_side(value: object) -> list[tuple[str, str]]:
+        if not isinstance(value, list):
+            return []
+        result: list[tuple[str, str]] = []
+        for row in value:
+            if not isinstance(row, list) or len(row) < 2:
+                return []
+            result.append((str(row[0]), str(row[1])))
+        return result
+
     async def _request_page(
         self,
         client: httpx.AsyncClient,
@@ -116,3 +171,4 @@ class BinancePublicAdapter:
 class BinanceUSDMPublicAdapter(BinancePublicAdapter):
     base_url = "https://fapi.binance.com"
     endpoint = "/fapi/v1/klines"
+    depth_endpoint = "/fapi/v1/depth"

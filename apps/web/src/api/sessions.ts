@@ -12,6 +12,7 @@ import type {
   EvidenceTarget,
   FinishSessionRequest,
   LockTradePlanRequest,
+  MarketDepthResponse,
   OrderResult,
   PlaybookEvaluation,
   ReplaySession,
@@ -100,6 +101,18 @@ export async function fetchSessionBars(
       `${API_BASE_URL}/api/v1/sessions/${sessionId}/bars?timeframe=${encodeURIComponent(timeframe)}`,
     ),
     "BarListResponse",
+  );
+}
+
+export async function fetchSessionMarketDepth(
+  sessionId: string,
+  levels = 20,
+): Promise<MarketDepthResponse> {
+  return contractJson(
+    await apiFetch(
+      `${API_BASE_URL}/api/v1/sessions/${sessionId}/market-depth?levels=${levels}`,
+    ),
+    "MarketDepthResponse",
   );
 }
 

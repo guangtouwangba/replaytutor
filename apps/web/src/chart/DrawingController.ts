@@ -131,12 +131,11 @@ export const LINE_TOOL_SECTIONS = [
       "trend_angle",
       "cross_line",
       "regression_trend",
-      "anchored_vwap",
     ],
   },
   {
     label: "通道",
-    tools: ["parallel_channel", "price_channel", "flat_top_bottom", "disjoint_channel"],
+    tools: ["parallel_channel", "price_channel", "disjoint_channel"],
   },
 ] as const satisfies readonly {
   readonly label: string;
@@ -145,16 +144,35 @@ export const LINE_TOOL_SECTIONS = [
 
 export const LINE_TOOL_IDS = LINE_TOOL_SECTIONS.flatMap((section) => section.tools);
 
-export const ADVANCED_TOOL_SECTIONS = [
+export const FIBONACCI_TOOL_SECTIONS = [
   { label: "斐波那契", tools: ["fibonacci_retracement", "fibonacci_extension", "fibonacci_channel", "fibonacci_time_zone", "pitchfork"] },
-  { label: "测量", tools: ["measure", "price_range", "date_range"] },
-  { label: "形状与形态", tools: ["zone", "brush", "polyline", "head_shoulders", "triangle_pattern"] },
 ] as const satisfies readonly {
   readonly label: string;
   readonly tools: readonly Exclude<DrawingTool, "select">[];
 }[];
 
-export const ADVANCED_TOOL_IDS = ADVANCED_TOOL_SECTIONS.flatMap((section) => section.tools);
+export const FIBONACCI_TOOL_IDS = FIBONACCI_TOOL_SECTIONS.flatMap((section) => section.tools);
+
+export const PREDICTION_TOOL_SECTIONS = [
+  { label: "预测", tools: ["long_position", "short_position", "risk_reward"] },
+  { label: "基于成交量", tools: ["anchored_vwap"] },
+  { label: "测量", tools: ["measure", "price_range", "date_range"] },
+] as const satisfies readonly {
+  readonly label: string;
+  readonly tools: readonly Exclude<DrawingTool, "select">[];
+}[];
+
+export const PREDICTION_TOOL_IDS = PREDICTION_TOOL_SECTIONS.flatMap((section) => section.tools);
+
+export const PATTERN_TOOL_SECTIONS = [
+  { label: "图表形态", tools: ["head_shoulders", "triangle_pattern", "flat_top_bottom"] },
+  { label: "形状", tools: ["zone", "brush", "polyline"] },
+] as const satisfies readonly {
+  readonly label: string;
+  readonly tools: readonly Exclude<DrawingTool, "select">[];
+}[];
+
+export const PATTERN_TOOL_IDS = PATTERN_TOOL_SECTIONS.flatMap((section) => section.tools);
 
 export function draftPreviewPoints(
   anchors: readonly AnnotationPoint[],

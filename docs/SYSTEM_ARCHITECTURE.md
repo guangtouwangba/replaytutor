@@ -1,5 +1,14 @@
 # ReplayTutor 系统架构
 
+实施注记（2026-08-02）：前端新增 Indicator Catalog 与 Indicator Controller 深模块。
+目录固定暴露 KLineChart 10.0.0 的 27 个内置指标及 VWAP、ATR、Bar Count、Order Block；
+Controller 是页面与 KLineChart 指标接口之间唯一 seam，负责创建、覆盖和删除实例。
+自有指标为纯内存确定性计算，只消费 ReplayFrame 已返回的可见 bars；Order Block 的
+确认结果只从突破确认柱向后输出，追加未来 bars 不得改变既有前缀。当前配置仅为本地
+显示状态。用户显式选择 MA、EMA、VOL、OBV、VWAP、ATR、Bar Count 或 Order Block
+后，Tutor Runtime 按 `frame_id + timeframe` 重新取得服务端裁剪 bars，由 Indicator
+Module 使用 Decimal 生成版本化 IndicatorEvidence；只有来源 bar ID 进入证据白名单。
+
 实施注记（2026-08-02）：绘图对象 V2 使用 Alembic `0017_chart_objects_v2`，在保留
 `shape + points + metadata` 兼容读取的同时增加 `tool_version + geometry + style +
 properties + derived_facts + algorithm_version`。对象修改仍写入追加式事件；模板和工具
@@ -179,6 +188,12 @@ query(snapshot_id, window: MarketWindow) -> MarketSlice
 
 不提供无 `snapshot_id` 的回放查询。`MarketSlice` 必须返回质量标记：缺口、重复、异常值、复权状态和来源。
 
+时点 L2 盘口由独立的 `MarketDepthService` 管理。数据可来自 Binance 公共 REST 深度快照或
+带时间戳的文件导入，统一标准化为排序后的 bids/asks、累计数量与累计名义金额。会话查询始终
+以 `snapshot_id` 和 `captured_at <= ReplayFrame.visible_at` 过滤；没有合格快照时返回结构化
+`unavailable`，超过 60 秒返回 `stale`。REST 快照用于本地采集起点；连续实时订单簿若启用，
+必须按供应商的 snapshot + diff sequence 规则校验，断号后丢弃本地簿并重新同步。
+
 ### 4.3 Training Session Module
 
 职责：作为 HTTP route 和测试进入训练系统的唯一写入 seam，在一个事务中协调回放、撮合、账本和 revision。调用者不能分别推进 Replay Engine 和 Paper Execution。
@@ -279,6 +294,9 @@ AI 上下文和图表都使用同一个 `visible_at`，禁止各自维护游标�
 训练撮合以不可变 1m Snapshot 和服务端 ReplayFrame 为真源。工作台可请求
 `1m / 5m / 15m / 1h / 4h / 1d` 只读图表窗口；高周期由服务端只聚合
 `close_time <= visible_at` 的 1m bars，切换不推进 revision，也不改变撮合结果。
+多图布局由前端同时订阅这些只读窗口。各窗格只有独立 timeframe 与 viewport，必须共享
+同一个 session、frame、品种、订单、成交和图层状态；活动窗格只决定键盘与绘图操作的
+UI 目标，不能成为第二个回放游标。
 
 MVP 采用“完整 K 线决策”语义：一根 K 线在收盘后才成为完整可见信息。用户基于该 K 线提交的订单设置 `activated_at = next_bar.open_time`，不得使用刚刚看见的当前柱高低价撮合。若未来支持逐 tick 或形成中 K 线，必须引入独立 frame 类型，不能复用完整 K 线语义。
 
@@ -316,6 +334,7 @@ settlement(execution) -> SettlementEvents
 | `market_calendar` | 交易日历版本 |
 | `data_snapshot` | 行情快照与来源版本 |
 | `dataset_download_job` | 行情后台下载状态、进度、错误与 Snapshot 产物 |
+| `market_depth_snapshot` | 与数据快照绑定的时点 L2 买卖盘、来源和更新序列 |
 | `replay_session` | 回放配置、游标、种子、状态 |
 | `replay_event` | 用户与系统事件时间线 |
 | `paper_account` | 虚拟账户配置 |

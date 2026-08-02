@@ -9,6 +9,10 @@ const chartHarness = vi.hoisted(() => {
   const chart = {
     convertToPixel: vi.fn(() => ({ x: candleX })),
     createOverlay: vi.fn((overlay: { id?: string }) => overlay.id ?? null),
+    createIndicator: vi.fn(() => "indicator-pane"),
+    getIndicators: vi.fn(() => []),
+    overrideIndicator: vi.fn(() => true),
+    removeIndicator: vi.fn(() => true),
     removeOverlay: vi.fn(() => true),
     resetData: vi.fn(),
     setDataLoader: vi.fn(),
@@ -36,7 +40,9 @@ const chartHarness = vi.hoisted(() => {
 
 vi.mock("klinecharts", () => ({
   dispose: vi.fn(),
+  getSupportedIndicators: vi.fn(() => []),
   init: vi.fn(() => chartHarness.chart),
+  registerIndicator: vi.fn(),
   registerOverlay: vi.fn(),
 }));
 

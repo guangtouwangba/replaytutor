@@ -1,5 +1,11 @@
 # ReplayTutor 原生 Coding Agent 绑定规范
 
+> 指标上下文实施注记（2026-08-02）：`TutorRequest.context_indicators` 只接受用户显式
+> 选择的 MA、EMA、VOL、OBV、VWAP、ATR、Bar Count 和 Order Block，最多 8 个。
+> Tutor Runtime 重新解析当前 session/frame 和各自 timeframe，由确定性 Indicator Module
+> 计算 `IndicatorEvidence`；浏览器值不进入 Agent，只有 `visible_at` 内来源 bar ID 加入
+> evidence 白名单。其余内置指标仍是显示能力，不得自动写入 TutorContext。
+
 > 绘图上下文实施注记（2026-08-02）：`ChartContextObject` 固化对象 revision、工具版本、
 > geometry、style、properties、算法版本和确定性派生事实。锚定 VWAP 与回归趋势只能使用
 > `visible_at` 以内行情；Agent 只能解释这些已固化事实，不能重新扩大区间或修改用户对象。
@@ -122,6 +128,8 @@ Adapter 内部负责命令差异、事件解析、会话 ID 和错误映射。
 上下文传文件，不把大段行情拼进命令行参数：
 工作台图表周期是显示偏好；当前 TutorContext 继续绑定 ReplayFrame 的 1m
 `visible_bars`。若后续把高周期证据加入上下文，必须由服务端在同一 `visible_at` 下派生并签发。
+多图布局中的活动窗格与各窗格周期同样只是显示偏好，不会扩大 TutorContext。Tutor
+仍只接收服务端签发的当前 ReplayFrame 与用户显式选择的 Chart Context 对象。
 
 ```json
 {
@@ -131,7 +139,7 @@ Adapter 内部负责命令差异、事件解析、会话 ID 和错误映射。
   "instrument": {},
   "market_rules": {},
   "visible_bars": [],
-  "indicators": {},
+  "indicators": [],
   "account_state": {},
   "orders": [],
   "executions": [],
