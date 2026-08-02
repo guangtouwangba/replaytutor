@@ -192,7 +192,9 @@ export function SessionSetupPage() {
   const actionLabel = create.isPending
     ? t("setup.creating")
     : activeSnapshot
-      ? t("setup.startLocal")
+      ? activePlaybook
+        ? t("setup.startLocal")
+        : t("setup.loading")
       : availableSnapshots.length > 0
         ? t("setup.selectSnapshotRequired")
       : matchingJob
@@ -385,7 +387,7 @@ export function SessionSetupPage() {
           {(download.isError || create.isError) && <div className="inline-error">{t("setup.prepareFailed", { message: download.error?.message ?? create.error?.message })}</div>}
           <button
             className="primary-action setup-submit"
-            disabled={datasets.isLoading || datasets.isError || create.isPending || download.isPending || Boolean(matchingJob) || (availableSnapshots.length > 0 && !activeSnapshot) || (startMode === "specific" && !effectiveStartTime)}
+            disabled={datasets.isLoading || datasets.isError || (Boolean(activeSnapshot) && (playbooks.isLoading || !activePlaybook)) || create.isPending || download.isPending || Boolean(matchingJob) || (availableSnapshots.length > 0 && !activeSnapshot) || (startMode === "specific" && !effectiveStartTime)}
             onClick={() => activeSnapshot ? create.mutate() : availableSnapshots.length === 0 ? download.mutate() : undefined}
             type="button"
           >

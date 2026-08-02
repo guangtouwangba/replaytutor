@@ -111,7 +111,20 @@ describe("automatic market data selection", () => {
     ];
     api.fetchDatasets.mockResolvedValue({ schema_version: "1.0", datasets: snapshots });
     api.fetchDatasetDownloadJobs.mockResolvedValue({ schema_version: "1.0", jobs: [] });
-    api.fetchPlaybooks.mockResolvedValue({ schema_version: "1.0", playbooks: [] });
+    api.fetchPlaybooks.mockResolvedValue({
+      schema_version: "1.0",
+      playbooks: [{
+        created_at: "2026-08-02T00:00:00Z",
+        description: "Deterministic E2E rules",
+        evaluator_version: "1.0",
+        name: "趋势回调",
+        official: true,
+        playbook_id: "pbk_trend",
+        rules: ["Lock the plan before ordering"],
+        slug: "trend-pullback",
+        version: 1,
+      }],
+    });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
@@ -140,6 +153,7 @@ describe("automatic market data selection", () => {
         start_mode: "specific",
         start_time: "2026-07-15T12:30:00.000Z",
         hidden_real_date: false,
+        playbook_id: "pbk_trend",
       }),
     ));
   });
