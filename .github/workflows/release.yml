@@ -30,6 +30,8 @@ jobs:
       - name: Install locked dependencies
         run: |
           corepack enable
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
           ./scripts/pnpm install --frozen-lockfile
           ./scripts/uv sync --project apps/api --frozen
           ./scripts/uv run --project apps/api playwright install --with-deps chromium
