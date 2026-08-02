@@ -1,0 +1,25 @@
+{
+  "name": "replaytutor",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "api": "./scripts/uv run --project apps/api replaytutor api",
+    "web": "./scripts/pnpm --filter @replaytutor/web dev",
+    "dev": "concurrently --kill-others --success first --names web,api --prefix-colors cyan,magenta \"./scripts/pnpm web\" \"./scripts/pnpm api\"",
+    "contracts": "./scripts/uv run --project apps/api replaytutor contracts check && ./scripts/pnpm --filter @replaytutor/contracts generate:check",
+    "contracts:update": "./scripts/uv run --project apps/api replaytutor contracts export && ./scripts/pnpm --filter @replaytutor/contracts generate",
+    "lint": "./scripts/pnpm -r --if-present lint",
+    "typecheck": "./scripts/pnpm -r --if-present typecheck",
+    "test": "./scripts/pnpm -r --if-present test",
+    "build": "./scripts/pnpm -r --if-present build",
+    "demo:prepare": "./scripts/demo-prepare.sh",
+    "demo:record": "./scripts/pnpm --filter @replaytutor/demo-video record",
+    "demo:render": "./scripts/pnpm --filter @replaytutor/demo-video render:all",
+    "demo:verify": "./scripts/pnpm --filter @replaytutor/demo-video verify"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.0"
+  }
+}

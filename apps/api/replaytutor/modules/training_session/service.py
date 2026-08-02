@@ -1,0 +1,826 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Any, Literal, cast
+
+from replaytutor.config import Settings
+from replaytutor.contracts import (
+    Bar,
+    BarListResponse,
+    CompletedSession,
+    CreateSessionSpec,
+    FinishSessionRequest,
+    PriceValues,
+    ReplayFrame,
+    ReplaySession,
+    SessionCommand,
+    SessionDelta,
+    SessionEvent,
+    SessionListResponse,
+    SessionTrashResponse,
+    Timeframe,
+)
+from replaytutor.ids import new_id, stable_id
+from replaytutor.modules.market_data.service import MarketDataService, utc_text
+from replaytutor.modules.replay import (
+    ReplayState,
+    advance,
+    choose_start_index,
+    replay_fingerprint,
+)
+from replaytutor.modules.replay.core import ReplayError
+from replaytutor.storage.database import connect_database
+
+VISIBLE_WINDOW_BARS = 500
+TIMEFRAME_MINUTES: dict[Timeframe, int] = {
+    "1m": 1,
+    "5m": 5,
+    "15m": 15,
+    "1h": 60,
+    "2h": 120,
+    "4h": 240,
+    "1d": 1_440,
+}
+SessionStatus = Literal["ready", "paused", "completed", "stopped"]
+
+
+class TrainingSessionError(RuntimeError):
+    pass
+
+
+class SessionNotFoundError(TrainingSessionError):
+    pass
+
+
+class SessionConflictError(TrainingSessionError):
+    def __init__(self, current_revision: int) -> None:
+        super().__init__(f"Session revision conflict; current revision is {current_revision}")
+        self.current_revision = current_revision
+
+
+class InvalidSessionStateError(TrainingSessionError):
+    pass
+
+
+class TrainingSessionService:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        self.market_data = MarketDataService(settings)
+
+    def create(self, spec: CreateSessionSpec) -> SessionDelta:
+        snapshot = self.market_data.get_snapshot(spec.snapshot_id)
+        if (
+            spec.account_type == "USDT_PERPETUAL"
+            and snapshot.instrument.asset_class != "crypto_perpetual"
+        ):
+            raise TrainingSessionError("USDT perpetual accounts require a perpetual snapshot")
+        if spec.account_type == "SPOT" and spec.leverage != 1:
+            raise TrainingSessionError("Spot sessions require 1x leverage")
+        for name, value in (
+            ("maker_fee_rate", spec.maker_fee_rate),
+            ("taker_fee_rate", spec.taker_fee_rate),
+            ("maintenance_margin_rate", spec.maintenance_margin_rate),
+        ):
+            if Decimal(value) < 0:
+                raise TrainingSessionError(f"{name} cannot be negative")
+        if Decimal(spec.maintenance_margin_rate) >= Decimal("1") / spec.leverage:
+            raise TrainingSessionError("Maintenance margin must be below initial margin")
+        if spec.playbook_id is not None:
+            from replaytutor.modules.playbook import PlaybookService
+
+            if not PlaybookService(self.settings).exists(spec.playbook_id):
+                raise TrainingSessionError("Playbook version not found")
+        if snapshot.timeframe != "1m":
+            raise TrainingSessionError("MVP sessions require a 1m source snapshot")
+        total_bars = self.market_data.snapshot_bar_count(spec.snapshot_id)
+        if spec.start_mode == "specific":
+            if spec.start_time is None:
+                raise TrainingSessionError("A specific replay start requires start_time")
+            if spec.start_time.tzinfo is None:
+                raise TrainingSessionError("Replay start_time must include a timezone")
+            start_index = self.market_data.snapshot_bar_index_at_or_after(
+                spec.snapshot_id,
+                spec.start_time.astimezone(UTC),
+            )
+            minimum = spec.warmup_bars - 1
+            maximum = total_bars - 2
+            if start_index < minimum:
+                raise TrainingSessionError(
+                    "Selected replay start does not leave enough warm-up bars"
+                )
+            if start_index > maximum:
+                raise TrainingSessionError(
+                    "Selected replay start must leave at least one future bar"
+                )
+        else:
+            try:
+                start_index = choose_start_index(
+                    total_bars=total_bars,
+                    warmup_bars=spec.warmup_bars,
+                    start_mode=spec.start_mode,
+                    seed=spec.seed,
+                )
+            except ReplayError as error:
+                raise TrainingSessionError(str(error)) from error
+        current_bar = self._bar_at(spec.snapshot_id, start_index)
+        now = datetime.now(UTC)
+        session_id = new_id("ses")
+        frame_id = self._frame_id(session_id, 0)
+        fingerprint = replay_fingerprint(
+            snapshot_hash=snapshot.content_hash,
+            seed=spec.seed,
+            start_index=start_index,
+            warmup_bars=spec.warmup_bars,
+        )
+        event = SessionEvent(
+            event_id=new_id("evt"),
+            session_id=session_id,
+            sequence=1,
+            revision=0,
+            event_type="session_created",
+            occurred_at=now,
+            payload={
+                "snapshot_id": snapshot.snapshot_id,
+                "start_index": start_index,
+                "requested_start_time": (
+                    utc_text(spec.start_time.astimezone(UTC))
+                    if spec.start_time is not None and spec.start_time.tzinfo is not None
+                    else None
+                ),
+                "warmup_bars": spec.warmup_bars,
+                "fingerprint": fingerprint,
+            },
+        )
+        with connect_database(self.settings.database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO replay_session (
+                    session_id, snapshot_id, status, revision, current_index,
+                    start_index, total_bars, warmup_bars, seed, initial_cash,
+                    hidden_real_date, fingerprint, created_at, updated_at,
+                    playbook_id, account_type, margin_mode, position_mode,
+                    leverage, maker_fee_rate, taker_fee_rate,
+                    maintenance_margin_rate, funding_rate, funding_interval_bars
+                ) VALUES (?, ?, 'ready', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    snapshot.snapshot_id,
+                    start_index,
+                    start_index,
+                    total_bars,
+                    spec.warmup_bars,
+                    spec.seed,
+                    spec.initial_cash,
+                    spec.hidden_real_date,
+                    fingerprint,
+                    utc_text(now),
+                    utc_text(now),
+                    spec.playbook_id,
+                    spec.account_type,
+                    spec.margin_mode,
+                    spec.position_mode,
+                    spec.leverage,
+                    spec.maker_fee_rate,
+                    spec.taker_fee_rate,
+                    spec.maintenance_margin_rate,
+                    spec.funding_rate,
+                    spec.funding_interval_bars,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO replay_frame (
+                    frame_id, session_id, revision, current_index, visible_at, created_at
+                ) VALUES (?, ?, 0, ?, ?, ?)
+                """,
+                (
+                    frame_id,
+                    session_id,
+                    start_index,
+                    utc_text(current_bar.close_time),
+                    utc_text(now),
+                ),
+            )
+            self._insert_event(connection, event)
+        return self.get(session_id, events=[event])
+
+    def list(self) -> SessionListResponse:
+        with connect_database(self.settings.database_path) as connection:
+            rows = connection.execute(
+                """SELECT * FROM replay_session
+                WHERE deleted_at IS NULL
+                ORDER BY created_at DESC"""
+            ).fetchall()
+            sessions = [self._session_from_row(connection, dict(row)) for row in rows]
+        return SessionListResponse(sessions=sessions)
+
+    def trash(self) -> SessionTrashResponse:
+        with connect_database(self.settings.database_path) as connection:
+            rows = connection.execute(
+                """SELECT * FROM replay_session
+                WHERE deleted_at IS NOT NULL
+                ORDER BY deleted_at DESC"""
+            ).fetchall()
+            sessions = [self._session_from_row(connection, dict(row)) for row in rows]
+        return SessionTrashResponse(sessions=sessions)
+
+    def soft_delete(self, session_id: str) -> ReplaySession:
+        now = datetime.now(UTC)
+        with connect_database(self.settings.database_path) as connection:
+            row = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                raise SessionNotFoundError("Session not found")
+            if row["deleted_at"] is None:
+                connection.execute(
+                    """UPDATE replay_session
+                    SET deleted_at = ?, updated_at = ?
+                    WHERE session_id = ?""",
+                    (utc_text(now), utc_text(now), session_id),
+                )
+            restored = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            assert restored is not None
+            return self._session_from_row(connection, dict(restored))
+
+    def restore(self, session_id: str) -> ReplaySession:
+        now = datetime.now(UTC)
+        with connect_database(self.settings.database_path) as connection:
+            row = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if row is None:
+                raise SessionNotFoundError("Session not found")
+            connection.execute(
+                """UPDATE replay_session
+                SET deleted_at = NULL, updated_at = ?
+                WHERE session_id = ?""",
+                (utc_text(now), session_id),
+            )
+            restored = connection.execute(
+                "SELECT * FROM replay_session WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            assert restored is not None
+            return self._session_from_row(connection, dict(restored))
+
+    def get(
+        self,
+        session_id: str,
+        *,
+        events: list[SessionEvent] | None = None,
+    ) -> SessionDelta:
+        with connect_database(self.settings.database_path) as connection:
+            row = self._session_row(connection, session_id)
+            session = self._session_from_row(connection, row)
+            from replaytutor.modules.annotations import load_annotations
+            from replaytutor.modules.execution.service import load_execution
+
+            mark_price = Decimal(
+                self._bar_at(
+                    str(row["snapshot_id"]),
+                    int(row["current_index"]),
+                ).raw.close
+            )
+            execution = load_execution(connection, row, mark_price=mark_price)
+            annotations = load_annotations(connection, session_id)
+        bars = self._visible_bars(session)
+        return SessionDelta(
+            session=session,
+            bars=bars,
+            events=events or [],
+            execution=execution,
+            annotations=annotations,
+        )
+
+    def ensure_available(self, session_id: str) -> None:
+        with connect_database(self.settings.database_path) as connection:
+            self._session_row(connection, session_id)
+
+    def visible_bars(self, session_id: str, timeframe: Timeframe) -> BarListResponse:
+        """Return a future-safe chart window without changing replay state."""
+        with connect_database(self.settings.database_path) as connection:
+            row = self._session_row(connection, session_id)
+            session = self._session_from_row(connection, row)
+
+        if timeframe == "1m":
+            bars = self._visible_bars(session)
+            has_more = session.frame.current_index + 1 > VISIBLE_WINDOW_BARS
+        else:
+            interval_minutes = TIMEFRAME_MINUTES[timeframe]
+            source_limit = min(
+                session.frame.current_index + 1,
+                VISIBLE_WINDOW_BARS * interval_minutes + interval_minutes - 1,
+            )
+            source_offset = session.frame.current_index - source_limit + 1
+            source = self.market_data.query_snapshot_bar_slice(
+                session.snapshot_id,
+                offset=source_offset,
+                limit=source_limit,
+            )
+            aggregated = aggregate_bars(source, timeframe)
+            has_more = len(aggregated) > VISIBLE_WINDOW_BARS
+            bars = aggregated[-VISIBLE_WINDOW_BARS:]
+
+        if any(bar.close_time > session.frame.visible_at for bar in bars):
+            raise TrainingSessionError("Future market data escaped the replay boundary")
+        return BarListResponse(
+            snapshot_id=session.snapshot_id,
+            timeframe=timeframe,
+            bars=bars,
+            has_more=has_more,
+        )
+
+    def apply(self, session_id: str, command: SessionCommand) -> SessionDelta:
+        connection = connect_database(self.settings.database_path)
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                "SELECT session_id, result_json FROM session_command WHERE command_id = ?",
+                (command.command_id,),
+            ).fetchone()
+            if existing is not None:
+                if str(existing["session_id"]) != session_id:
+                    raise TrainingSessionError("Command id was already used by another session")
+                connection.rollback()
+                stored = SessionDelta.model_validate_json(existing["result_json"])
+                return stored.model_copy(update={"idempotent_replay": True})
+
+            row = self._session_row(connection, session_id)
+            if row["status"] in {"completed", "stopped"}:
+                raise InvalidSessionStateError(f"Cannot advance a {row['status']} session")
+            if int(row["revision"]) != command.expected_revision:
+                raise SessionConflictError(int(row["revision"]))
+
+            transition = advance(
+                ReplayState(
+                    current_index=int(row["current_index"]),
+                    start_index=int(row["start_index"]),
+                    total_bars=int(row["total_bars"]),
+                ),
+                command.bars,
+            )
+            if transition.advanced_bars == 0:
+                raise InvalidSessionStateError("Replay is already at the final bar")
+            revision = int(row["revision"]) + 1
+            now = datetime.now(UTC)
+            current_bar = self._bar_at(
+                str(row["snapshot_id"]),
+                transition.current.current_index,
+            )
+            frame_id = self._frame_id(session_id, revision)
+            event = SessionEvent(
+                event_id=new_id("evt"),
+                session_id=session_id,
+                sequence=self._next_sequence(connection, session_id),
+                revision=revision,
+                event_type="replay_advanced",
+                occurred_at=now,
+                payload={
+                    "requested_bars": command.bars,
+                    "advanced_bars": transition.advanced_bars,
+                    "from_index": transition.previous.current_index,
+                    "to_index": transition.current.current_index,
+                    "reached_end": transition.reached_end,
+                },
+            )
+            connection.execute(
+                """
+                UPDATE replay_session
+                SET status = 'paused', revision = ?, current_index = ?, updated_at = ?
+                WHERE session_id = ?
+                """,
+                (
+                    revision,
+                    transition.current.current_index,
+                    utc_text(now),
+                    session_id,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO replay_frame (
+                    frame_id, session_id, revision, current_index, visible_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    frame_id,
+                    session_id,
+                    revision,
+                    transition.current.current_index,
+                    utc_text(current_bar.close_time),
+                    utc_text(now),
+                ),
+            )
+            self._insert_event(connection, event)
+            from replaytutor.modules.execution.service import (
+                load_execution,
+                settle_pending_orders,
+            )
+
+            updated_row = dict(row)
+            updated_row.update(
+                status="paused",
+                revision=revision,
+                current_index=transition.current.current_index,
+                updated_at=utc_text(now),
+            )
+            settle_pending_orders(
+                connection,
+                market_data=self.market_data,
+                row=updated_row,
+                from_index=transition.previous.current_index + 1,
+                to_index=transition.current.current_index,
+                frame_id=frame_id,
+            )
+            session = self._session_from_values(
+                updated_row,
+                frame_id=frame_id,
+                visible_at=current_bar.close_time,
+            )
+            result = SessionDelta(
+                session=session,
+                bars=self._visible_bars(session),
+                events=[event],
+                execution=load_execution(
+                    connection,
+                    updated_row,
+                    mark_price=Decimal(current_bar.raw.close),
+                ),
+                annotations=self._load_annotations(connection, session_id),
+            )
+            connection.execute(
+                """
+                INSERT INTO session_command (
+                    command_id, session_id, command_type, expected_revision,
+                    request_json, result_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    command.command_id,
+                    session_id,
+                    command.kind,
+                    command.expected_revision,
+                    command.model_dump_json(),
+                    result.model_dump_json(),
+                    utc_text(now),
+                ),
+            )
+            connection.commit()
+            return result
+        except BaseException:
+            if connection.in_transaction:
+                connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def finish(
+        self,
+        session_id: str,
+        request: FinishSessionRequest,
+    ) -> CompletedSession:
+        connection = connect_database(self.settings.database_path)
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                """
+                SELECT session_id, command_type, result_json
+                FROM session_command
+                WHERE command_id = ?
+                """,
+                (request.command_id,),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["session_id"]) != session_id
+                    or str(existing["command_type"]) != "finish"
+                ):
+                    raise TrainingSessionError("Command id was already used by another operation")
+                connection.rollback()
+                stored = CompletedSession.model_validate_json(existing["result_json"])
+                return stored.model_copy(update={"idempotent_replay": True})
+
+            row = self._session_row(connection, session_id)
+            if int(row["revision"]) != request.expected_revision:
+                raise SessionConflictError(int(row["revision"]))
+            if row["status"] == "completed":
+                raise InvalidSessionStateError(
+                    "Completed session requires the original finish command id"
+                )
+            if row["status"] == "stopped":
+                raise InvalidSessionStateError("Stopped session cannot be completed")
+
+            revision = int(row["revision"]) + 1
+            now = datetime.now(UTC)
+            current_bar = self._bar_at(
+                str(row["snapshot_id"]),
+                int(row["current_index"]),
+            )
+            frame_id = self._frame_id(session_id, revision)
+            event = SessionEvent(
+                event_id=new_id("evt"),
+                session_id=session_id,
+                sequence=self._next_sequence(connection, session_id),
+                revision=revision,
+                event_type="session_completed",
+                occurred_at=now,
+                payload={"final_index": int(row["current_index"])},
+            )
+            connection.execute(
+                """
+                UPDATE replay_session
+                SET status = 'completed', revision = ?, updated_at = ?, completed_at = ?
+                WHERE session_id = ?
+                """,
+                (revision, utc_text(now), utc_text(now), session_id),
+            )
+            connection.execute(
+                """
+                INSERT INTO replay_frame (
+                    frame_id, session_id, revision, current_index, visible_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    frame_id,
+                    session_id,
+                    revision,
+                    int(row["current_index"]),
+                    utc_text(current_bar.close_time),
+                    utc_text(now),
+                ),
+            )
+            self._insert_event(connection, event)
+            updated_row = dict(row)
+            updated_row.update(
+                status="completed",
+                revision=revision,
+                updated_at=utc_text(now),
+                completed_at=utc_text(now),
+            )
+            snapshot = self.market_data.get_snapshot(str(row["snapshot_id"]))
+            result = CompletedSession(
+                session=self._session_from_values(
+                    updated_row,
+                    frame_id=frame_id,
+                    visible_at=current_bar.close_time,
+                ),
+                finished_at=now,
+                revealed_coverage_start=snapshot.coverage_start,
+                revealed_coverage_end=snapshot.coverage_end,
+            )
+            connection.execute(
+                """
+                INSERT INTO session_command (
+                    command_id, session_id, command_type, expected_revision,
+                    request_json, result_json, created_at
+                ) VALUES (?, ?, 'finish', ?, ?, ?, ?)
+                """,
+                (
+                    request.command_id,
+                    session_id,
+                    request.expected_revision,
+                    request.model_dump_json(),
+                    result.model_dump_json(),
+                    utc_text(now),
+                ),
+            )
+            connection.commit()
+            return result
+        except BaseException:
+            if connection.in_transaction:
+                connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    def _session_row(
+        self,
+        connection: sqlite3.Connection,
+        session_id: str,
+    ) -> dict[str, Any]:
+        row = connection.execute(
+            "SELECT * FROM replay_session WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        if row is None:
+            raise SessionNotFoundError("Session not found")
+        if row["deleted_at"] is not None:
+            raise SessionNotFoundError("Session is in trash")
+        return dict(row)
+
+    def _session_from_row(
+        self,
+        connection: sqlite3.Connection,
+        row: dict[str, Any],
+    ) -> ReplaySession:
+        frame = connection.execute(
+            """
+            SELECT * FROM replay_frame
+            WHERE session_id = ?
+            ORDER BY revision DESC
+            LIMIT 1
+            """,
+            (row["session_id"],),
+        ).fetchone()
+        if frame is None:
+            raise TrainingSessionError("Session has no replay frame")
+        return self._session_from_values(
+            row,
+            frame_id=str(frame["frame_id"]),
+            visible_at=parse_utc(str(frame["visible_at"])),
+        )
+
+    def _session_from_values(
+        self,
+        row: dict[str, Any],
+        *,
+        frame_id: str,
+        visible_at: datetime,
+    ) -> ReplaySession:
+        snapshot = self.market_data.get_snapshot(str(row["snapshot_id"]))
+        total_bars = int(row["total_bars"])
+        current_index = int(row["current_index"])
+        revision = int(row["revision"])
+        frame = ReplayFrame(
+            frame_id=frame_id,
+            session_id=str(row["session_id"]),
+            revision=revision,
+            current_index=current_index,
+            total_bars=total_bars,
+            visible_at=visible_at,
+            progress=current_index / (total_bars - 1),
+        )
+        return ReplaySession(
+            session_id=str(row["session_id"]),
+            snapshot_id=str(row["snapshot_id"]),
+            instrument=snapshot.instrument,
+            status=cast(SessionStatus, str(row["status"])),
+            revision=revision,
+            frame=frame,
+            start_index=int(row["start_index"]),
+            warmup_bars=int(row["warmup_bars"]),
+            seed=int(row["seed"]),
+            initial_cash=str(row["initial_cash"]),
+            hidden_real_date=bool(row["hidden_real_date"]),
+            playbook_id=(str(row["playbook_id"]) if row.get("playbook_id") is not None else None),
+            account_type=cast(
+                Literal["SPOT", "USDT_PERPETUAL"], str(row.get("account_type", "SPOT"))
+            ),
+            margin_mode=cast(Literal["ISOLATED", "CROSS"], str(row.get("margin_mode", "ISOLATED"))),
+            position_mode=cast(Literal["ONEWAY", "HEDGE"], str(row.get("position_mode", "ONEWAY"))),
+            leverage=int(row.get("leverage", 1)),
+            maker_fee_rate=str(row.get("maker_fee_rate", "0.0002")),
+            taker_fee_rate=str(row.get("taker_fee_rate", "0.0005")),
+            maintenance_margin_rate=str(row.get("maintenance_margin_rate", "0.005")),
+            funding_rate=str(row.get("funding_rate", "0")),
+            funding_interval_bars=int(row.get("funding_interval_bars", 480)),
+            fingerprint=str(row["fingerprint"]),
+            created_at=parse_utc(str(row["created_at"])),
+            updated_at=parse_utc(str(row["updated_at"])),
+            deleted_at=(
+                parse_utc(str(row["deleted_at"])) if row.get("deleted_at") is not None else None
+            ),
+        )
+
+    def _visible_bars(self, session: ReplaySession) -> list[Bar]:
+        limit = min(VISIBLE_WINDOW_BARS, session.frame.current_index + 1)
+        offset = session.frame.current_index - limit + 1
+        bars = self.market_data.query_snapshot_bar_slice(
+            session.snapshot_id,
+            offset=offset,
+            limit=limit,
+        )
+        if not bars or bars[-1].close_time != session.frame.visible_at:
+            raise TrainingSessionError("Visible frame does not match market data")
+        if any(bar.close_time > session.frame.visible_at for bar in bars):
+            raise TrainingSessionError("Future market data escaped the replay boundary")
+        return bars
+
+    def _bar_at(self, snapshot_id: str, index: int) -> Bar:
+        bars = self.market_data.query_snapshot_bar_slice(
+            snapshot_id,
+            offset=index,
+            limit=1,
+        )
+        if len(bars) != 1:
+            raise TrainingSessionError("Replay bar is missing from the snapshot")
+        return bars[0]
+
+    @staticmethod
+    def _load_annotations(
+        connection: sqlite3.Connection,
+        session_id: str,
+    ) -> list[Any]:
+        from replaytutor.modules.annotations import load_annotations
+
+        return load_annotations(connection, session_id)
+
+    @staticmethod
+    def _frame_id(session_id: str, revision: int) -> str:
+        return stable_id(
+            "frm",
+            "replaytutor:frame",
+            f"{session_id}:{revision}",
+        )
+
+    @staticmethod
+    def _next_sequence(connection: sqlite3.Connection, session_id: str) -> int:
+        row = connection.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM session_event WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        return int(row[0])
+
+    @staticmethod
+    def _insert_event(
+        connection: sqlite3.Connection,
+        event: SessionEvent,
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO session_event (
+                event_id, session_id, sequence, revision, event_type,
+                payload_json, occurred_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.event_id,
+                event.session_id,
+                event.sequence,
+                event.revision,
+                event.event_type,
+                json.dumps(event.payload, separators=(",", ":"), sort_keys=True),
+                utc_text(event.occurred_at),
+            ),
+        )
+
+
+def aggregate_bars(source: list[Bar], timeframe: Timeframe) -> list[Bar]:
+    minutes = TIMEFRAME_MINUTES[timeframe]
+    if minutes == 1:
+        return source
+
+    interval_seconds = minutes * 60
+    groups: list[list[Bar]] = []
+    current_bucket: int | None = None
+    for bar in source:
+        bucket = int(bar.open_time.timestamp()) // interval_seconds
+        if bucket != current_bucket:
+            groups.append([])
+            current_bucket = bucket
+        groups[-1].append(bar)
+
+    aggregated: list[Bar] = []
+    for group in groups:
+        first = group[0]
+        last = group[-1]
+        bucket_start = datetime.fromtimestamp(
+            (int(first.open_time.timestamp()) // interval_seconds) * interval_seconds,
+            UTC,
+        )
+        flags = sorted({flag for bar in group for flag in bar.quality_flags})
+        aggregated.append(
+            Bar(
+                bar_id=stable_id(
+                    "bar",
+                    f"replaytutor:{first.instrument_id}:timeframe",
+                    f"{timeframe}:{utc_text(bucket_start)}",
+                ),
+                instrument_id=first.instrument_id,
+                timeframe=timeframe,
+                open_time=bucket_start,
+                close_time=last.close_time,
+                raw=PriceValues(
+                    open=first.raw.open,
+                    high=decimal_text(max(Decimal(bar.raw.high) for bar in group)),
+                    low=decimal_text(min(Decimal(bar.raw.low) for bar in group)),
+                    close=last.raw.close,
+                    volume=decimal_text(
+                        sum((Decimal(bar.raw.volume) for bar in group), Decimal("0"))
+                    ),
+                ),
+                quality_flags=flags,
+            )
+        )
+    return aggregated
+
+
+def decimal_text(value: Decimal) -> str:
+    result = format(value, "f")
+    return result.rstrip("0").rstrip(".") if "." in result else result
+
+
+def parse_utc(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)

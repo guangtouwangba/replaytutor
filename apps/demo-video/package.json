@@ -1,0 +1,36 @@
+{
+  "name": "@replaytutor/demo-video",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio --no-open",
+    "record": "../../scripts/demo-record.sh",
+    "render:en": "remotion render ReplayTutorDemoEn ../../apps/web/public/media/replaytutor-demo-en.mp4 --codec=h264 --crf=23",
+    "render:zh": "remotion render ReplayTutorDemoZh ../../apps/web/public/media/replaytutor-demo-zh.mp4 --codec=h264 --crf=23",
+    "poster:en": "remotion still ReplayTutorPosterEn ../../apps/web/public/media/replaytutor-demo-en-poster.png --image-format=png && ffmpeg -y -i ../../apps/web/public/media/replaytutor-demo-en-poster.png ../../apps/web/public/media/replaytutor-demo-en-poster.webp && rm ../../apps/web/public/media/replaytutor-demo-en-poster.png",
+    "poster:zh": "remotion still ReplayTutorPosterZh ../../apps/web/public/media/replaytutor-demo-zh-poster.png --image-format=png && ffmpeg -y -i ../../apps/web/public/media/replaytutor-demo-zh-poster.png ../../apps/web/public/media/replaytutor-demo-zh-poster.webp && rm ../../apps/web/public/media/replaytutor-demo-zh-poster.png",
+    "render:all": "pnpm render:en && pnpm render:zh && pnpm poster:en && pnpm poster:zh",
+    "verify": "node scripts/verify-assets.mjs",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "remotion compositions src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/captions": "4.0.503",
+    "@remotion/cli": "4.0.503",
+    "@remotion/media": "4.0.503",
+    "@remotion/transitions": "4.0.503",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.503",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.9",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  }
+}

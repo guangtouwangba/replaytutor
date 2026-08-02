@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+import asyncio
+
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
+
+from replaytutor.adapters.agents import CodexAdapter
+from replaytutor.config import Settings
+from replaytutor.contracts import AgentCapability, TutorRequest, TutorRun
+from replaytutor.errors import ApiError
+from replaytutor.modules.tutor import TutorRuntime
+from replaytutor.modules.tutor.runtime import TutorRunNotFoundError
+from replaytutor.storage.database import connect_database
+
+router = APIRouter(prefix="/api/v1", tags=["codex-tutor"])
+
+
+def runtime(request: Request) -> TutorRuntime:
+    settings: Settings = request.app.state.settings
+    return TutorRuntime(settings)
+
+
+@router.get("/agents/codex", response_model=AgentCapability)
+def discover_codex(request: Request) -> AgentCapability:
+    capability = CodexAdapter().discover()
+    if not capability.available:
+        return capability
+    settings: Settings = request.app.state.settings
+    with connect_database(settings.database_path) as connection:
+        completed = connection.execute(
+            "SELECT 1 FROM tutor_run WHERE status = 'completed' LIMIT 1"
+        ).fetchone()
+        auth_failure = connection.execute(
+            """SELECT 1 FROM tutor_run
+            WHERE status = 'failed'
+              AND (error LIKE '%authentication%' OR error LIKE '%codex login%')
+            LIMIT 1"""
+        ).fetchone()
+    if completed is not None:
+        return capability.model_copy(update={"authentication": "verified"})
+    if auth_failure is not None:
+        return capability.model_copy(update={"authentication": "failed"})
+    return capability
+
+
+@router.post("/sessions/{session_id}/tutor", response_model=TutorRun)
+def start_tutor(
+    request: Request,
+    session_id: str,
+    payload: TutorRequest,
+) -> TutorRun:
+    try:
+        return runtime(request).start(session_id, payload)
+    except ValueError as error:
+        raise ApiError("tutor_request_invalid", str(error), status_code=409) from error
+
+
+@router.get("/tutor/runs/{run_id}", response_model=TutorRun)
+def get_tutor_run(request: Request, run_id: str) -> TutorRun:
+    try:
+        return runtime(request).get(run_id)
+    except TutorRunNotFoundError as error:
+        raise ApiError("tutor_run_not_found", str(error), status_code=404) from error
+
+
+@router.post("/tutor/runs/{run_id}/cancel", response_model=TutorRun)
+def cancel_tutor_run(request: Request, run_id: str) -> TutorRun:
+    try:
+        return runtime(request).cancel(run_id)
+    except TutorRunNotFoundError as error:
+        raise ApiError("tutor_run_not_found", str(error), status_code=404) from error
+
+
+@router.get("/tutor/runs/{run_id}/events")
+async def tutor_events(request: Request, run_id: str) -> StreamingResponse:
+    async def events():
+        previous = ""
+        while True:
+            run = runtime(request).get(run_id)
+            payload = run.model_dump_json()
+            if payload != previous:
+                yield f"event: status\ndata: {payload}\n\n"
+                previous = payload
+            if run.status != "running":
+                break
+            await asyncio.sleep(0.25)
+
+    try:
+        runtime(request).get(run_id)
+    except TutorRunNotFoundError as error:
+        raise ApiError("tutor_run_not_found", str(error), status_code=404) from error
+    return StreamingResponse(events(), media_type="text/event-stream")

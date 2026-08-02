@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00.000 --> 00:05.000
+Train decisions, not hindsight.
+
+00:05.000 --> 00:11.000
+Choose BTCUSDT perpetual. Reuse local data or fill the missing range.
+
+00:11.000 --> 00:18.000
+Future bars stay hidden behind the server-issued visible_at boundary.
+
+00:18.000 --> 00:25.000
+Orders, fills, fees, and the ledger are deterministic.
+
+00:25.000 --> 00:32.000
+Tutor cites the current frame. It cannot rewrite trading state.
+
+00:32.000 --> 00:36.000
+Replay the market. Audit the decision.

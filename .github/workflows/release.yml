@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          ./scripts/pnpm install --frozen-lockfile
+          ./scripts/uv sync --project apps/api --frozen
+          ./scripts/uv run --project apps/api playwright install --with-deps chromium
+      - name: Verify code and contracts
+        run: make verify
+      - name: Reproduce browser recordings and bilingual video
+        run: make demo-video
+      - name: Upload release media artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: replaytutor-demo-media
+          path: apps/web/public/media/
+          if-no-files-found: error
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --title "ReplayTutor $GITHUB_REF_NAME" \
+            apps/web/public/media/replaytutor-demo-en.mp4 \
+            apps/web/public/media/replaytutor-demo-zh.mp4

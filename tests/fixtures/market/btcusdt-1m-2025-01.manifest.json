@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-07-19T03:12:19.007179Z",
+  "dataset_id": "btcusdt-1m-2025-01",
+  "endpoint": "https://data-api.binance.vision/api/v3/klines",
+  "normalized_parquet_sha256": "5ac28259f52ce78ccbcda3c67995d8ac4be34e1e0633165b7803e4b52e0d912e",
+  "quality": {
+    "duplicate_count": 0,
+    "flags": [],
+    "gap_count": 0,
+    "invalid_ohlc_count": 0,
+    "row_count": 44640,
+    "status": "passed"
+  },
+  "request": {
+    "end_time_exclusive": "2025-02-01T00:00:00.000Z",
+    "interval": "1m",
+    "page_limit": 1000,
+    "start_time": "2025-01-01T00:00:00.000Z",
+    "symbol": "BTCUSDT"
+  },
+  "row_count": 44640,
+  "schema_version": "1.0",
+  "source": "Binance Spot public market data REST API",
+  "source_fields_sha256": "2b2e2017727cb9eedf7c4c63cc396b4f91b95e80c7cb9f0faee5d05269a4fb78"
+}

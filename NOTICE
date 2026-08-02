@@ -1,0 +1,21 @@
+ReplayTutor
+Copyright 2026 ReplayTutor contributors
+
+This product includes software developed by third parties. Their licenses are
+available through the respective package metadata and lockfiles.
+
+The private demo-video workspace uses Remotion packages. Those packages are
+licensed separately under the Remotion License and are not covered by this
+repository's Apache-2.0 license. See https://www.remotion.dev/license before
+using or modifying the video toolchain, especially on behalf of a company.
+
+The bundled BTCUSDT Golden Dataset is normalized from Binance public spot
+market data. Its source endpoint, capture window, and hashes are recorded in
+tests/fixtures/market/btcusdt-1m-2025-01.manifest.json. Binance publishes its
+public-data tooling under the MIT License. Binance trademarks remain the
+property of their respective owners; inclusion of the fixture does not imply
+endorsement or affiliation.
+
+TradingView is a trademark of its respective owner. ReplayTutor is not
+affiliated with TradingView and does not distribute its proprietary Charting
+Library, branding, or icons.

@@ -1,0 +1,6 @@
+packages:
+  - apps/web
+  - apps/demo-video
+  - packages/contracts
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If ReplayTutor supports your research or teaching, please cite the project."
+title: "ReplayTutor"
+type: software
+version: "0.1.0-alpha.1"
+date-released: 2026-08-02
+license: Apache-2.0
+repository-code: "https://github.com/guangtouwangba/replaytutor"
+authors:
+  - name: "ReplayTutor contributors"
