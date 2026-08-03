@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -314,7 +315,18 @@ def page(
     else:
         context.tracing.stop()
     context.close()
-    assert console_errors == []
+    allowed_console_error_marker = request.node.get_closest_marker("allow_console_errors")
+    allowed_console_error_patterns = (
+        tuple(str(pattern) for pattern in allowed_console_error_marker.args)
+        if allowed_console_error_marker is not None
+        else ()
+    )
+    unexpected_console_errors = [
+        message
+        for message in console_errors
+        if not any(re.fullmatch(pattern, message) for pattern in allowed_console_error_patterns)
+    ]
+    assert unexpected_console_errors == []
     assert page_errors == []
 
 

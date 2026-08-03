@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -52,7 +54,7 @@ jobs:
           retention-days: 14
 
       - name: Upload release acceptance artifacts
-        if: always()
+        if: ${{ always() && hashFiles('test-results/release-acceptance-*') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: release-acceptance-artifacts

@@ -479,6 +479,7 @@ def test_market_limit_and_bracket_orders_respect_activation_boundaries(
     )
 
 
+@pytest.mark.allow_console_errors(r"Failed to load resource: net::ERR_CONNECTION_REFUSED")
 def test_api_and_web_restart_preserve_session_ledger_annotations_and_review(
     page: Page,
     e2e_stack_factory,
