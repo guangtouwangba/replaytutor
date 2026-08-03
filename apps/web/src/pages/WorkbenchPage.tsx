@@ -4,10 +4,11 @@ import type {
   AnnotationPoint,
   ChartAnnotation,
   CreateAnnotationRequest,
+  IndicatorSpec,
   SubmitOrderRequest,
 } from "@replaytutor/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, ChevronRight, Keyboard, Pause, Play, Square, StepForward } from "lucide-react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BarChart3, Bot, ChevronRight, Columns2, Crosshair, Grid2X2, Keyboard, Link2, LockKeyhole, MessageSquare, PanelTop, Pause, Play, Rows2, Square, StepForward } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -22,6 +23,7 @@ import {
   fetchPlaybookEvaluation,
   fetchSession,
   fetchSessionBars,
+  fetchSessionMarketDepth,
   finishSession,
   lockTradePlan,
   submitOrder,
@@ -29,6 +31,12 @@ import {
 import { fetchPreferences } from "../api/localSystem";
 import { createChartToolTemplate, fetchChartToolManifest } from "../api/chartTools";
 import { ReplayChart } from "../chart/ReplayChart";
+import {
+  DEFAULT_PANE_TIMEFRAMES,
+  isChartLayout,
+  paneCountForLayout,
+  type ChartLayout,
+} from "../chart/ChartWorkspaceLayout";
 import {
   drawingDefinition,
   DRAWING_DEFINITIONS,
@@ -46,8 +54,12 @@ import {
   timeframeFromDigits,
 } from "../chart/WorkbenchShortcuts";
 import { evidenceReturnUrl } from "../chart/EvidenceSelectionBridge";
+import { DEFAULT_INDICATORS, INDICATOR_CATALOG, supportsTutorEvidence, type IndicatorInstance } from "../chart/IndicatorCatalog";
+import { chartTradePlanContext } from "../chart/TradePlanContext";
 import { AnnotationInspector } from "../components/AnnotationInspector";
 import { DrawingToolbar } from "../components/DrawingToolbar";
+import { MarketDepthPanel } from "../components/MarketDepthPanel";
+import { IndicatorPanel } from "../components/IndicatorPanel";
 import { TutorDock } from "../components/TutorDock";
 import {
   CommandPalette,
@@ -60,6 +72,8 @@ type ReplayTimeframe = typeof REPLAY_TIMEFRAMES[number];
 
 interface SavedChartLayout {
   readonly timeframe?: ReplayTimeframe;
+  readonly layout?: ChartLayout;
+  readonly paneTimeframes?: readonly ReplayTimeframe[];
   readonly annotationsVisible?: boolean;
   readonly annotationsLocked?: boolean;
   readonly magnetEnabled?: boolean;
@@ -72,6 +86,10 @@ function savedChartLayout(): SavedChartLayout {
     const parsed = JSON.parse(window.localStorage.getItem("replaytutor:chart-layout") ?? "{}") as SavedChartLayout;
     return {
       timeframe: REPLAY_TIMEFRAMES.includes(parsed.timeframe as ReplayTimeframe) ? parsed.timeframe : undefined,
+      layout: isChartLayout(parsed.layout) ? parsed.layout : undefined,
+      paneTimeframes: Array.isArray(parsed.paneTimeframes)
+        ? parsed.paneTimeframes.filter((item): item is ReplayTimeframe => REPLAY_TIMEFRAMES.includes(item as ReplayTimeframe)).slice(0, 4)
+        : undefined,
       annotationsVisible: typeof parsed.annotationsVisible === "boolean" ? parsed.annotationsVisible : undefined,
       annotationsLocked: typeof parsed.annotationsLocked === "boolean" ? parsed.annotationsLocked : undefined,
       magnetEnabled: typeof parsed.magnetEnabled === "boolean" ? parsed.magnetEnabled : undefined,
@@ -79,6 +97,37 @@ function savedChartLayout(): SavedChartLayout {
     };
   } catch {
     return {};
+  }
+}
+
+function savedPaneIndicators(): IndicatorInstance[][] {
+  const fallback = Array.from({ length: 4 }, (_, paneIndex) => DEFAULT_INDICATORS.map((item) => ({
+    ...item,
+    instanceId: `${item.instanceId}-${paneIndex}`,
+  })));
+  if (typeof window === "undefined") return fallback;
+  try {
+    const known = new Set(INDICATOR_CATALOG.map((item) => item.id));
+    const parsed = JSON.parse(window.localStorage.getItem("replaytutor:chart-indicators") ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return fallback;
+    return Array.from({ length: 4 }, (_, paneIndex) => {
+      const pane = parsed[paneIndex];
+      if (!Array.isArray(pane)) return fallback[paneIndex];
+      return pane.flatMap((candidate): IndicatorInstance[] => {
+        if (!candidate || typeof candidate !== "object") return [];
+        const item = candidate as Partial<IndicatorInstance>;
+        if (typeof item.instanceId !== "string" || typeof item.definitionId !== "string" || !known.has(item.definitionId)) return [];
+        if (item.params !== undefined && (!Array.isArray(item.params) || !item.params.every((value) => Number.isFinite(value) && value > 0))) return [];
+        return [{
+          instanceId: item.instanceId,
+          definitionId: item.definitionId,
+          params: item.params,
+          visible: item.visible !== false,
+        }];
+      });
+    });
+  } catch {
+    return fallback;
   }
 }
 
@@ -172,11 +221,39 @@ export function WorkbenchPage() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const initialChartLayout = useMemo(savedChartLayout, []);
-  const [timeframe, setTimeframe] = useState<ReplayTimeframe>(initialChartLayout.timeframe ?? "1m");
+  const [chartLayout, setChartLayout] = useState<ChartLayout>(initialChartLayout.layout ?? "single");
+  const [paneTimeframes, setPaneTimeframes] = useState<ReplayTimeframe[]>(() => {
+    const saved = initialChartLayout.paneTimeframes ?? [];
+    return DEFAULT_PANE_TIMEFRAMES.map((fallback, index) => saved[index]
+      ?? (index === 0 ? initialChartLayout.timeframe : undefined)
+      ?? fallback);
+  });
+  const [activePane, setActivePane] = useState(0);
+  const [indicatorPanelOpen, setIndicatorPanelOpen] = useState(false);
+  const [paneIndicators, setPaneIndicators] = useState<IndicatorInstance[][]>(savedPaneIndicators);
+  const [contextIndicatorIds, setContextIndicatorIds] = useState<string[]>([]);
+  const timeframe = paneTimeframes[activePane] ?? "1m";
+  const setTimeframe = useCallback((next: ReplayTimeframe) => {
+    setPaneTimeframes((items) => items.map((item, index) => index === activePane ? next : item));
+  }, [activePane]);
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
+  const [deskView, setDeskView] = useState<"order" | "depth">("order");
+  const [activeRightTool, setActiveRightTool] = useState<"trade" | "chat" | null>(() => {
+    if (typeof window === "undefined") return "trade";
+    const saved = window.localStorage.getItem("replaytutor:active-right-tool");
+    if (saved === "trade" || saved === "chat") return saved;
+    if (saved === "collapsed") return null;
+    return window.localStorage.getItem("replaytutor:decision-dock-collapsed") === "true" ? null : "trade";
+  });
+  const [chatRunning, setChatRunning] = useState(false);
+  const [chatUnread, setChatUnread] = useState(false);
   const [thesis, setThesis] = useState("");
   const [invalidation, setInvalidation] = useState("");
   const [riskAmount, setRiskAmount] = useState("100");
+  const [planEntryPrice, setPlanEntryPrice] = useState("");
+  const [planStopPrice, setPlanStopPrice] = useState("");
+  const [planTargetPrice, setPlanTargetPrice] = useState("");
+  const [planContextAnnotationId, setPlanContextAnnotationId] = useState<string | null>(null);
   const [orderType, setOrderType] = useState<SubmitOrderRequest["order_type"]>("MARKET");
   const [quantity, setQuantity] = useState("0.01");
   const [triggerPrice, setTriggerPrice] = useState("");
@@ -192,13 +269,28 @@ export function WorkbenchPage() {
   const [protectiveStop, setProtectiveStop] = useState("");
   const [annotationLabel, setAnnotationLabel] = useState(() => english ? "My observation" : "我的观察");
   const [drawingTool, setDrawingTool] = useState<DrawingTool>("select");
-  const [drawingRequest, setDrawingRequest] = useState(0);
+  const [drawingRequests, setDrawingRequests] = useState([0, 0, 0, 0]);
+  const bumpActiveDrawingRequest = useCallback(() => {
+    setDrawingRequests((items) => items.map((item, index) => index === activePane ? item + 1 : item));
+  }, [activePane]);
   const [magnetEnabled, setMagnetEnabled] = useState(initialChartLayout.magnetEnabled ?? true);
   const [continuousDrawing, setContinuousDrawing] = useState(initialChartLayout.continuousDrawing ?? false);
   const [annotationsVisible, setAnnotationsVisible] = useState(initialChartLayout.annotationsVisible ?? true);
   const [annotationsLocked, setAnnotationsLocked] = useState(initialChartLayout.annotationsLocked ?? false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [contextAnnotationIds, setContextAnnotationIds] = useState<string[]>([]);
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:chart-indicators", JSON.stringify(paneIndicators));
+  }, [paneIndicators]);
+  const tutorIndicators = useMemo(() => paneIndicators.flatMap((pane, paneIndex) => pane.flatMap((instance): IndicatorSpec[] => {
+    if (!contextIndicatorIds.includes(instance.instanceId) || !supportsTutorEvidence(instance.definitionId)) return [];
+    return [{
+      instance_id: instance.instanceId,
+      definition_id: instance.definitionId as IndicatorSpec["definition_id"],
+      timeframe: paneTimeframes[paneIndex] ?? "1m",
+      params: instance.params as IndicatorSpec["params"],
+    }];
+  })).slice(0, 8), [contextIndicatorIds, paneIndicators, paneTimeframes]);
   const [chartHistory, setChartHistory] = useState<ChartHistoryEntry[]>([]);
   const [chartHistoryIndex, setChartHistoryIndex] = useState(0);
   const [chartEditError, setChartEditError] = useState<string | null>(null);
@@ -211,6 +303,7 @@ export function WorkbenchPage() {
   const timeframeDigitsRef = useRef("");
   const timeframeTimerRef = useRef<number | null>(null);
   const orderTicketRef = useRef<HTMLFormElement>(null);
+  const hydratedPlanIdRef = useRef<string | null>(null);
   const recordChartHistory = useCallback((entry: ChartHistoryEntry) => {
     setChartHistory((items) => [...items.slice(0, chartHistoryIndex), entry]);
     setChartHistoryIndex((value) => value + 1);
@@ -220,16 +313,48 @@ export function WorkbenchPage() {
     queryFn: () => fetchSession(sessionId!),
     enabled: Boolean(sessionId),
   });
-  const timeframeBars = useQuery({
-    queryKey: ["session-bars", sessionId, timeframe, session.data?.session.revision],
-    queryFn: () => fetchSessionBars(sessionId!, timeframe),
-    enabled: Boolean(sessionId && session.data && timeframe !== "1m"),
-    placeholderData: (previous) => previous,
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:active-right-tool", activeRightTool ?? "collapsed");
+    window.localStorage.removeItem("replaytutor:decision-dock-collapsed");
+  }, [activeRightTool]);
+  const marketDepth = useQuery({
+    queryKey: ["session-market-depth", sessionId, session.data?.session.frame.frame_id],
+    queryFn: () => fetchSessionMarketDepth(sessionId!),
+    enabled: Boolean(sessionId && session.data && deskView === "depth"),
   });
+  const visiblePaneCount = paneCountForLayout(chartLayout);
+  const visiblePaneTimeframes = paneTimeframes.slice(0, visiblePaneCount);
+  const derivedTimeframes = REPLAY_TIMEFRAMES.slice(1);
+  const timeframeQueries = useQueries({
+    queries: derivedTimeframes.map((item) => ({
+      queryKey: ["session-bars", sessionId, item, session.data?.session.revision],
+      queryFn: () => fetchSessionBars(sessionId!, item),
+      enabled: Boolean(sessionId && session.data && visiblePaneTimeframes.includes(item)),
+      placeholderData: (previous: Awaited<ReturnType<typeof fetchSessionBars>> | undefined) => previous,
+    })),
+  });
+  useEffect(() => {
+    if (activePane >= visiblePaneCount) setActivePane(0);
+  }, [activePane, visiblePaneCount]);
   const preferences = useQuery({
     queryKey: ["local-preferences"],
     queryFn: fetchPreferences,
   });
+  useEffect(() => {
+    const lockedPlan = session.data?.execution?.plan;
+    if (!lockedPlan || hydratedPlanIdRef.current === lockedPlan.plan_id) return;
+    hydratedPlanIdRef.current = lockedPlan.plan_id;
+    setSide(lockedPlan.side);
+    setPlanEntryPrice(lockedPlan.entry_price ?? "");
+    setPlanStopPrice(lockedPlan.stop_price ?? "");
+    setPlanTargetPrice(lockedPlan.target_price ?? "");
+    if (lockedPlan.entry_price) {
+      setOrderType("LIMIT");
+      setTriggerPrice(lockedPlan.entry_price);
+    }
+    setProtectiveStop(lockedPlan.stop_price ?? "");
+    setTakeProfit(lockedPlan.target_price ?? "");
+  }, [session.data?.execution?.plan]);
   const chartToolManifest = useQuery({
     queryKey: ["chart-tool-manifest"],
     queryFn: fetchChartToolManifest,
@@ -304,6 +429,9 @@ export function WorkbenchPage() {
         side,
         thesis,
         invalidation,
+        entry_price: planEntryPrice || null,
+        stop_price: planStopPrice || null,
+        target_price: planTargetPrice || null,
         risk_amount: riskAmount,
       });
     },
@@ -312,6 +440,13 @@ export function WorkbenchPage() {
         ["session", sessionId],
         { ...session.data!, session: result.session, execution: result.execution },
       );
+      const lockedPlan = result.execution.plan;
+      if (lockedPlan?.entry_price) {
+        setOrderType("LIMIT");
+        setTriggerPrice(lockedPlan.entry_price);
+      }
+      if (lockedPlan?.stop_price) setProtectiveStop(lockedPlan.stop_price);
+      if (lockedPlan?.target_price) setTakeProfit(lockedPlan.target_price);
       void refreshPlaybookEvaluation();
     },
   });
@@ -395,9 +530,11 @@ export function WorkbenchPage() {
     mutationFn: async ({
       tool,
       points,
+      source = "drawing_rail",
     }: {
       tool: Exclude<DrawingTool, "select">;
       points: AnnotationPoint[];
+      source?: "drawing_rail" | "price_axis";
     }) => {
       if (!sessionId || !session.data) throw new Error("Session is not ready");
       const definition = drawingDefinition(tool);
@@ -477,7 +614,7 @@ export function WorkbenchPage() {
         algorithm_version: "1",
         metadata: {
           side: plan?.side ?? (side === "BUY" ? "long" : "short"),
-          source: "drawing_rail",
+          source,
           ...(plan ? {
             entry_price: plan.entryPrice,
             stop_price: plan.stopPrice,
@@ -499,7 +636,7 @@ export function WorkbenchPage() {
       );
       if (continuousDrawing) {
         setDrawingTool(variables.tool);
-        setDrawingRequest((value) => value + 1);
+        bumpActiveDrawingRequest();
       } else {
         setDrawingTool("select");
       }
@@ -637,18 +774,40 @@ export function WorkbenchPage() {
   const selectedDisposition = dispositions.data?.dispositions.find(
     (item) => item.annotation_id === selectedAnnotationId,
   ) ?? null;
+  const selectedChartPlan = chartTradePlanContext(selectedDisposition);
+  const adoptedChartPlan = chartTradePlanContext(
+    dispositions.data?.dispositions.find((item) => item.annotation_id === planContextAnnotationId),
+  );
+  const adoptSelectedChartPlan = () => {
+    if (!selectedChartPlan) return;
+    setSide(selectedChartPlan.side);
+    setPlanEntryPrice(selectedChartPlan.entryPrice);
+    setPlanStopPrice(selectedChartPlan.stopPrice);
+    setPlanTargetPrice(selectedChartPlan.targetPrice);
+    setPlanContextAnnotationId(selectedChartPlan.annotationId);
+    setOrderType("LIMIT");
+    setTriggerPrice(selectedChartPlan.entryPrice);
+    setProtectiveStop(selectedChartPlan.stopPrice);
+    setTakeProfit(selectedChartPlan.targetPrice);
+    setContextAnnotationIds((items) => (
+      items.includes(selectedChartPlan.annotationId) ? items : [...items, selectedChartPlan.annotationId]
+    ));
+  };
   const handleDrawingComplete = useCallback(
     (tool: Exclude<DrawingTool, "select">, points: AnnotationPoint[]) => {
       createDrawing.mutate({ tool, points });
     },
     [createDrawing],
   );
+  const handlePriceAxisHorizontalLine = useCallback((point: AnnotationPoint) => {
+    createDrawing.mutate({ tool: "horizontal_line", points: [point], source: "price_axis" });
+  }, [createDrawing]);
   const startDrawing = (tool: Exclude<DrawingTool, "select">) => {
     if (reviewMode || !chartToolRegistryReady) return;
     createDrawing.reset();
     setAnnotationLabel(drawingDefinition(tool).label);
     setDrawingTool(tool);
-    setDrawingRequest((value) => value + 1);
+    bumpActiveDrawingRequest();
   };
   const reviseAnnotationFromChart = useCallback((annotationId: string, points: AnnotationPoint[]) => {
     const disposition = dispositions.data?.dispositions.find(
@@ -839,7 +998,7 @@ export function WorkbenchPage() {
           setCommandPaletteQuery(null);
           setShortcutHelpOpen(false);
           setDrawingTool("select");
-          setDrawingRequest((value) => value + 1);
+          bumpActiveDrawingRequest();
           break;
         case "drawing":
           if (!readOnlyShortcut) startDrawing(command.tool);
@@ -860,7 +1019,15 @@ export function WorkbenchPage() {
         case "delete": if (!readOnlyShortcut) deleteSelectedAnnotation(); break;
         case "toggle_drawings": setAnnotationsVisible((value) => !value); break;
         case "save_layout":
-          window.localStorage.setItem("replaytutor:chart-layout", JSON.stringify({ timeframe, annotationsVisible, annotationsLocked, magnetEnabled, continuousDrawing }));
+          window.localStorage.setItem("replaytutor:chart-layout", JSON.stringify({
+            timeframe,
+            layout: chartLayout,
+            paneTimeframes,
+            annotationsVisible,
+            annotationsLocked,
+            magnetEnabled,
+            continuousDrawing,
+          }));
           setShortcutNotice(l("Chart layout saved locally", "图表布局已保存到本机"));
           break;
         case "reset_chart": setChartResetRequest((value) => value + 1); break;
@@ -883,7 +1050,7 @@ export function WorkbenchPage() {
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [advance, annotationsLocked, annotationsVisible, chartHistory, chartHistoryAction, chartHistoryIndex, continuousDrawing, copiedAnnotationId, duplicateChartObject, english, magnetEnabled, reviewMode, selectedAnnotationId, session.data, timeframe]);
+  }, [advance, annotationsLocked, annotationsVisible, bumpActiveDrawingRequest, chartHistory, chartHistoryAction, chartHistoryIndex, chartLayout, continuousDrawing, copiedAnnotationId, duplicateChartObject, english, magnetEnabled, paneTimeframes, reviewMode, selectedAnnotationId, session.data, timeframe]);
 
   useEffect(() => () => {
     if (timeframeTimerRef.current !== null) window.clearTimeout(timeframeTimerRef.current);
@@ -913,10 +1080,21 @@ export function WorkbenchPage() {
   const delta = session.data;
   const state = delta.session;
   const execution = delta.execution;
-  const chartBars = timeframe === "1m" ? delta.bars : (timeframeBars.data?.bars ?? []);
+  const queryForTimeframe = (item: ReplayTimeframe) => (
+    item === "1m" ? null : timeframeQueries[derivedTimeframes.indexOf(item)]
+  );
+  const barsForTimeframe = (item: ReplayTimeframe) => (
+    item === "1m" ? delta.bars : (queryForTimeframe(item)?.data?.bars ?? [])
+  );
+  const chartBars = barsForTimeframe(timeframe);
+  const currentPrice = chartBars.at(-1)?.raw.close ?? delta.bars.at(-1)?.raw.close ?? "-";
   const perpetual = state.account_type === "USDT_PERPETUAL";
   const needsTrigger = orderType !== "MARKET";
   const needsSecondaryLimit = ["STOP_LIMIT", "TAKE_PROFIT_LIMIT"].includes(orderType);
+  const orderReferencePrice = orderType === "MARKET" ? currentPrice : (triggerPrice || currentPrice);
+  const estimatedNotional = Number(quantity) > 0 && Number(orderReferencePrice) > 0
+    ? (Number(quantity) * Number(orderReferencePrice)).toFixed(2)
+    : null;
   const readOnly = reviewMode || state.status === "completed";
   const visibleLabel = state.hidden_real_date
     ? `Frame ${String(state.frame.current_index).padStart(5, "0")}`
@@ -942,7 +1120,7 @@ export function WorkbenchPage() {
     { id: "reset", label: l("Reset chart viewport", "复位图表视口"), detail: l("Return to the right edge of visible data.", "回到当前可见数据最右侧"), shortcut: "⌥/Alt + R", run: () => setChartResetRequest((value) => value + 1) },
     { id: "toggle-drawings", label: annotationsVisible ? l("Hide all drawings", "隐藏全部绘图") : l("Show all drawings", "显示全部绘图"), detail: l("Toggle visibility without deleting objects.", "不删除对象，只切换可见性"), shortcut: "⌘/Ctrl + ⌥/Alt + H", run: () => setAnnotationsVisible((value) => !value) },
     { id: "shortcuts", label: l("View keyboard shortcuts", "查看快捷键"), detail: l("Show available actions and safety limits.", "显示已接入操作和安全限制"), shortcut: "?", run: () => setShortcutHelpOpen(true) },
-    { id: "indicators", label: l("Indicators", "指标"), detail: l("Indicator management is not connected; no fake action is provided.", "指标管理模块尚未接入，当前不创建假操作"), keywords: "indicator 指标", disabled: true, run: () => undefined },
+    { id: "indicators", label: l("Indicators", "指标"), detail: l("Add, hide, configure, or remove indicators on the active chart.", "添加、隐藏、配置或删除当前窗口的指标"), keywords: "indicator 指标", run: () => setIndicatorPanelOpen(true) },
     { id: "symbol", label: l("Switch instrument", "切换品种"), detail: l("The instrument is part of the deterministic session contract. Create a new session from Training setup.", "会话品种属于确定性契约，请从训练配置创建新会话"), keywords: "symbol 品种 代码", disabled: true, run: () => undefined },
     { id: "date", label: l("Go to date", "定位到指定日期"), detail: l("Disabled in replay to prevent crossing visible_at into future data.", "回放内禁用，避免越过 visible_at 查看未来数据"), keywords: "date 日期", disabled: true, run: () => undefined },
   ];
@@ -984,7 +1162,7 @@ export function WorkbenchPage() {
         </button>}
       </header>
 
-      <div className="workbench-grid">
+      <div className={`workbench-grid right-tool-${activeRightTool ?? "collapsed"}`}>
         <DrawingToolbar
           activeTool={drawingTool}
           annotationsLocked={annotationsLocked}
@@ -1009,32 +1187,47 @@ export function WorkbenchPage() {
           onToggleContinuous={() => setContinuousDrawing((value) => !value)}
           onUndo={undoChartAction}
           onRedo={redoChartAction}
+          onZoomIn={() => setChartZoomRequest((value) => ({ sequence: (value?.sequence ?? 0) + 1, scale: 1.12 }))}
+          onZoomOut={() => setChartZoomRequest((value) => ({ sequence: (value?.sequence ?? 0) + 1, scale: 0.88 }))}
           onDelete={deleteSelectedAnnotation}
           onToggleLock={() => setAnnotationsLocked((value) => !value)}
         />
         <main className="chart-stage">
           <div className="chart-stage-head">
             <span>{state.instrument.canonical_symbol}</span>
-            <div className="timeframe-switcher" aria-label={l("Chart timeframe", "K 线周期")}>
-              {REPLAY_TIMEFRAMES.map((item) => (
+            <button
+              aria-expanded={indicatorPanelOpen}
+              aria-label={l("Indicators", "指标")}
+              className={indicatorPanelOpen ? "indicator-trigger is-active" : "indicator-trigger"}
+              onClick={() => setIndicatorPanelOpen((value) => !value)}
+              title={l("Add and configure indicators", "添加和配置指标")}
+              type="button"
+            >
+              <BarChart3 aria-hidden="true" size={14} />
+              <span>{l("Indicators", "指标")}</span>
+              {paneIndicators[activePane]?.length ? <em>{paneIndicators[activePane].length}</em> : null}
+            </button>
+            <div className="chart-layout-switcher" aria-label={l("Chart layout", "图表布局")}>
+              {([
+                ["single", PanelTop, l("Single chart", "单图")],
+                ["vertical", Columns2, l("Two columns", "左右双图")],
+                ["horizontal", Rows2, l("Two rows", "上下双图")],
+                ["quad", Grid2X2, l("Four charts", "四图")],
+              ] as const).map(([layout, Icon, label]) => (
                 <button
-                  aria-pressed={timeframe === item}
-                  className={timeframe === item ? "is-active" : ""}
-                  key={item}
-                  onClick={() => setTimeframe(item)}
+                  aria-label={label}
+                  aria-pressed={chartLayout === layout}
+                  className={chartLayout === layout ? "is-active" : ""}
+                  key={layout}
+                  onClick={() => setChartLayout(layout)}
+                  title={label}
                   type="button"
                 >
-                  {item}
+                  <Icon aria-hidden="true" size={14} />
                 </button>
               ))}
             </div>
-            <span className={timeframeBars.isError && timeframe !== "1m" ? "timeframe-error" : ""}>
-              {timeframeBars.isError && timeframe !== "1m"
-                ? l("Timeframe data failed", "周期数据加载失败")
-                : timeframeBars.isFetching && timeframe !== "1m"
-                  ? l("Aggregating…", "聚合中…")
-                  : `${chartBars.length} visible bars`}
-            </span>
+            <span>{l("Active chart", "当前窗口")} {activePane + 1} / {visiblePaneCount} · {timeframe}</span>
             <span className="fingerprint">fp {state.fingerprint.slice(0, 10)}</span>
             <button
               aria-label={l("Keyboard shortcuts", "键盘快捷键")}
@@ -1048,72 +1241,196 @@ export function WorkbenchPage() {
             </button>
             {!chartToolRegistryReady && <span className="timeframe-error">{l("Chart tool registry is not ready", "绘图注册表未就绪")}</span>}
           </div>
-          <ReplayChart
-            bars={chartBars}
-            symbol={state.instrument.canonical_symbol}
-            timeframe={timeframe}
-            pricePrecision={state.instrument.price_scale}
-            visibleAt={state.frame.visible_at}
-            hideRealDate={state.hidden_real_date}
-            orders={execution?.orders}
-            fills={execution?.fills}
-            annotations={annotationsVisible ? effectiveAnnotations : []}
-            annotationsLocked={annotationsLocked}
-            drawingTool={drawingTool}
-            drawingRequest={drawingRequest}
-            magnetEnabled={magnetEnabled}
-            drawingPending={createDrawing.isPending}
-            drawingError={createDrawing.error?.message ?? null}
-            resetRequest={chartResetRequest}
-            zoomRequest={chartZoomRequest}
-            contextAnnotationIds={selectedAnnotationId ? [...contextAnnotationIds, selectedAnnotationId] : contextAnnotationIds}
-            onDrawingComplete={handleDrawingComplete}
-            onAnnotationSelect={setSelectedAnnotationId}
-            onAnnotationChange={reviseAnnotationFromChart}
-            selectedAnnotationId={selectedAnnotationId}
-            onAnnotationDelete={readOnly ? undefined : deleteAnnotationFromChart}
-            onAnnotationDuplicate={readOnly ? undefined : (annotationId) => duplicateChartObject.mutate(annotationId)}
-            onAnnotationStyleChange={readOnly ? undefined : (annotationId, style) => updateAnnotationAppearance(annotationId, { style })}
-            onAnnotationPropertiesChange={readOnly ? undefined : (annotationId, properties) => updateAnnotationAppearance(annotationId, { properties })}
-            onAnnotationSaveTemplate={readOnly ? undefined : (annotationId) => saveChartToolTemplate.mutate(annotationId)}
-            evidenceTarget={evidence.data ?? null}
+          <IndicatorPanel
+            contextInstanceIds={contextIndicatorIds}
+            instances={paneIndicators[activePane] ?? []}
+            onApplyAll={(instances) => {
+              setContextIndicatorIds([]);
+              setPaneIndicators(Array.from({ length: 4 }, () => instances.map((item) => ({
+                ...item,
+                instanceId: `indicator-${crypto.randomUUID()}`,
+              }))));
+            }}
+            onChange={(instances) => {
+              const retainedIds = new Set(paneIndicators.flatMap((pane, index) => (
+                index === activePane ? instances : pane
+              )).map((item) => item.instanceId));
+              setContextIndicatorIds((items) => items.filter((item) => retainedIds.has(item)));
+              setPaneIndicators((panes) => panes.map((pane, index) => index === activePane ? instances : pane));
+            }}
+            onClose={() => setIndicatorPanelOpen(false)}
+            open={indicatorPanelOpen}
+            onToggleContext={(instanceId) => setContextIndicatorIds((items) => items.includes(instanceId) ? items.filter((item) => item !== instanceId) : [...items, instanceId].slice(-8))}
+            paneNumber={activePane + 1}
           />
+          <div className={`chart-workspace layout-${chartLayout}`}>
+            {visiblePaneTimeframes.map((paneTimeframe, paneIndex) => {
+              const paneBars = barsForTimeframe(paneTimeframe);
+              const paneQuery = queryForTimeframe(paneTimeframe);
+              const paneActive = activePane === paneIndex;
+              return (
+                <section
+                  aria-label={`${l("Chart", "图表")} ${paneIndex + 1}, ${paneTimeframe}`}
+                  className={`chart-pane ${paneActive ? "is-active" : ""}`}
+                  key={paneIndex}
+                  onFocus={() => setActivePane(paneIndex)}
+                  onPointerDown={() => setActivePane(paneIndex)}
+                  tabIndex={0}
+                >
+                  <header className="chart-pane-head">
+                    <strong>{state.instrument.canonical_symbol}</strong>
+                    <div className="timeframe-switcher" aria-label={`${l("Chart timeframe", "K 线周期")} ${paneIndex + 1}`}>
+                      {REPLAY_TIMEFRAMES.map((item) => (
+                        <button
+                          aria-pressed={paneTimeframe === item}
+                          className={paneTimeframe === item ? "is-active" : ""}
+                          key={item}
+                          onClick={() => {
+                            setActivePane(paneIndex);
+                            setPaneTimeframes((items) => items.map((current, index) => index === paneIndex ? item : current));
+                          }}
+                          type="button"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                    <span className={paneQuery?.isError ? "timeframe-error" : ""}>
+                      {paneQuery?.isError
+                        ? l("Load failed", "加载失败")
+                        : paneQuery?.isFetching
+                          ? l("Aggregating", "聚合中")
+                          : `${paneBars.length} bars`}
+                    </span>
+                    <span className="pane-number">{paneIndex + 1}</span>
+                  </header>
+                  <ReplayChart
+                    bars={paneBars}
+                    symbol={state.instrument.canonical_symbol}
+                    timeframe={paneTimeframe}
+                    pricePrecision={state.instrument.price_scale}
+                    visibleAt={state.frame.visible_at}
+                    hideRealDate={state.hidden_real_date}
+                    indicators={paneIndicators[paneIndex] ?? []}
+                    orders={execution?.orders}
+                    fills={execution?.fills}
+                    annotations={annotationsVisible ? effectiveAnnotations : []}
+                    annotationsLocked={annotationsLocked}
+                    drawingTool={paneActive ? drawingTool : "select"}
+                    drawingRequest={drawingRequests[paneIndex]}
+                    magnetEnabled={magnetEnabled}
+                    drawingPending={paneActive && createDrawing.isPending}
+                    drawingError={paneActive ? createDrawing.error?.message ?? null : null}
+                    resetRequest={paneActive ? chartResetRequest : 0}
+                    zoomRequest={paneActive ? chartZoomRequest : undefined}
+                    contextAnnotationIds={selectedAnnotationId ? [...contextAnnotationIds, selectedAnnotationId] : contextAnnotationIds}
+                    onDrawingComplete={paneActive ? handleDrawingComplete : undefined}
+                    onPriceAxisHorizontalLine={paneActive && !readOnly ? handlePriceAxisHorizontalLine : undefined}
+                    onAnnotationSelect={setSelectedAnnotationId}
+                    onAnnotationChange={reviseAnnotationFromChart}
+                    selectedAnnotationId={selectedAnnotationId}
+                    onAnnotationDelete={readOnly ? undefined : deleteAnnotationFromChart}
+                    onAnnotationDuplicate={readOnly ? undefined : (annotationId) => duplicateChartObject.mutate(annotationId)}
+                    onAnnotationStyleChange={readOnly ? undefined : (annotationId, style) => updateAnnotationAppearance(annotationId, { style })}
+                    onAnnotationPropertiesChange={readOnly ? undefined : (annotationId, properties) => updateAnnotationAppearance(annotationId, { properties })}
+                    onAnnotationSaveTemplate={readOnly ? undefined : (annotationId) => saveChartToolTemplate.mutate(annotationId)}
+                    evidenceTarget={evidence.data ?? null}
+                  />
+                </section>
+              );
+            })}
+          </div>
           <details className="chart-data-table">
-            <summary>{l("View accessible market-data table", "查看可访问行情数据表")}</summary>
+            <summary>{l("View active chart as a market-data table", "以行情数据表查看当前窗口")}</summary>
             <table>
               <thead><tr><th>{l("Time", "时间")}</th><th>{l("Open", "开")}</th><th>{l("High", "高")}</th><th>{l("Low", "低")}</th><th>{l("Close", "收")}</th></tr></thead>
               <tbody>{chartBars.slice(-20).map((bar) => <tr key={bar.bar_id}><td>{new Date(bar.close_time).toLocaleString(english ? "en-US" : "zh-CN", { hour12: false })}</td><td>{bar.raw.open}</td><td>{bar.raw.high}</td><td>{bar.raw.low}</td><td>{bar.raw.close}</td></tr>)}</tbody>
             </table>
           </details>
         </main>
-        <aside className="workbench-dock">
-          <div className="dock-heading"><Bot size={17} /><strong>{l("Decision desk", "交易决策台")}</strong><span>W2</span></div>
-          <div className="stage-tabs"><button type="button">{l("Context", "环境")}</button><button className="is-active" type="button">{l("Plan", "计划")}</button><button type="button">{l("Position", "持仓")}</button><button type="button">AI</button></div>
-          {!execution?.plan ? (
-            <form className="dock-card decision-form" onSubmit={(event) => { event.preventDefault(); lockPlan.mutate(); }} ref={orderTicketRef}>
-              <span className="page-kicker">PLAN GATE</span>
-              <h2>{l("Lock the trading plan first", "先锁定交易计划")}</h2>
-              <div className="segmented"><button className={side === "BUY" ? "is-active" : ""} onClick={() => setSide("BUY")} type="button">{l("Long", "做多")}</button><button className={side === "SELL" ? "is-active" : ""} onClick={() => setSide("SELL")} type="button">{perpetual ? l("Short", "做空") : l("Sell", "卖出")}</button></div>
+        <aside className={`workbench-dock right-tool-${activeRightTool ?? "collapsed"}`}>
+          <div className="right-dock-panels">
+          <div className="decision-dock-content" hidden={activeRightTool !== "trade"}>
+          <div className="dock-heading">
+            <Bot size={17} />
+            <strong>{l("Decision desk", "交易决策台")}</strong>
+            <span>{l("Paper", "模拟")}</span>
+            <button
+              aria-expanded="true"
+              aria-label={l("Collapse decision desk", "收起交易决策台")}
+              className="decision-dock-collapse"
+              onClick={() => setActiveRightTool(null)}
+              title={l("Collapse decision desk", "收起交易决策台")}
+              type="button"
+            ><ChevronRight aria-hidden="true" size={14} /></button>
+          </div>
+          <div className="ticket-mode-tabs" role="tablist" aria-label={l("Trading desk view", "交易决策台视图")}>
+            <button aria-selected={deskView === "order"} className={deskView === "order" ? "is-active" : ""} onClick={() => setDeskView("order")} role="tab" type="button">{l("Order", "订单")}</button>
+            <button aria-selected={deskView === "depth"} className={deskView === "depth" ? "is-active" : ""} onClick={() => setDeskView("depth")} role="tab" type="button">{l("Market depth", "市场深度")}</button>
+          </div>
+          {deskView === "depth" ? (
+            <MarketDepthPanel
+              depth={marketDepth.data}
+              english={english}
+              error={marketDepth.error?.message ?? null}
+              loading={marketDepth.isLoading}
+              priceScale={state.instrument.price_scale}
+              quoteCurrency={state.instrument.quote_currency}
+            />
+          ) : !execution?.plan ? (
+            <form className="trade-ticket decision-form" onSubmit={(event) => { event.preventDefault(); lockPlan.mutate(); }} ref={orderTicketRef}>
+              <div className="ticket-quote-switch" aria-label={l("Plan direction", "计划方向")} role="group">
+                <button aria-pressed={side === "SELL"} className={`sell ${side === "SELL" ? "is-active" : ""}`} onClick={() => setSide("SELL")} type="button"><span>{perpetual ? l("Short", "卖出开空") : l("Sell", "卖出")}</span><strong>{currentPrice}</strong></button>
+                <button aria-pressed={side === "BUY"} className={`buy ${side === "BUY" ? "is-active" : ""}`} onClick={() => setSide("BUY")} type="button"><span>{l("Long", "买入做多")}</span><strong>{currentPrice}</strong></button>
+              </div>
+              <div className="plan-gate-heading">
+                <span className="page-kicker">PLAN GATE</span>
+                <h2>{l("Lock the trading plan first", "先锁定交易计划")}</h2>
+                <p>{l("The chart can define price structure. You still define why the trade exists and when it is wrong.", "图形负责价格结构，你仍需说明为什么交易，以及何时判断失效。")}</p>
+              </div>
+              {selectedChartPlan && selectedChartPlan.annotationId !== planContextAnnotationId && (
+                <section className="chart-plan-candidate" aria-label={l("Selected chart plan", "已选中的图形计划")}>
+                  <div><Crosshair aria-hidden="true" size={14} /><span><strong>{selectedChartPlan.label}</strong><small>{l("Selected on chart", "当前图上已选中")} · R:R {selectedChartPlan.riskRewardRatio}</small></span></div>
+                  <dl><div><dt>{l("Entry", "入场")}</dt><dd>{selectedChartPlan.entryPrice}</dd></div><div><dt>{l("Stop", "止损")}</dt><dd>{selectedChartPlan.stopPrice}</dd></div><div><dt>{l("Target", "目标")}</dt><dd>{selectedChartPlan.targetPrice}</dd></div></dl>
+                  <button className="use-chart-plan" onClick={adoptSelectedChartPlan} type="button"><Link2 aria-hidden="true" size={13} />{l("Use in trading plan", "纳入交易计划")}</button>
+                </section>
+              )}
+              {adoptedChartPlan && (
+                <div className="adopted-plan-context" role="status"><Link2 aria-hidden="true" size={12} /><span>{l("Plan context", "计划上下文")} · {adoptedChartPlan.label}</span><button aria-label={l("Remove chart plan context", "移除图形计划上下文")} onClick={() => { setPlanContextAnnotationId(null); setPlanEntryPrice(""); setPlanStopPrice(""); setPlanTargetPrice(""); }} type="button">×</button></div>
+              )}
+              <div className="plan-price-grid">
+                <label>{l("Planned entry", "计划入场")}<input min="0.01" onChange={(event) => setPlanEntryPrice(event.target.value)} placeholder={l("Optional", "可选")} step="0.01" type="number" value={planEntryPrice} /></label>
+                <label>{l("Stop", "止损")}<input min="0.01" onChange={(event) => setPlanStopPrice(event.target.value)} placeholder={l("Optional", "可选")} step="0.01" type="number" value={planStopPrice} /></label>
+                <label>{l("Target", "目标")}<input min="0.01" onChange={(event) => setPlanTargetPrice(event.target.value)} placeholder={l("Optional", "可选")} step="0.01" type="number" value={planTargetPrice} /></label>
+              </div>
               <label>{l("Trade thesis", "交易逻辑")}<textarea onChange={(event) => setThesis(event.target.value)} placeholder={l("Why is this trade worth taking now?", "为什么此刻值得交易？")} required value={thesis} /></label>
               <label>{l("Invalidation", "失效条件")}<textarea onChange={(event) => setInvalidation(event.target.value)} placeholder={l("What would prove this idea wrong?", "什么发生时证明判断错误？")} required value={invalidation} /></label>
               <label>{l("Risk amount", "风险金额")}<input min="0.01" onChange={(event) => setRiskAmount(event.target.value)} step="0.01" type="number" value={riskAmount} /></label>
-              <button className="primary-action" disabled={readOnly || lockPlan.isPending || thesis.length < 3 || invalidation.length < 3} type="submit">{l("Lock plan", "锁定计划")}</button>
+              <button aria-label={l("Lock plan", "锁定计划")} className={`ticket-submit ${side === "BUY" ? "buy" : "sell"}`} disabled={readOnly || lockPlan.isPending || thesis.length < 3 || invalidation.length < 3} type="submit"><LockKeyhole aria-hidden="true" size={14} />{side === "BUY" ? l("Lock long plan", "锁定多头计划") : l("Lock short plan", "锁定空头计划")}</button>
             </form>
           ) : (
-            <form className="dock-card decision-form" onSubmit={(event) => { event.preventDefault(); placeOrder.mutate(); }} ref={orderTicketRef}>
-              <span className="page-kicker">PLAN LOCKED · {execution.plan.side}</span>
+            <form className="trade-ticket decision-form" onSubmit={(event) => { event.preventDefault(); placeOrder.mutate(); }} ref={orderTicketRef}>
+              <div className="ticket-quote-switch" aria-label={l("Locked plan direction", "已锁定计划方向")} role="group">
+                <button aria-pressed={execution.plan.side === "SELL"} className={`sell ${execution.plan.side === "SELL" ? "is-active" : ""}`} disabled type="button"><span>{perpetual ? l("Short", "卖出开空") : l("Sell", "卖出")}</span><strong>{currentPrice}</strong></button>
+                <button aria-pressed={execution.plan.side === "BUY"} className={`buy ${execution.plan.side === "BUY" ? "is-active" : ""}`} disabled type="button"><span>{l("Long", "买入做多")}</span><strong>{currentPrice}</strong></button>
+              </div>
+              <details className="locked-plan-summary" open>
+                <summary><span><LockKeyhole aria-hidden="true" size={12} />{l("Plan locked", "计划已锁定")} · {execution.plan.side}</span><small>{l("Evidence captured at", "证据帧")} {execution.plan.frame_id.slice(0, 12)}…</small></summary>
+                <p>{execution.plan.thesis}</p>
+                <dl>
+                  <div><dt>{l("Entry", "入场")}</dt><dd>{execution.plan.entry_price ?? "-"}</dd></div>
+                  <div><dt>{l("Stop", "止损")}</dt><dd>{execution.plan.stop_price ?? "-"}</dd></div>
+                  <div><dt>{l("Target", "目标")}</dt><dd>{execution.plan.target_price ?? "-"}</dd></div>
+                  <div><dt>{l("Risk", "风险")}</dt><dd>{execution.plan.risk_amount}</dd></div>
+                </dl>
+                <small>{l("Invalidation", "失效条件")} · {execution.plan.invalidation}</small>
+              </details>
               <h2>{l("Submit paper order", "提交模拟订单")}</h2>
-              <p>{execution.plan.thesis}</p>
               {perpetual && <div className="account-risk-strip"><strong>{state.leverage}×</strong><span>{state.margin_mode === "ISOLATED" ? l("Isolated", "逐仓") : l("Cross", "全仓")}</span><span>{state.position_mode === "ONEWAY" ? l("One-way", "单向") : l("Hedge", "双向")}</span></div>}
-              <label>{l("Order type", "订单类型")}<select onChange={(event) => setOrderType(event.target.value as typeof orderType)} value={orderType}>
-                <option value="MARKET">{l("Market", "市价")}</option>
-                <option value="LIMIT">{l("Limit", "限价")}</option>
-                <option value="STOP_MARKET">{l("Stop market", "止损市价")}</option>
-                <option value="STOP_LIMIT">{l("Stop limit", "止损限价")}</option>
-                <option value="TAKE_PROFIT_MARKET">{l("Take-profit market", "止盈市价")}</option>
-                <option value="TAKE_PROFIT_LIMIT">{l("Take-profit limit", "止盈限价")}</option>
-                <option value="TRAILING_STOP_MARKET">{l("Trailing stop", "追踪止损")}</option>
-              </select></label>
+              <fieldset className="order-type-tabs"><legend>{l("Order type", "订单类型")}</legend>{([[
+                "MARKET", l("Market", "市价")], ["LIMIT", l("Limit", "限价")], ["STOP_MARKET", l("Stop market", "止损")], ["STOP_LIMIT", l("Stop limit", "停损限价")],
+               ] as const).map(([value, label]) => <button aria-pressed={orderType === value} className={orderType === value ? "is-active" : ""} key={value} onClick={() => setOrderType(value)} type="button">{label}</button>)}</fieldset>
+               <label className="advanced-order-type">{l("Advanced order", "高级订单")}<select aria-label={l("Advanced order type", "高级订单类型")} onChange={(event) => setOrderType(event.target.value as typeof orderType)} value={["TAKE_PROFIT_MARKET", "TAKE_PROFIT_LIMIT", "TRAILING_STOP_MARKET"].includes(orderType) ? orderType : ""}><option value="">{l("Choose when needed", "需要时选择")}</option><option value="TAKE_PROFIT_MARKET">{l("Take-profit market", "止盈市价")}</option><option value="TAKE_PROFIT_LIMIT">{l("Take-profit limit", "止盈限价")}</option><option value="TRAILING_STOP_MARKET">{l("Trailing stop", "追踪止损")}</option></select></label>
               <label>{l("Quantity", "数量")}<input min="0.00001" onChange={(event) => setQuantity(event.target.value)} step="0.00001" type="number" value={quantity} /></label>
               {needsTrigger && <label>{orderType === "LIMIT" ? l("Limit price", "委托价") : orderType === "TRAILING_STOP_MARKET" ? l("Activation price (optional)", "激活价（可选）") : l("Trigger price", "触发价")}<input min="0.01" onChange={(event) => setTriggerPrice(event.target.value)} step="0.01" type="number" value={triggerPrice} /></label>}
               {needsSecondaryLimit && <label>{l("Limit price", "限价")}<input min="0.01" onChange={(event) => setLimitPrice(event.target.value)} step="0.01" type="number" value={limitPrice} /></label>}
@@ -1124,8 +1441,9 @@ export function WorkbenchPage() {
               {perpetual && <label className="check-row"><input checked={reduceOnly} onChange={(event) => setReduceOnly(event.target.checked)} type="checkbox" /><span><strong>{l("Reduce only", "只减仓")}</strong><small>{l("Prevent the order from increasing or reversing a position.", "禁止订单增加或反向打开持仓。")}</small></span></label>}
               {perpetual && <label className="check-row"><input checked={closePosition} onChange={(event) => setClosePosition(event.target.checked)} type="checkbox" /><span><strong>{l("Close the entire side", "平掉该方向全部持仓")}</strong><small>{l("Use the closable quantity at execution instead of the input quantity.", "成交时按可平数量计算，不依赖输入数量。")}</small></span></label>}
               {["LIMIT", "STOP_LIMIT", "TAKE_PROFIT_LIMIT"].includes(orderType) && <label className="check-row"><input checked={postOnly} onChange={(event) => setPostOnly(event.target.checked)} type="checkbox" /><span><strong>Post-only</strong><small>{l("Enter the order book only as a maker order.", "只作为挂单进入订单簿。")}</small></span></label>}
-              <label>{l("Take-profit price (optional)", "止盈价（可选）")}<input min="0.01" onChange={(event) => setTakeProfit(event.target.value)} step="0.01" type="number" value={takeProfit} /></label><label>{l("Protective stop (optional)", "保护止损（可选）")}<input min="0.01" onChange={(event) => setProtectiveStop(event.target.value)} step="0.01" type="number" value={protectiveStop} /></label>
-              <button className="primary-action" disabled={readOnly || placeOrder.isPending || (needsTrigger && orderType !== "TRAILING_STOP_MARKET" && !triggerPrice) || (needsSecondaryLimit && !limitPrice) || (timeInForce === "GTD" && !goodTillIndex)} type="submit">{l("Submit · activates on next bar", "提交 · 下一根激活")}</button>
+              <details className="exit-controls" open><summary>{l("Exit plan", "退出设置")}</summary><label>{l("Take-profit price (optional)", "止盈价（可选）")}<input min="0.01" onChange={(event) => setTakeProfit(event.target.value)} step="0.01" type="number" value={takeProfit} /></label><label>{l("Protective stop (optional)", "保护止损（可选）")}<input min="0.01" onChange={(event) => setProtectiveStop(event.target.value)} step="0.01" type="number" value={protectiveStop} /></label></details>
+              <dl className="order-estimate"><div><dt>{l("Reference price", "参考价格")}</dt><dd>{orderReferencePrice}</dd></div><div><dt>{l("Estimated notional", "预计交易额")}</dt><dd>{estimatedNotional ?? "-"} {state.instrument.quote_currency}</dd></div></dl>
+              <button aria-label={l("Submit · activates on next bar", "提交 · 下一根激活")} className={`ticket-submit ${execution.plan.side === "BUY" ? "buy" : "sell"}`} disabled={readOnly || placeOrder.isPending || (needsTrigger && orderType !== "TRAILING_STOP_MARKET" && !triggerPrice) || (needsSecondaryLimit && !limitPrice) || (timeInForce === "GTD" && !goodTillIndex)} type="submit">{execution.plan.side === "BUY" ? l("Submit buy order", "提交买入订单") : l("Submit sell order", "提交卖出订单")}<small>{quantity} {state.instrument.base_currency} @ {orderReferencePrice} · {l("next bar", "下一根激活")}</small></button>
             </form>
           )}
           <div className="dock-card">
@@ -1171,18 +1489,6 @@ export function WorkbenchPage() {
               </div>
             ))}
           </div>
-          {!readOnly && preferences.data?.ai_mode !== "off" && <TutorDock
-            sessionId={sessionId}
-            contextAnnotations={effectiveAnnotations.filter((item) => contextAnnotationIds.includes(item.annotation_id))}
-            onContextClear={() => setContextAnnotationIds([])}
-            onContextRemove={(annotationId) => setContextAnnotationIds((items) => items.filter((item) => item !== annotationId))}
-            onEvidenceSelect={(targetId) => {
-              if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) {
-                setSelectedAnnotationId(targetId);
-              }
-            }}
-            onAnnotationsChanged={handleAnnotationsChanged}
-          />}
           {reviewMode && (
             <div className="dock-card evidence-focus-card" role="status">
               <span className="page-kicker">EVIDENCE FOCUS</span>
@@ -1225,6 +1531,32 @@ export function WorkbenchPage() {
               if (selectedAnnotationId) annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
             }}
           />
+          </div>
+          <div className="chat-dock-content" hidden={activeRightTool !== "chat"}>
+            {preferences.data?.ai_mode === "off" ? <div className="chat-disabled"><Bot size={20} /><strong>{l("Codex Tutor is disabled", "Codex Tutor 已关闭")}</strong><p>{l("Enable AI mode in local settings to use session chat.", "请在本地设置中启用 AI 模式后使用会话聊天。")}</p></div> : <TutorDock
+              active={activeRightTool === "chat"}
+              afterAction={readOnly}
+              sessionId={sessionId}
+              contextAnnotations={effectiveAnnotations.filter((item) => contextAnnotationIds.includes(item.annotation_id))}
+              contextIndicators={tutorIndicators}
+              onContextClear={() => { setContextAnnotationIds([]); setContextIndicatorIds([]); }}
+              onContextRemove={(annotationId) => setContextAnnotationIds((items) => items.filter((item) => item !== annotationId))}
+              onIndicatorContextRemove={(instanceId) => setContextIndicatorIds((items) => items.filter((item) => item !== instanceId))}
+              onEvidenceSelect={(targetId) => {
+                if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) setSelectedAnnotationId(targetId);
+              }}
+              onAnnotationsChanged={handleAnnotationsChanged}
+              onRunningChange={(running) => {
+                if (chatRunning && !running && activeRightTool !== "chat") setChatUnread(true);
+                setChatRunning(running);
+              }}
+            />}
+          </div>
+          </div>
+          <nav aria-label={l("Right workbench tools", "右侧工作台工具")} className="right-tool-rail">
+            <button aria-pressed={activeRightTool === "trade"} className={activeRightTool === "trade" ? "is-active" : ""} onClick={() => setActiveRightTool((value) => value === "trade" ? null : "trade")} title={l("Trade desk", "交易台")} type="button"><BarChart3 size={17} /><span>{l("Trade", "交易")}</span></button>
+            <button aria-pressed={activeRightTool === "chat"} className={activeRightTool === "chat" ? "is-active" : ""} onClick={() => { setChatUnread(false); setActiveRightTool((value) => value === "chat" ? null : "chat"); }} title={l("Tutor chat", "Tutor 对话")} type="button"><MessageSquare size={17} /><span>Chat</span>{(chatRunning || chatUnread) && <i aria-label={chatRunning ? l("Tutor is running", "Tutor 正在运行") : l("Unread Tutor response", "有未读 Tutor 回复")} />}</button>
+          </nav>
         </aside>
         <footer className="replay-controls">
           <button

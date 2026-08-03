@@ -19,10 +19,19 @@
 - M3–M5：完成 MVP 1A 核心纵向闭环。包含 bracket/OCO、取消订单、订单与成交 Overlay、用户/AI 图层、确定性 MFE/MAE/R/回撤/退出效率、Codex 回放中与事后审查、完整绘图、证据回跳、AI 标注处置、版本化 Playbook 确定性规则检查、五维训练聚合/推荐和隔离浏览器 E2E。完整 MVP v1 仍需经过 H5 本地产品硬化与发布封板。
 - 专业绘图批次：40 项工具已进入统一注册目录；自定义矩形、风险收益、层级和多段线
   Overlay 替代无效 `rect`，对象 V2 契约和 0017 迁移已落地，支持持久样式、复制、锁定、
-  隐藏、删除、工具模板与偏好。正式发布仍以每项工具完整浏览器生命周期矩阵为门禁。
+  隐藏、删除、工具模板与偏好。左栏已按线类、斐波那契、预测与测量、图形形态拆分，
+  并补充活动窗格直接放大和缩小。正式发布仍以每项工具完整浏览器生命周期矩阵为门禁。
 - 工作台快捷键批次：已接入命令面板、快捷键帮助、常用画线、周期直输、图表视口、
   回放推进、图层显隐及绘图复制/删除。模拟交易快捷键只预填订单草稿并保留显式提交；
   回退、未来日期和会话内换品种等不安全动作不做假实现。
+- 多图工作区批次：已接入单图、左右双图、上下双图和四图布局。各窗格独立周期，活动
+  窗格接收快捷键与绘图，所有窗格共享同一服务端 frame 与 `visible_at`；布局偏好不进入
+  确定性交易结果。
+- 指标工作台第一切片：已接入 KLineChart 10.0.0 的 27 个内置指标，以及 VWAP、ATR、
+  连续 Bar Count 和确认后不重画的 Order Block。支持窗格独立配置、中英文搜索、参数、
+  显隐、删除、应用到全部窗格和本地恢复；默认显示可删除的成交量副图。MA、EMA、VOL、
+  OBV、VWAP、ATR、Bar Count、Order Block 支持显式加入 Context Tray，服务端按签名 frame
+  重新计算版本化 IndicatorEvidence；其余内置指标暂不进入 Tutor，不把浏览器值当证据。
 - 本地试用硬化：完成可恢复会话删除、偏好/隐私、SQLite 备份恢复、Agent orphan 收敛、三宽度/axe 验收与构建产物扫描。后续 M6–M8 等待真实用户试用反馈后启动；A 股规则和 Post-MVP 能力不计入当前 Codex-only 交付。
 
 M1 Golden Dataset 固定为 `2025-01-01T00:00:00Z` 至 `2025-02-01T00:00:00Z` 的 BTCUSDT 1m 数据，共 44,640 根。仓库 fixture manifest 保存来源请求、抓取时间、源字段 hash、Parquet hash 和质量摘要；运行时载入生成新的不可变 Snapshot，fixture 本身不被修改。
@@ -112,6 +121,8 @@ MVP 支持三种数据入口：
 - TradingView 式应用壳：顶部工具栏、左侧绘图栏、中央图表、右侧工具坞、回放条、底部面板。
 - K 线、成交量、十字光标、价格/时间轴缩放、拖动画布。
 - 周期：1m、5m、15m、1h、4h、1d；切换只使用当前 snapshot 在 `visible_at` 内的派生数据。
+- 布局：单图、左右双图、上下双图、四图；各窗格周期独立，回放帧、品种、订单、成交
+  与图层状态同步。活动窗格接收快捷键、缩放、复位和新绘图操作。
 - 绘图：线类分组支持趋势线、射线、延长线、价格线、水平/垂直线和平行/价格通道；
   第一点后实时预览，完成采点后才保存。矩形、文字等对象支持选择、锁定、隐藏、删除。
 - 买入、卖出、止损、止盈、拒单和证据标记。
@@ -214,9 +225,10 @@ Agent：
 
 - 实时行情、真实下单、券商登录、跟单和收益承诺。
 - 美股、外汇、期货、永续合约、期权、保证金和裸空。
-- tick/L2、盘口、成交量驱动的部分成交和排队模型。
+- 已实现时点 L2 的 Binance REST 采集、历史导入、`visible_at` 防泄漏查询和盘口展示；
+  WebSocket 增量簿、tick 驱动部分成交与排队模型仍属于后续执行仿真阶段。
 - TradingView Pine Script、闭源图表库、告警系统和社区内容。
-- 多图联动、多人协作、分享链接、云同步和移动端完整交易。
+- 多图十字光标/视口同步、多人协作、分享链接、云同步和移动端完整交易。
 - 券商真实成交导入、跨会话周/月稳定模式和自动策略回测。
 - 任意用户脚本、Agent 写入交易数据、Agent 自主下单。
 
@@ -290,7 +302,7 @@ apps/web/src/
 | 订单草稿 | Zustand | 未确认前不进入后端事实 |
 | 图表 viewport、当前工具 | Zustand/localStorage | 不影响确定性结果 |
 | 右/底面板尺寸与页签 | Zustand/localStorage | 限制最小/最大尺寸 |
-| Tutor 正式消息 | FastAPI/TanStack Query | SSE 增量只是运行中视图 |
+| Tutor 线程、正式消息 | FastAPI/TanStack Query | Session 隔离持久化；SSE/轮询只负责运行中视图 |
 | 表单输入 | React Hook Form | 提交后以服务端返回为准 |
 
 ### 5.5 Workbench 组合
@@ -623,7 +635,9 @@ TutorResponse 只能引用本次 evidence manifest 中存在的 ID。
 | GET | `/api/v1/replay-sessions` | 会话库 |
 | DELETE | `/api/v1/replay-sessions/{id}` | 软删除 |
 | GET | `/api/v1/replay-sessions/{id}/review` | 确定性复盘产物 |
-| POST | `/api/v1/tutor/runs` | 创建 Tutor/Review 运行 |
+| GET/POST | `/api/v1/sessions/{id}/tutor/threads` | 列出或新建当前会话的 Chat 线程 |
+| GET/PATCH/DELETE | `/api/v1/tutor/threads/{id}` | 查看、重命名或软删除 Chat 线程 |
+| POST | `/api/v1/sessions/{id}/tutor` | 在线程中创建 Tutor/Review 运行 |
 | GET | `/api/v1/tutor/runs/{id}` | Agent 运行状态与合法结果 |
 | POST | `/api/v1/tutor/runs/{id}/cancel` | 取消运行 |
 | GET/POST | `/api/v1/playbooks` | 列表/创建 Playbook |

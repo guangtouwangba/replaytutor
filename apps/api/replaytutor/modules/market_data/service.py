@@ -128,6 +128,10 @@ class MarketDataService:
                     """,
                     (snapshot_id,),
                 )
+                connection.execute(
+                    "DELETE FROM market_depth_snapshot WHERE snapshot_id = ?",
+                    (snapshot_id,),
+                )
                 cursor = connection.execute(
                     "DELETE FROM data_snapshot WHERE snapshot_id = ?",
                     (snapshot_id,),

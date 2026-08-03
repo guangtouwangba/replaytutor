@@ -25,7 +25,7 @@ describe("DrawingController", () => {
     ["price_channel", "priceChannelLine", "zone"],
     ["fibonacci_retracement", "fibonacciLine", "line"],
     ["measure", "segment", "line"],
-    ["horizontal_line", "horizontalStraightLine", "line"],
+    ["horizontal_line", "replayHorizontalLine", "line"],
     ["zone", "replayRect", "zone"],
     ["planned_entry", "simpleAnnotation", "marker"],
     ["stop_loss", "horizontalStraightLine", "line"],

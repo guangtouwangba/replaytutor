@@ -6,6 +6,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Query, Request, Response, UploadFile, status
 
+from replaytutor.adapters.market_data.binance import (
+    BinanceAdapterError,
+    BinancePublicAdapter,
+    BinanceUSDMPublicAdapter,
+)
 from replaytutor.config import Settings
 from replaytutor.contracts import (
     BarListResponse,
@@ -17,6 +22,9 @@ from replaytutor.contracts import (
     DataSnapshot,
     GoldenDatasetRequest,
     ImportPreview,
+    MarketDepthImportRequest,
+    MarketDepthInputLevel,
+    MarketDepthSnapshot,
     SnapshotDeleteResponse,
 )
 from replaytutor.errors import ApiError
@@ -25,6 +33,7 @@ from replaytutor.modules.market_data.download_jobs import (
     DatasetDownloadJobService,
 )
 from replaytutor.modules.market_data.service import MarketDataError, MarketDataService
+from replaytutor.modules.market_depth import MarketDepthError, MarketDepthService
 
 router = APIRouter(prefix="/api/v1", tags=["market-data"])
 
@@ -37,6 +46,11 @@ def service(request: Request) -> MarketDataService:
 def job_service(request: Request) -> DatasetDownloadJobService:
     settings: Settings = request.app.state.settings
     return DatasetDownloadJobService(settings)
+
+
+def depth_service(request: Request) -> MarketDepthService:
+    settings: Settings = request.app.state.settings
+    return MarketDepthService(settings)
 
 
 def schedule_download(request: Request, job_id: str) -> None:
@@ -137,6 +151,59 @@ def get_bars(
         return service(request).query_snapshot_bars(snapshot_id, start=start, end=end, limit=limit)
     except MarketDataError as error:
         raise translate(error) from error
+
+
+@router.post(
+    "/datasets/{snapshot_id}/market-depth/import",
+    response_model=MarketDepthSnapshot,
+)
+def import_market_depth(
+    request: Request,
+    snapshot_id: str,
+    payload: MarketDepthImportRequest,
+) -> MarketDepthSnapshot:
+    try:
+        return depth_service(request).import_snapshot(snapshot_id, payload)
+    except (MarketDataError, MarketDepthError) as error:
+        raise ApiError("market_depth_error", str(error), status_code=422) from error
+
+
+@router.post(
+    "/datasets/{snapshot_id}/market-depth/capture-binance",
+    response_model=MarketDepthSnapshot,
+)
+async def capture_binance_market_depth(
+    request: Request,
+    snapshot_id: str,
+    limit: int = Query(default=100, ge=5, le=5000),
+) -> MarketDepthSnapshot:
+    try:
+        snapshot = service(request).get_snapshot(snapshot_id)
+        adapter = (
+            BinanceUSDMPublicAdapter()
+            if snapshot.instrument.asset_class == "crypto_perpetual"
+            else BinancePublicAdapter()
+        )
+        captured = await adapter.fetch_depth(snapshot.instrument.canonical_symbol, limit)
+        payload = MarketDepthImportRequest(
+            captured_at=captured.captured_at,
+            last_update_id=captured.last_update_id,
+            bids=[
+                MarketDepthInputLevel(price=price, quantity=quantity)
+                for price, quantity in captured.bids
+            ],
+            asks=[
+                MarketDepthInputLevel(price=price, quantity=quantity)
+                for price, quantity in captured.asks
+            ],
+        )
+        return depth_service(request).import_snapshot(
+            snapshot_id,
+            payload,
+            source_kind="binance_rest",
+        )
+    except (MarketDataError, MarketDepthError, BinanceAdapterError, ValueError) as error:
+        raise ApiError("market_depth_error", str(error), status_code=422) from error
 
 
 @router.post("/datasets/imports", response_model=ImportPreview)

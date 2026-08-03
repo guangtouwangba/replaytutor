@@ -18,22 +18,21 @@ def test_tutor_response_uses_visible_evidence_and_separate_ai_layer(
     session_id = created["session"]["session_id"]
 
     page.goto(f"{stack.web_url}/sessions/{session_id}")
+    page.get_by_role("button", name="Chat", exact=True).click()
     expect(page.get_by_text("codex-cli fake-e2e", exact=True)).to_be_visible(timeout=30_000)
-    page.get_by_label("向 Codex 询问当前 frame").fill("核验当前可见证据")
-    page.get_by_role("button", name="让 Codex 检查").click()
+    page.get_by_label("发送给 Codex Tutor").fill("核验当前可见证据")
+    page.get_by_role("button", name="发送", exact=True).click()
     expect(page.get_by_text("事实观察", exact=True)).to_be_visible(timeout=30_000)
     expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible()
-    expect(page.locator(".annotation-list", has_text="proposed")).to_be_visible()
 
-    page.get_by_role("button", name="继续追问").click()
-    page.get_by_label("向 Codex 询问当前 frame").fill("给出第二条可修订建议")
-    page.get_by_role("button", name="让 Codex 检查").click()
-    expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible(timeout=30_000)
-    page.get_by_role("button", name="继续追问").click()
-    page.get_by_label("向 Codex 询问当前 frame").fill("给出第三条可拒绝建议")
-    page.get_by_role("button", name="让 Codex 检查").click()
-    expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible(timeout=30_000)
+    page.get_by_label("发送给 Codex Tutor").fill("给出第二条可修订建议")
+    page.get_by_role("button", name="发送", exact=True).click()
+    expect(page.locator(".chat-turn")).to_have_count(2, timeout=30_000)
+    page.get_by_label("发送给 Codex Tutor").fill("给出第三条可拒绝建议")
+    page.get_by_role("button", name="发送", exact=True).click()
+    expect(page.locator(".chat-turn")).to_have_count(3, timeout=30_000)
 
+    page.get_by_role("button", name="交易", exact=True).click()
     ai_rows = page.locator(".annotation-list button", has_text="E2E Tutor 标注")
     expect(ai_rows).to_have_count(3)
     ai_rows.nth(0).click()
@@ -95,7 +94,8 @@ def test_codex_unavailable_does_not_block_deterministic_replay(
     expect(page.get_by_text("不可用", exact=True)).to_be_visible(timeout=30_000)
     page.goto(f"{stack.web_url}/sessions/{session_id}")
     expect(page.get_by_role("button", name="下一根 K 线")).to_be_enabled()
-    expect(page.get_by_role("button", name="让 Codex 检查")).to_be_disabled()
+    page.get_by_role("button", name="Chat", exact=True).click()
+    expect(page.get_by_role("button", name="发送", exact=True)).to_be_disabled()
 
     before = client.get(f"/api/v1/sessions/{session_id}").json()
     advanced = client.post(

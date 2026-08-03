@@ -5,6 +5,7 @@ export const REPLAY_CUSTOM_OVERLAYS = [
   "replayRiskReward",
   "replayPolyline",
   "replayLevels",
+  "replayHorizontalLine",
 ] as const;
 
 type ReplayCustomOverlay = typeof REPLAY_CUSTOM_OVERLAYS[number];
@@ -89,9 +90,58 @@ const replayLevels: OverlayTemplate = {
   },
 };
 
+const replayHorizontalLine: OverlayTemplate = {
+  name: "replayHorizontalLine",
+  totalStep: 2,
+  needDefaultPointFigure: true,
+  needDefaultYAxisFigure: false,
+  createPointFigures: ({ coordinates, bounding }) => coordinates.length < 1 ? [] : [{
+    key: "horizontal-line",
+    type: "line",
+    attrs: {
+      coordinates: [
+        { x: 0, y: coordinates[0].y },
+        { x: bounding.width, y: coordinates[0].y },
+      ],
+    },
+  }],
+  createYAxisFigures: ({ chart, coordinates, bounding, overlay }) => {
+    const value = overlay.points[0]?.value;
+    if (coordinates.length < 1 || typeof value !== "number" || !Number.isFinite(value)) return [];
+    const precision = chart.getSymbol()?.pricePrecision ?? 2;
+    const color = overlay.styles?.line?.color ?? "#20b7f5";
+    const text = value.toLocaleString("en-US", {
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision,
+    });
+    return [
+      {
+        key: "price-label-background",
+        type: "rect",
+        attrs: { x: 0, y: coordinates[0].y - 13, width: bounding.width, height: 26 },
+        styles: { style: "fill", color, borderColor: color, borderSize: 0, borderRadius: 3 },
+        ignoreEvent: true,
+      },
+      {
+        key: "price-label-text",
+        type: "text",
+        attrs: {
+          x: bounding.width - 6,
+          y: coordinates[0].y,
+          text,
+          align: "right",
+          baseline: "middle",
+        },
+        styles: { color: "#ffffff", size: 11, weight: 600 },
+        ignoreEvent: true,
+      },
+    ];
+  },
+};
+
 export function registerReplayOverlays(): void {
   if (registered) return;
-  [replayRect, replayRiskReward, replayPolyline, replayLevels].forEach(registerOverlay);
+  [replayRect, replayRiskReward, replayPolyline, replayLevels, replayHorizontalLine].forEach(registerOverlay);
   registered = true;
 }
 

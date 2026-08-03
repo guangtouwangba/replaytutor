@@ -17,6 +17,7 @@ from replaytutor.contracts import (
     EvidenceTarget,
     FinishSessionRequest,
     LockTradePlanRequest,
+    MarketDepthResponse,
     OrderResult,
     PlaybookEvaluation,
     ReplaySession,
@@ -35,6 +36,7 @@ from replaytutor.modules.annotations import AnnotationService
 from replaytutor.modules.evidence_review import EvidenceResolver, EvidenceReviewService
 from replaytutor.modules.execution.service import ExecutionService
 from replaytutor.modules.market_data.service import MarketDataError
+from replaytutor.modules.market_depth import MarketDepthService
 from replaytutor.modules.market_rules import RuleViolation
 from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import (
@@ -125,6 +127,22 @@ def get_session_bars(
 ) -> BarListResponse:
     try:
         return service(request).visible_bars(session_id, timeframe)
+    except (TrainingSessionError, MarketDataError) as error:
+        raise translate(error) from error
+
+
+@router.get("/sessions/{session_id}/market-depth", response_model=MarketDepthResponse)
+def get_session_market_depth(
+    request: Request,
+    session_id: str,
+    levels: int = 20,
+) -> MarketDepthResponse:
+    if levels < 5 or levels > 100:
+        raise ApiError("market_depth_error", "levels must be between 5 and 100", status_code=422)
+    try:
+        session = service(request).get(session_id).session
+        settings: Settings = request.app.state.settings
+        return MarketDepthService(settings).for_session(session, levels)
     except (TrainingSessionError, MarketDataError) as error:
         raise translate(error) from error
 

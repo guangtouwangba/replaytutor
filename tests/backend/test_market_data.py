@@ -163,6 +163,93 @@ async def test_binance_adapter_retries_429_and_uses_utc_pagination() -> None:
     assert str(bars[0].open) == "93576.00"
 
 
+@pytest.mark.asyncio
+async def test_binance_adapter_fetches_an_atomic_depth_snapshot() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/depth"
+        assert request.url.params["symbol"] == "BTCUSDT"
+        assert request.url.params["limit"] == "20"
+        return httpx.Response(
+            200,
+            json={
+                "lastUpdateId": 42,
+                "bids": [["100.00", "2.5"], ["99.50", "3"]],
+                "asks": [["100.50", "1.5"], ["101.00", "4"]],
+            },
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler),
+        base_url="https://data-api.binance.vision",
+    ) as http_client:
+        depth = await BinancePublicAdapter(http_client).fetch_depth("BTCUSDT", 20)
+
+    assert depth.last_update_id == 42
+    assert depth.bids[0] == ("100.00", "2.5")
+    assert depth.asks[0] == ("100.50", "1.5")
+
+
+def test_market_depth_is_point_in_time_and_never_reads_a_future_snapshot(
+    client: TestClient,
+) -> None:
+    snapshot_id = client.post("/api/v1/datasets/golden", json={}).json()["snapshot_id"]
+    session = client.post(
+        "/api/v1/sessions",
+        json={"snapshot_id": snapshot_id, "warmup_bars": 20},
+    ).json()["session"]
+
+    visible_capture = client.post(
+        f"/api/v1/datasets/{snapshot_id}/market-depth/import",
+        json={
+            "captured_at": "2025-01-01T00:19:30Z",
+            "last_update_id": 10,
+            "bids": [
+                {"price": "93570", "quantity": "1"},
+                {"price": "93560", "quantity": "2"},
+            ],
+            "asks": [
+                {"price": "93580", "quantity": "1.5"},
+                {"price": "93590", "quantity": "3"},
+            ],
+        },
+    )
+    assert visible_capture.status_code == 200
+    future_capture = client.post(
+        f"/api/v1/datasets/{snapshot_id}/market-depth/import",
+        json={
+            "captured_at": "2025-01-01T00:20:30Z",
+            "last_update_id": 11,
+            "bids": [{"price": "99990", "quantity": "1"}],
+            "asks": [{"price": "100000", "quantity": "1"}],
+        },
+    )
+    assert future_capture.status_code == 200
+
+    result = client.get(f"/api/v1/sessions/{session['session_id']}/market-depth?levels=20")
+    assert result.status_code == 200
+    body = result.json()
+    assert body["frame_id"] == session["frame"]["frame_id"]
+    assert body["status"] == "available"
+    assert body["depth"]["last_update_id"] == 10
+    assert body["depth"]["best_bid"] == "93570"
+    assert body["depth"]["asks"][1]["cumulative_quantity"] == "4.5"
+
+    advanced = client.post(
+        f"/api/v1/sessions/{session['session_id']}/commands",
+        json={
+            "command_id": "cmd_00000000-0000-0000-0000-000000000123",
+            "expected_revision": 0,
+            "kind": "advance",
+            "bars": 1,
+        },
+    )
+    assert advanced.status_code == 200
+    next_depth = client.get(
+        f"/api/v1/sessions/{session['session_id']}/market-depth?levels=20"
+    ).json()
+    assert next_depth["depth"]["last_update_id"] == 11
+
+
 def test_binance_download_runs_as_a_durable_background_job(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -4827,6 +4827,27 @@
       "title": "CreateSessionSpec",
       "type": "object"
     },
+    "CreateTutorThreadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "CreateTutorThreadRequest",
+      "type": "object"
+    },
     "DataQuality": {
       "additionalProperties": false,
       "properties": {
@@ -7586,6 +7607,212 @@
       "title": "ImportPreview",
       "type": "object"
     },
+    "IndicatorEvidence": {
+      "$defs": {
+        "IndicatorEvidencePoint": {
+          "additionalProperties": false,
+          "properties": {
+            "bar_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Bar Id",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Values",
+              "type": "object"
+            }
+          },
+          "required": [
+            "bar_id",
+            "time"
+          ],
+          "title": "IndicatorEvidencePoint",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "calculation_version": {
+          "title": "Calculation Version",
+          "type": "string"
+        },
+        "definition_id": {
+          "enum": [
+            "MA",
+            "EMA",
+            "VOL",
+            "OBV",
+            "VWAP",
+            "ATR",
+            "BAR_COUNT",
+            "ORDER_BLOCK"
+          ],
+          "title": "Definition Id",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "frame_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "instance_id": {
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "params": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Params",
+          "type": "array"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/IndicatorEvidencePoint"
+          },
+          "maxItems": 50,
+          "title": "Points",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "insufficient_data"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "timeframe": {
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Timeframe",
+          "type": "string"
+        },
+        "visible_at": {
+          "format": "date-time",
+          "title": "Visible At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "frame_id",
+        "visible_at",
+        "instance_id",
+        "definition_id",
+        "timeframe",
+        "status",
+        "calculation_version"
+      ],
+      "title": "IndicatorEvidence",
+      "type": "object"
+    },
+    "IndicatorEvidencePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "bar_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Bar Id",
+          "type": "string"
+        },
+        "time": {
+          "format": "date-time",
+          "title": "Time",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "bar_id",
+        "time"
+      ],
+      "title": "IndicatorEvidencePoint",
+      "type": "object"
+    },
+    "IndicatorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "definition_id": {
+          "enum": [
+            "MA",
+            "EMA",
+            "VOL",
+            "OBV",
+            "VWAP",
+            "ATR",
+            "BAR_COUNT",
+            "ORDER_BLOCK"
+          ],
+          "title": "Definition Id",
+          "type": "string"
+        },
+        "instance_id": {
+          "pattern": "^indicator-[A-Za-z0-9-]+$",
+          "title": "Instance Id",
+          "type": "string"
+        },
+        "params": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 8,
+          "title": "Params",
+          "type": "array"
+        },
+        "timeframe": {
+          "default": "1m",
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Timeframe",
+          "type": "string"
+        }
+      },
+      "required": [
+        "instance_id",
+        "definition_id"
+      ],
+      "title": "IndicatorSpec",
+      "type": "object"
+    },
     "Instrument": {
       "additionalProperties": false,
       "properties": {
@@ -7907,6 +8134,504 @@
         "trashed_agent_runs"
       ],
       "title": "MaintenanceStatus",
+      "type": "object"
+    },
+    "MarketDepthImportRequest": {
+      "$defs": {
+        "MarketDepthInputLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity"
+          ],
+          "title": "MarketDepthInputLevel",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "asks": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthInputLevel"
+          },
+          "maxItems": 5000,
+          "minItems": 1,
+          "title": "Asks",
+          "type": "array"
+        },
+        "bids": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthInputLevel"
+          },
+          "maxItems": 5000,
+          "minItems": 1,
+          "title": "Bids",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "last_update_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Update Id"
+        }
+      },
+      "required": [
+        "captured_at",
+        "bids",
+        "asks"
+      ],
+      "title": "MarketDepthImportRequest",
+      "type": "object"
+    },
+    "MarketDepthInputLevel": {
+      "additionalProperties": false,
+      "properties": {
+        "price": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Price",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Quantity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price",
+        "quantity"
+      ],
+      "title": "MarketDepthInputLevel",
+      "type": "object"
+    },
+    "MarketDepthLevel": {
+      "additionalProperties": false,
+      "properties": {
+        "cumulative_notional": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cumulative Notional",
+          "type": "string"
+        },
+        "cumulative_quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cumulative Quantity",
+          "type": "string"
+        },
+        "notional": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Notional",
+          "type": "string"
+        },
+        "price": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Price",
+          "type": "string"
+        },
+        "quantity": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Quantity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price",
+        "quantity",
+        "cumulative_quantity",
+        "notional",
+        "cumulative_notional"
+      ],
+      "title": "MarketDepthLevel",
+      "type": "object"
+    },
+    "MarketDepthResponse": {
+      "$defs": {
+        "MarketDepthLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "cumulative_notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Notional",
+              "type": "string"
+            },
+            "cumulative_quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Quantity",
+              "type": "string"
+            },
+            "notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Notional",
+              "type": "string"
+            },
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity",
+            "cumulative_quantity",
+            "notional",
+            "cumulative_notional"
+          ],
+          "title": "MarketDepthLevel",
+          "type": "object"
+        },
+        "MarketDepthSnapshot": {
+          "additionalProperties": false,
+          "properties": {
+            "asks": {
+              "items": {
+                "$ref": "#/$defs/MarketDepthLevel"
+              },
+              "title": "Asks",
+              "type": "array"
+            },
+            "best_ask": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Best Ask",
+              "type": "string"
+            },
+            "best_bid": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Best Bid",
+              "type": "string"
+            },
+            "bids": {
+              "items": {
+                "$ref": "#/$defs/MarketDepthLevel"
+              },
+              "title": "Bids",
+              "type": "array"
+            },
+            "captured_at": {
+              "format": "date-time",
+              "title": "Captured At",
+              "type": "string"
+            },
+            "depth_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Depth Id",
+              "type": "string"
+            },
+            "instrument_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Instrument Id",
+              "type": "string"
+            },
+            "last_update_id": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Update Id"
+            },
+            "midpoint": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Midpoint",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "snapshot_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            },
+            "source_kind": {
+              "enum": [
+                "binance_rest",
+                "file_import"
+              ],
+              "title": "Source Kind",
+              "type": "string"
+            },
+            "spread": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Spread",
+              "type": "string"
+            }
+          },
+          "required": [
+            "depth_id",
+            "snapshot_id",
+            "instrument_id",
+            "captured_at",
+            "source_kind",
+            "bids",
+            "asks",
+            "best_bid",
+            "best_ask",
+            "spread",
+            "midpoint"
+          ],
+          "title": "MarketDepthSnapshot",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "age_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Seconds"
+        },
+        "depth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketDepthSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frame_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "historical_depth_not_captured",
+                "depth_snapshot_is_stale"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "stale",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "visible_at": {
+          "format": "date-time",
+          "title": "Visible At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "frame_id",
+        "visible_at",
+        "status"
+      ],
+      "title": "MarketDepthResponse",
+      "type": "object"
+    },
+    "MarketDepthSnapshot": {
+      "$defs": {
+        "MarketDepthLevel": {
+          "additionalProperties": false,
+          "properties": {
+            "cumulative_notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Notional",
+              "type": "string"
+            },
+            "cumulative_quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Cumulative Quantity",
+              "type": "string"
+            },
+            "notional": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Notional",
+              "type": "string"
+            },
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "quantity": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Quantity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "price",
+            "quantity",
+            "cumulative_quantity",
+            "notional",
+            "cumulative_notional"
+          ],
+          "title": "MarketDepthLevel",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "asks": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthLevel"
+          },
+          "title": "Asks",
+          "type": "array"
+        },
+        "best_ask": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Best Ask",
+          "type": "string"
+        },
+        "best_bid": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Best Bid",
+          "type": "string"
+        },
+        "bids": {
+          "items": {
+            "$ref": "#/$defs/MarketDepthLevel"
+          },
+          "title": "Bids",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "depth_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Depth Id",
+          "type": "string"
+        },
+        "instrument_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Instrument Id",
+          "type": "string"
+        },
+        "last_update_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Update Id"
+        },
+        "midpoint": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Midpoint",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "binance_rest",
+            "file_import"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "spread": {
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread",
+          "type": "string"
+        }
+      },
+      "required": [
+        "depth_id",
+        "snapshot_id",
+        "instrument_id",
+        "captured_at",
+        "source_kind",
+        "bids",
+        "asks",
+        "best_bid",
+        "best_ask",
+        "spread",
+        "midpoint"
+      ],
+      "title": "MarketDepthSnapshot",
       "type": "object"
     },
     "OrderResult": {
@@ -17024,6 +17749,60 @@
       "type": "object"
     },
     "TutorRequest": {
+      "$defs": {
+        "IndicatorSpec": {
+          "additionalProperties": false,
+          "properties": {
+            "definition_id": {
+              "enum": [
+                "MA",
+                "EMA",
+                "VOL",
+                "OBV",
+                "VWAP",
+                "ATR",
+                "BAR_COUNT",
+                "ORDER_BLOCK"
+              ],
+              "title": "Definition Id",
+              "type": "string"
+            },
+            "instance_id": {
+              "pattern": "^indicator-[A-Za-z0-9-]+$",
+              "title": "Instance Id",
+              "type": "string"
+            },
+            "params": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 8,
+              "title": "Params",
+              "type": "array"
+            },
+            "timeframe": {
+              "default": "1m",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance_id",
+            "definition_id"
+          ],
+          "title": "IndicatorSpec",
+          "type": "object"
+        }
+      },
       "additionalProperties": false,
       "properties": {
         "context_annotation_ids": {
@@ -17033,6 +17812,14 @@
           },
           "maxItems": 32,
           "title": "Context Annotation Ids",
+          "type": "array"
+        },
+        "context_indicators": {
+          "items": {
+            "$ref": "#/$defs/IndicatorSpec"
+          },
+          "maxItems": 8,
+          "title": "Context Indicators",
           "type": "array"
         },
         "locale": {
@@ -17061,6 +17848,19 @@
           ],
           "title": "Stage",
           "type": "string"
+        },
+        "thread_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Thread Id"
         }
       },
       "required": [
@@ -17630,6 +18430,11 @@
           "title": "Schema Version",
           "type": "string"
         },
+        "sequence": {
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
         "session_id": {
           "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
           "title": "Session Id",
@@ -17656,10 +18461,17 @@
           ],
           "title": "Status",
           "type": "string"
+        },
+        "thread_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Thread Id",
+          "type": "string"
         }
       },
       "required": [
         "run_id",
+        "thread_id",
+        "sequence",
         "session_id",
         "frame_id",
         "status",
@@ -17668,6 +18480,634 @@
         "created_at"
       ],
       "title": "TutorRun",
+      "type": "object"
+    },
+    "TutorThreadDetail": {
+      "$defs": {
+        "AnnotationPoint": {
+          "additionalProperties": false,
+          "properties": {
+            "price": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Price",
+              "type": "string"
+            },
+            "time": {
+              "format": "date-time",
+              "title": "Time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "time",
+            "price"
+          ],
+          "title": "AnnotationPoint",
+          "type": "object"
+        },
+        "TutorChartInstruction": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Evidence Ids",
+              "type": "array"
+            },
+            "label": {
+              "title": "Label",
+              "type": "string"
+            },
+            "points": {
+              "items": {
+                "$ref": "#/$defs/AnnotationPoint"
+              },
+              "maxItems": 16,
+              "minItems": 1,
+              "title": "Points",
+              "type": "array"
+            },
+            "shape": {
+              "enum": [
+                "line",
+                "zone",
+                "marker",
+                "label"
+              ],
+              "title": "Shape",
+              "type": "string"
+            }
+          },
+          "required": [
+            "shape",
+            "label",
+            "evidence_ids",
+            "points"
+          ],
+          "title": "TutorChartInstruction",
+          "type": "object"
+        },
+        "TutorInference": {
+          "additionalProperties": false,
+          "properties": {
+            "confidence": {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "title": "Confidence",
+              "type": "string"
+            },
+            "evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Evidence Ids",
+              "type": "array"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text",
+            "confidence"
+          ],
+          "title": "TutorInference",
+          "type": "object"
+        },
+        "TutorObservation": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Evidence Ids",
+              "type": "array"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "title": "TutorObservation",
+          "type": "object"
+        },
+        "TutorResponse": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "items": {
+                "$ref": "#/$defs/TutorChartInstruction"
+              },
+              "title": "Annotations",
+              "type": "array"
+            },
+            "disclaimer": {
+              "title": "Disclaimer",
+              "type": "string"
+            },
+            "inferences": {
+              "items": {
+                "$ref": "#/$defs/TutorInference"
+              },
+              "title": "Inferences",
+              "type": "array"
+            },
+            "next_questions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Next Questions",
+              "type": "array"
+            },
+            "observations": {
+              "items": {
+                "$ref": "#/$defs/TutorObservation"
+              },
+              "title": "Observations",
+              "type": "array"
+            },
+            "risks_and_unknowns": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Risks And Unknowns",
+              "type": "array"
+            },
+            "rule_checks": {
+              "items": {
+                "$ref": "#/$defs/TutorRuleCheck"
+              },
+              "title": "Rule Checks",
+              "type": "array"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "summary": {
+              "title": "Summary",
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
+            "disclaimer"
+          ],
+          "title": "TutorResponse",
+          "type": "object"
+        },
+        "TutorRuleCheck": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Evidence Ids",
+              "type": "array"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            },
+            "rule_id": {
+              "title": "Rule Id",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "passed",
+                "failed",
+                "unknown"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rule_id",
+            "status",
+            "reason"
+          ],
+          "title": "TutorRuleCheck",
+          "type": "object"
+        },
+        "TutorRun": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_id": {
+              "const": "codex-local",
+              "default": "codex-local",
+              "title": "Agent Id",
+              "type": "string"
+            },
+            "completed_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Completed At"
+            },
+            "context_bundle_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Context Bundle Id"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "error": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Error"
+            },
+            "frame_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Frame Id",
+              "type": "string"
+            },
+            "question": {
+              "title": "Question",
+              "type": "string"
+            },
+            "response": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TutorResponse"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "run_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Run Id",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "sequence": {
+              "minimum": 1,
+              "title": "Sequence",
+              "type": "integer"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "stage": {
+              "enum": [
+                "environment",
+                "plan",
+                "position",
+                "exit",
+                "after_action"
+              ],
+              "title": "Stage",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "running",
+                "completed",
+                "failed",
+                "cancelled",
+                "timed_out"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "thread_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "run_id",
+            "thread_id",
+            "sequence",
+            "session_id",
+            "frame_id",
+            "status",
+            "question",
+            "stage",
+            "created_at"
+          ],
+          "title": "TutorRun",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Question"
+        },
+        "last_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "running",
+                "completed",
+                "failed",
+                "cancelled",
+                "timed_out"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Status"
+        },
+        "run_count": {
+          "minimum": 0,
+          "title": "Run Count",
+          "type": "integer"
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/$defs/TutorRun"
+          },
+          "title": "Runs",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "thread_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "thread_id",
+        "session_id",
+        "title",
+        "run_count",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "TutorThreadDetail",
+      "type": "object"
+    },
+    "TutorThreadListResponse": {
+      "$defs": {
+        "TutorThreadSummary": {
+          "additionalProperties": false,
+          "properties": {
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "last_question": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Question"
+            },
+            "last_status": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "running",
+                    "completed",
+                    "failed",
+                    "cancelled",
+                    "timed_out"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Status"
+            },
+            "run_count": {
+              "minimum": 0,
+              "title": "Run Count",
+              "type": "integer"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "thread_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Thread Id",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            }
+          },
+          "required": [
+            "thread_id",
+            "session_id",
+            "title",
+            "run_count",
+            "created_at",
+            "updated_at"
+          ],
+          "title": "TutorThreadSummary",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "threads": {
+          "items": {
+            "$ref": "#/$defs/TutorThreadSummary"
+          },
+          "title": "Threads",
+          "type": "array"
+        }
+      },
+      "title": "TutorThreadListResponse",
+      "type": "object"
+    },
+    "TutorThreadSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Question"
+        },
+        "last_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "running",
+                "completed",
+                "failed",
+                "cancelled",
+                "timed_out"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Status"
+        },
+        "run_count": {
+          "minimum": 0,
+          "title": "Run Count",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "thread_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "thread_id",
+        "session_id",
+        "title",
+        "run_count",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "TutorThreadSummary",
       "type": "object"
     },
     "UpdateChartToolPreferenceRequest": {
@@ -17711,6 +19151,22 @@
         }
       },
       "title": "UpdateChartToolPreferenceRequest",
+      "type": "object"
+    },
+    "UpdateTutorThreadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "UpdateTutorThreadRequest",
       "type": "object"
     }
   },

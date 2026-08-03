@@ -1,5 +1,11 @@
 # ReplayTutor 原生 Coding Agent 绑定规范
 
+> 指标上下文实施注记（2026-08-02）：`TutorRequest.context_indicators` 只接受用户显式
+> 选择的 MA、EMA、VOL、OBV、VWAP、ATR、Bar Count 和 Order Block，最多 8 个。
+> Tutor Runtime 重新解析当前 session/frame 和各自 timeframe，由确定性 Indicator Module
+> 计算 `IndicatorEvidence`；浏览器值不进入 Agent，只有 `visible_at` 内来源 bar ID 加入
+> evidence 白名单。其余内置指标仍是显示能力，不得自动写入 TutorContext。
+
 > 绘图上下文实施注记（2026-08-02）：`ChartContextObject` 固化对象 revision、工具版本、
 > geometry、style、properties、算法版本和确定性派生事实。锚定 VWAP 与回归趋势只能使用
 > `visible_at` 以内行情；Agent 只能解释这些已固化事实，不能重新扩大区间或修改用户对象。
@@ -122,6 +128,8 @@ Adapter 内部负责命令差异、事件解析、会话 ID 和错误映射。
 上下文传文件，不把大段行情拼进命令行参数：
 工作台图表周期是显示偏好；当前 TutorContext 继续绑定 ReplayFrame 的 1m
 `visible_bars`。若后续把高周期证据加入上下文，必须由服务端在同一 `visible_at` 下派生并签发。
+多图布局中的活动窗格与各窗格周期同样只是显示偏好，不会扩大 TutorContext。Tutor
+仍只接收服务端签发的当前 ReplayFrame 与用户显式选择的 Chart Context 对象。
 
 ```json
 {
@@ -131,7 +139,7 @@ Adapter 内部负责命令差异、事件解析、会话 ID 和错误映射。
   "instrument": {},
   "market_rules": {},
   "visible_bars": [],
-  "indicators": {},
+  "indicators": [],
   "account_state": {},
   "orders": [],
   "executions": [],
@@ -317,6 +325,11 @@ tutor_thread
 用户切换 Agent 时，应用线程不丢失。新 Agent 获得：线程摘要、最近消息、Playbook、当前证据包；不会伪造另一个 Agent 的原生 session。
 
 线程摘要必须标记哪些是用户原话、确定性事实、旧 Agent 推断，防止推断逐轮变成“事实”。
+
+当前 Codex Adapter 继续使用 `--ephemeral`。宿主从同一 `tutor_thread` 选择最近 12 个成功
+回合，并在 24,000 字符预算内写入 `conversation_history`；完整历史只在应用数据库和 UI
+中保留。失败、取消、超时回合不进入后续 Agent 上下文。旧证据 ID 只保留为来源标记，除非
+也出现在当前回合的 `allowed_evidence_ids`，否则不得引用。
 
 ## 12. 提示与技能包
 

@@ -178,9 +178,11 @@ export type SchemaVersion = "1.0";
 export type Summary = string;
 export type RunId = string;
 export type SchemaVersion1 = "1.0";
+export type Sequence = number;
 export type SessionId = string;
 export type Stage = "environment" | "plan" | "position" | "exit" | "after_action";
 export type Status1 = "running" | "completed" | "failed" | "cancelled" | "timed_out";
+export type ThreadId = string;
 
 export interface TutorRun {
   agent_id?: AgentId;
@@ -193,9 +195,11 @@ export interface TutorRun {
   response?: TutorResponse | null;
   run_id: RunId;
   schema_version?: SchemaVersion1;
+  sequence: Sequence;
   session_id: SessionId;
   stage: Stage;
   status: Status1;
+  thread_id: ThreadId;
 }
 export interface TutorResponse {
   annotations?: Annotations;

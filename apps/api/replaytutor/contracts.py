@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from math import isfinite
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ContractModel(BaseModel):
@@ -222,6 +223,51 @@ class BarListResponse(ContractModel):
     timeframe: Timeframe
     bars: list[Bar]
     has_more: bool
+
+
+class MarketDepthInputLevel(ContractModel):
+    price: DecimalString
+    quantity: DecimalString
+
+
+class MarketDepthLevel(MarketDepthInputLevel):
+    cumulative_quantity: DecimalString
+    notional: DecimalString
+    cumulative_notional: DecimalString
+
+
+class MarketDepthImportRequest(ContractModel):
+    captured_at: datetime
+    last_update_id: int | None = Field(default=None, ge=0)
+    bids: list[MarketDepthInputLevel] = Field(min_length=1, max_length=5000)
+    asks: list[MarketDepthInputLevel] = Field(min_length=1, max_length=5000)
+
+
+class MarketDepthSnapshot(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    depth_id: Identifier
+    snapshot_id: Identifier
+    instrument_id: Identifier
+    captured_at: datetime
+    source_kind: Literal["binance_rest", "file_import"]
+    last_update_id: int | None = Field(default=None, ge=0)
+    bids: list[MarketDepthLevel]
+    asks: list[MarketDepthLevel]
+    best_bid: DecimalString
+    best_ask: DecimalString
+    spread: DecimalString
+    midpoint: DecimalString
+
+
+class MarketDepthResponse(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    session_id: Identifier
+    frame_id: Identifier
+    visible_at: datetime
+    status: Literal["available", "stale", "unavailable"]
+    reason: Literal["historical_depth_not_captured", "depth_snapshot_is_stale"] | None = None
+    age_seconds: float | None = Field(default=None, ge=0)
+    depth: MarketDepthSnapshot | None = None
 
 
 class GoldenDatasetRequest(ContractModel):
@@ -774,11 +820,59 @@ class AgentCapability(ContractModel):
     diagnostics: list[str] = Field(default_factory=list)
 
 
+IndicatorDefinitionId = Literal[
+    "MA",
+    "EMA",
+    "VOL",
+    "OBV",
+    "VWAP",
+    "ATR",
+    "BAR_COUNT",
+    "ORDER_BLOCK",
+]
+
+
+class IndicatorSpec(ContractModel):
+    instance_id: str = Field(pattern=r"^indicator-[A-Za-z0-9-]+$")
+    definition_id: IndicatorDefinitionId
+    timeframe: Timeframe = "1m"
+    params: list[float] = Field(default_factory=list, max_length=8)
+
+    @field_validator("params")
+    @classmethod
+    def validate_params(cls, values: list[float]) -> list[float]:
+        if any(not isfinite(value) or value <= 0 for value in values):
+            raise ValueError("Indicator parameters must be finite and positive")
+        return values
+
+
+class IndicatorEvidencePoint(ContractModel):
+    bar_id: Identifier
+    time: datetime
+    values: dict[str, str] = Field(default_factory=dict)
+
+
+class IndicatorEvidence(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    evidence_id: Identifier
+    frame_id: Identifier
+    visible_at: datetime
+    instance_id: str
+    definition_id: IndicatorDefinitionId
+    timeframe: Timeframe
+    params: list[float] = Field(default_factory=list)
+    status: Literal["ready", "insufficient_data"]
+    calculation_version: str
+    points: list[IndicatorEvidencePoint] = Field(default_factory=list, max_length=50)
+
+
 class TutorRequest(ContractModel):
     question: str = Field(min_length=2, max_length=2000)
+    thread_id: Identifier | None = None
     stage: Literal["environment", "plan", "position", "exit", "after_action"] = "environment"
     locale: Literal["en-US", "zh-CN"] = "en-US"
     context_annotation_ids: list[Identifier] = Field(default_factory=list, max_length=32)
+    context_indicators: list[IndicatorSpec] = Field(default_factory=list, max_length=8)
 
 
 class TutorObservation(ContractModel):
@@ -821,6 +915,8 @@ class TutorResponse(ContractModel):
 class TutorRun(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     run_id: Identifier
+    thread_id: Identifier
+    sequence: int = Field(ge=1)
     session_id: Identifier
     frame_id: Identifier
     agent_id: Literal["codex-local"] = "codex-local"
@@ -832,6 +928,35 @@ class TutorRun(ContractModel):
     error: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class CreateTutorThreadRequest(ContractModel):
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class UpdateTutorThreadRequest(ContractModel):
+    title: str = Field(min_length=1, max_length=80)
+
+
+class TutorThreadSummary(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    thread_id: Identifier
+    session_id: Identifier
+    title: str
+    run_count: int = Field(ge=0)
+    last_question: str | None = None
+    last_status: Literal["running", "completed", "failed", "cancelled", "timed_out"] | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TutorThreadDetail(TutorThreadSummary):
+    runs: list[TutorRun] = Field(default_factory=list)
+
+
+class TutorThreadListResponse(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    threads: list[TutorThreadSummary] = Field(default_factory=list)
 
 
 class PlaybookVersion(ContractModel):
@@ -862,8 +987,16 @@ class PlaybookListResponse(ContractModel):
 
 class ChartGeometry(ContractModel):
     kind: Literal[
-        "point", "line", "channel", "region", "polyline", "levels",
-        "measurement", "risk_reward", "anchored_series", "pattern",
+        "point",
+        "line",
+        "channel",
+        "region",
+        "polyline",
+        "levels",
+        "measurement",
+        "risk_reward",
+        "anchored_series",
+        "pattern",
     ]
     anchors: list[AnnotationPoint] = Field(min_length=1, max_length=16)
 
@@ -886,8 +1019,16 @@ class ChartToolManifest(ContractModel):
     tool_version: int = Field(default=1, ge=1)
     group: Literal["analysis", "fibonacci", "measure", "shapes", "notes", "trade", "position"]
     geometry_kind: Literal[
-        "point", "line", "channel", "region", "polyline", "levels",
-        "measurement", "risk_reward", "anchored_series", "pattern",
+        "point",
+        "line",
+        "channel",
+        "region",
+        "polyline",
+        "levels",
+        "measurement",
+        "risk_reward",
+        "anchored_series",
+        "pattern",
     ]
     min_anchors: int = Field(ge=1, le=16)
     max_anchors: int = Field(ge=1, le=16)

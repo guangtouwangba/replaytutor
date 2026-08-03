@@ -4,6 +4,7 @@ from typing import Any
 
 from replaytutor.contracts import (
     ChartContextBundle,
+    IndicatorEvidence,
     PlaybookEvaluation,
     SessionDelta,
     TrainingReview,
@@ -17,6 +18,7 @@ def build_tutor_context(
     review: TrainingReview | None = None,
     playbook_evaluation: PlaybookEvaluation | None = None,
     chart_context: ChartContextBundle | None = None,
+    indicator_evidence: list[IndicatorEvidence] | None = None,
 ) -> tuple[dict[str, Any], set[str]]:
     evidence_ids = {bar.bar_id for bar in delta.bars}
     execution = delta.execution
@@ -32,6 +34,9 @@ def build_tutor_context(
             evidence_ids.update(check.evidence_ids)
     if chart_context is not None:
         evidence_ids.update(chart_context.evidence_ids)
+    indicators = indicator_evidence or []
+    for indicator in indicators:
+        evidence_ids.update(point.bar_id for point in indicator.points)
     after_action = request.stage == "after_action"
     context = {
         "schema_version": "1.0",
@@ -44,6 +49,7 @@ def build_tutor_context(
         "chart_context": (
             chart_context.model_dump(mode="json") if chart_context is not None else None
         ),
+        "indicators": [item.model_dump(mode="json") for item in indicators],
         "instrument": delta.session.instrument.model_dump(mode="json"),
         "visible_bars": [bar.model_dump(mode="json") for bar in delta.bars],
         "account_state": (

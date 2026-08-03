@@ -70,6 +70,7 @@ export interface DrawingDefinition {
     | "replayRiskReward"
     | "replayPolyline"
     | "replayLevels"
+    | "replayHorizontalLine"
     | "simpleAnnotation";
 }
 
@@ -97,7 +98,7 @@ export const DRAWING_DEFINITIONS: readonly DrawingDefinition[] = [
   { tool: "measure", label: "日期与价格测量", shortLabel: "测量", shape: "line", semanticRole: "analysis", persistenceTool: "measure", group: "measure", instruction: "依次点击测量起点和终点", requiredPoints: 2, overlayName: "segment" },
   { tool: "price_range", label: "价格范围", shortLabel: "价格范围", shape: "zone", semanticRole: "analysis", persistenceTool: "price_range", group: "measure", instruction: "选择价格区间的两个边界", requiredPoints: 2, overlayName: "replayRect" },
   { tool: "date_range", label: "日期范围", shortLabel: "日期范围", shape: "zone", semanticRole: "analysis", persistenceTool: "date_range", group: "measure", instruction: "选择时间区间的起点和终点", requiredPoints: 2, overlayName: "replayRect" },
-  { tool: "horizontal_line", label: "水平线", shortLabel: "水平", shape: "line", semanticRole: "analysis", persistenceTool: "horizontal_line", group: "analysis", instruction: "点击一个关键价格", requiredPoints: 1, overlayName: "horizontalStraightLine" },
+  { tool: "horizontal_line", label: "水平线", shortLabel: "水平", shape: "line", semanticRole: "analysis", persistenceTool: "horizontal_line", group: "analysis", instruction: "点击一个关键价格", requiredPoints: 1, overlayName: "replayHorizontalLine" },
   { tool: "zone", label: "价格区域", shortLabel: "区域", shape: "zone", semanticRole: "analysis", persistenceTool: "zone", group: "shapes", instruction: "点击区域的两个对角点", requiredPoints: 2, overlayName: "replayRect" },
   { tool: "brush", label: "画笔", shortLabel: "画笔", shape: "line", semanticRole: "analysis", persistenceTool: "brush", group: "shapes", instruction: "连续点击最多 16 个结构点", requiredPoints: 4, overlayName: "replayPolyline" },
   { tool: "polyline", label: "多段线", shortLabel: "多段线", shape: "line", semanticRole: "analysis", persistenceTool: "polyline", group: "shapes", instruction: "依次点击折线控制点", requiredPoints: 4, overlayName: "replayPolyline" },
@@ -131,12 +132,11 @@ export const LINE_TOOL_SECTIONS = [
       "trend_angle",
       "cross_line",
       "regression_trend",
-      "anchored_vwap",
     ],
   },
   {
     label: "通道",
-    tools: ["parallel_channel", "price_channel", "flat_top_bottom", "disjoint_channel"],
+    tools: ["parallel_channel", "price_channel", "disjoint_channel"],
   },
 ] as const satisfies readonly {
   readonly label: string;
@@ -145,16 +145,35 @@ export const LINE_TOOL_SECTIONS = [
 
 export const LINE_TOOL_IDS = LINE_TOOL_SECTIONS.flatMap((section) => section.tools);
 
-export const ADVANCED_TOOL_SECTIONS = [
+export const FIBONACCI_TOOL_SECTIONS = [
   { label: "斐波那契", tools: ["fibonacci_retracement", "fibonacci_extension", "fibonacci_channel", "fibonacci_time_zone", "pitchfork"] },
-  { label: "测量", tools: ["measure", "price_range", "date_range"] },
-  { label: "形状与形态", tools: ["zone", "brush", "polyline", "head_shoulders", "triangle_pattern"] },
 ] as const satisfies readonly {
   readonly label: string;
   readonly tools: readonly Exclude<DrawingTool, "select">[];
 }[];
 
-export const ADVANCED_TOOL_IDS = ADVANCED_TOOL_SECTIONS.flatMap((section) => section.tools);
+export const FIBONACCI_TOOL_IDS = FIBONACCI_TOOL_SECTIONS.flatMap((section) => section.tools);
+
+export const PREDICTION_TOOL_SECTIONS = [
+  { label: "预测", tools: ["long_position", "short_position", "risk_reward"] },
+  { label: "基于成交量", tools: ["anchored_vwap"] },
+  { label: "测量", tools: ["measure", "price_range", "date_range"] },
+] as const satisfies readonly {
+  readonly label: string;
+  readonly tools: readonly Exclude<DrawingTool, "select">[];
+}[];
+
+export const PREDICTION_TOOL_IDS = PREDICTION_TOOL_SECTIONS.flatMap((section) => section.tools);
+
+export const PATTERN_TOOL_SECTIONS = [
+  { label: "图表形态", tools: ["head_shoulders", "triangle_pattern", "flat_top_bottom"] },
+  { label: "形状", tools: ["zone", "brush", "polyline"] },
+] as const satisfies readonly {
+  readonly label: string;
+  readonly tools: readonly Exclude<DrawingTool, "select">[];
+}[];
+
+export const PATTERN_TOOL_IDS = PATTERN_TOOL_SECTIONS.flatMap((section) => section.tools);
 
 export function draftPreviewPoints(
   anchors: readonly AnnotationPoint[],
@@ -323,7 +342,7 @@ const SUPPORTED_RENDERERS = new Set<DrawingDefinition["overlayName"]>([
   "segment", "rayLine", "straightLine", "priceLine", "horizontalRayLine",
   "verticalStraightLine", "horizontalStraightLine", "parallelStraightLine",
   "priceChannelLine", "fibonacciLine", "simpleAnnotation", "replayRect",
-  "replayRiskReward", "replayPolyline", "replayLevels",
+  "replayRiskReward", "replayPolyline", "replayLevels", "replayHorizontalLine",
 ]);
 
 export function assertDrawingRegistry(): void {
