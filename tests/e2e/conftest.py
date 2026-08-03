@@ -283,8 +283,12 @@ def browser() -> Generator[Browser, None, None]:
 @pytest.fixture
 def page(
     browser: Browser,
+    e2e_stack_factory: Callable[[Literal["fake", "unavailable"]], E2EStack],
     request: pytest.FixtureRequest,
 ) -> Generator[Page, None, None]:
+    # Keep test services alive until the browser context has closed. Without this
+    # dependency pytest may tear down the stack while media requests are in flight.
+    del e2e_stack_factory
     RESULTS_DIR.mkdir(exist_ok=True)
     context = browser.new_context(
         viewport={"width": 1600, "height": 1000},
