@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 
+from alembic import command
 from fastapi.testclient import TestClient
 
 from replaytutor.adapters.agents import CodexAdapter
@@ -19,7 +20,8 @@ from replaytutor.contracts import (
     TutorRuleCheck,
 )
 from replaytutor.ids import new_id
-from replaytutor.storage.database import connect_database
+from replaytutor.main import create_app
+from replaytutor.storage.database import alembic_config, connect_database, upgrade_database
 
 
 def create_session(client: TestClient) -> dict:
@@ -61,6 +63,139 @@ def wait_for_run(client: TestClient, run_id: str) -> dict:
             return run
         time.sleep(0.01)
     raise AssertionError("Tutor run did not finish")
+
+
+def test_tutor_threads_are_session_scoped_renameable_and_soft_deleted(
+    client: TestClient,
+) -> None:
+    first = create_session(client)
+    second = create_session(client)
+    first_session_id = first["session"]["session_id"]
+    second_session_id = second["session"]["session_id"]
+
+    created = client.post(
+        f"/api/v1/sessions/{first_session_id}/tutor/threads",
+        json={},
+    )
+    assert created.status_code == 200
+    thread_id = created.json()["thread_id"]
+    assert created.json()["runs"] == []
+
+    listed = client.get(f"/api/v1/sessions/{first_session_id}/tutor/threads").json()
+    assert [item["thread_id"] for item in listed["threads"]] == [thread_id]
+    assert client.get(f"/api/v1/sessions/{second_session_id}/tutor/threads").json()[
+        "threads"
+    ] == []
+
+    renamed = client.patch(
+        f"/api/v1/tutor/threads/{thread_id}",
+        json={"title": "突破计划复盘"},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "突破计划复盘"
+
+    deleted = client.delete(f"/api/v1/tutor/threads/{thread_id}")
+    assert deleted.status_code == 204
+    assert client.get(f"/api/v1/tutor/threads/{thread_id}").status_code == 404
+    assert client.get(f"/api/v1/sessions/{first_session_id}/tutor/threads").json()[
+        "threads"
+    ] == []
+
+
+def test_tutor_thread_preserves_order_and_supplies_provenance_tagged_history(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    created = create_session(client)
+    session_id = created["session"]["session_id"]
+    evidence_id = created["bars"][-1]["bar_id"]
+    thread = client.post(
+        f"/api/v1/sessions/{session_id}/tutor/threads",
+        json={},
+    ).json()
+    calls = 0
+
+    def fake_run(self, workspace, *, timeout_seconds, on_process):
+        nonlocal calls
+        del self, timeout_seconds, on_process
+        context = json.loads((workspace / "tutor_context.json").read_text())
+        if calls == 0:
+            assert context["conversation_history"] == []
+        else:
+            history = context["conversation_history"]
+            assert len(history) == 1
+            assert history[0]["user_statement"] == "第一轮问题"
+            assert history[0]["assistant_summary"] == "当前结构仍需用户先定义失效条件。"
+            assert history[0]["deterministic_observations"][0]["evidence_ids"] == [
+                evidence_id
+            ]
+            assert context["conversation_history_policy"]["completed_turn_limit"] == 12
+        calls += 1
+        return response(evidence_id)
+
+    monkeypatch.setattr(CodexAdapter, "run", fake_run)
+    first = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={
+            "thread_id": thread["thread_id"],
+            "question": "第一轮问题",
+            "stage": "environment",
+        },
+    ).json()
+    assert wait_for_run(client, first["run_id"])["status"] == "completed"
+    second = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={
+            "thread_id": thread["thread_id"],
+            "question": "第二轮追问",
+            "stage": "plan",
+        },
+    ).json()
+    assert wait_for_run(client, second["run_id"])["status"] == "completed"
+
+    detail = client.get(f"/api/v1/tutor/threads/{thread['thread_id']}").json()
+    assert [item["sequence"] for item in detail["runs"]] == [1, 2]
+    assert [item["question"] for item in detail["runs"]] == ["第一轮问题", "第二轮追问"]
+    assert detail["title"] == "第一轮问题"
+
+
+def test_tutor_thread_migration_backfills_existing_runs(
+    settings: Settings,
+    monkeypatch,
+) -> None:
+    upgrade_database(settings)
+
+    def fake_run(self, workspace, *, timeout_seconds, on_process):
+        del self, timeout_seconds, on_process
+        context = json.loads((workspace / "tutor_context.json").read_text())
+        return response(context["visible_bars"][-1]["bar_id"])
+
+    monkeypatch.setattr(CodexAdapter, "run", fake_run)
+    with TestClient(create_app(settings)) as migration_client:
+        created = create_session(migration_client)
+        session_id = created["session"]["session_id"]
+        started = migration_client.post(
+            f"/api/v1/sessions/{session_id}/tutor",
+            json={"question": "迁移前历史问题", "stage": "environment"},
+        ).json()
+        assert wait_for_run(migration_client, started["run_id"])["status"] == "completed"
+
+    command.downgrade(alembic_config(settings), "0018_market_depth")
+    upgrade_database(settings)
+    with connect_database(settings.database_path) as connection:
+        thread = connection.execute(
+            "SELECT * FROM tutor_thread WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        run = connection.execute(
+            "SELECT thread_id, sequence FROM tutor_run WHERE run_id = ?",
+            (started["run_id"],),
+        ).fetchone()
+    assert thread is not None
+    assert thread["title"] == "历史 Tutor 对话"
+    assert run is not None
+    assert run["thread_id"] == thread["thread_id"]
+    assert run["sequence"] == 1
 
 
 def test_tutor_context_is_future_safe_and_fake_run_is_persisted(
@@ -399,6 +534,12 @@ def test_tutor_timeout_crash_and_cancel_are_terminal_and_clean_up_process(
         json={"question": "触发取消", "stage": "environment"},
     ).json()
     assert process_started.wait(timeout=2)
+    duplicate = client.post(
+        f"/api/v1/sessions/{session_id}/tutor",
+        json={"question": "同一线程重复请求", "stage": "environment"},
+    )
+    assert duplicate.status_code == 409
+    assert "running request" in duplicate.json()["error"]["message"]
     cancelled = client.post(f"/api/v1/tutor/runs/{cancellable['run_id']}/cancel")
     assert cancelled.status_code == 200
     assert cancelled.json()["status"] == "cancelled"

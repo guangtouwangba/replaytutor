@@ -345,7 +345,8 @@ settlement(execution) -> SettlementEvents
 | `trade_import` | 真实成交导入批次 |
 | `playbook` | 策略规则和检查表 |
 | `analysis_artifact` | 确定性分析产物 |
-| `tutor_thread` | Tutor 会话 |
+| `tutor_thread` | 按回放 Session 隔离的 Tutor 会话、标题、更新时间和软删除状态 |
+| `tutor_run` | 线程内有序的用户问题、Agent 状态和已校验结构化回答 |
 | `agent_run` | Agent 运行、状态和成本/耗时 |
 | `agent_artifact` | 输入、输出、报告和证据映射 |
 

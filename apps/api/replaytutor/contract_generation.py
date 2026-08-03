@@ -33,6 +33,7 @@ from replaytutor.contracts import (
     CreateChartToolTemplateRequest,
     CreatePlaybookRequest,
     CreateSessionSpec,
+    CreateTutorThreadRequest,
     DataQuality,
     DatasetDownloadJob,
     DatasetDownloadJobListResponse,
@@ -103,7 +104,11 @@ from replaytutor.contracts import (
     TutorResponse,
     TutorRuleCheck,
     TutorRun,
+    TutorThreadDetail,
+    TutorThreadListResponse,
+    TutorThreadSummary,
     UpdateChartToolPreferenceRequest,
+    UpdateTutorThreadRequest,
 )
 
 
@@ -198,6 +203,11 @@ def render_contracts() -> str:
         TutorChartInstruction,
         TutorResponse,
         TutorRun,
+        CreateTutorThreadRequest,
+        UpdateTutorThreadRequest,
+        TutorThreadSummary,
+        TutorThreadDetail,
+        TutorThreadListResponse,
         PlaybookVersion,
         PlaybookRuleDefinition,
         PlaybookRuleCheck,

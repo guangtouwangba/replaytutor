@@ -7,7 +7,7 @@ import type {
   PaperOrder,
 } from "@replaytutor/contracts";
 import { dispose, init, type Chart, type KLineData, type Point } from "klinecharts";
-import { Copy, EyeOff, Lock, Save, Trash2, Unlock } from "lucide-react";
+import { ChevronDown, ChevronUp, CirclePlus, Copy, EyeOff, Lock, Minus, Save, Trash2, Unlock } from "lucide-react";
 import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { draftPreviewPoints, drawingDefinition, isDrawingTool, type DrawingTool } from "./DrawingController";
@@ -42,6 +42,7 @@ interface ReplayChartProps {
     tool: Exclude<DrawingTool, "select">,
     points: AnnotationPoint[],
   ) => void;
+  readonly onPriceAxisHorizontalLine?: (point: AnnotationPoint) => void;
   readonly onAnnotationSelect?: (annotationId: string) => void;
   readonly onAnnotationChange?: (annotationId: string, points: AnnotationPoint[]) => void;
   readonly selectedAnnotationId?: string | null;
@@ -166,6 +167,7 @@ export function ReplayChart({
   zoomRequest,
   contextAnnotationIds = [],
   onDrawingComplete,
+  onPriceAxisHorizontalLine,
   onAnnotationSelect,
   onAnnotationChange,
   selectedAnnotationId = null,
@@ -190,6 +192,15 @@ export function ReplayChart({
   const [pointError, setPointError] = useState<string | null>(null);
   const [hoveredAnnotationId, setHoveredAnnotationId] = useState<string | null>(null);
   const [visibleBoundaryX, setVisibleBoundaryX] = useState<number | null>(null);
+  const [indicatorLegendCollapsed, setIndicatorLegendCollapsed] = useState(false);
+  const [priceAxisHover, setPriceAxisHover] = useState<{
+    readonly point: AnnotationPoint;
+    readonly y: number;
+    readonly menuTop: number;
+    readonly axisWidth: number;
+  } | null>(null);
+  const [priceAxisMenu, setPriceAxisMenu] = useState<typeof priceAxisHover>(null);
+  const visibleIndicatorCount = indicators.filter((indicator) => indicator.visible).length;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -207,7 +218,9 @@ export function ReplayChart({
             downColor: "#f2687d",
             noChangeColor: "#8a96a8",
           },
+          tooltip: { offsetLeft: 38 },
         },
+        indicator: { tooltip: { offsetLeft: 38 } },
         xAxis: { axisLine: { color: "#2b3746" } },
         yAxis: { axisLine: { color: "#2b3746" } },
       },
@@ -262,6 +275,16 @@ export function ReplayChart({
     if (!chart) return;
     syncChartIndicators(chart, indicators);
   }, [indicators]);
+
+  useEffect(() => {
+    chartRef.current?.setStyles({
+      indicator: {
+        tooltip: {
+          showRule: indicatorLegendCollapsed ? "none" : "always",
+        },
+      },
+    });
+  }, [indicatorLegendCollapsed]);
 
   useEffect(() => {
     if (resetRequest === 0) return;
@@ -343,14 +366,56 @@ export function ReplayChart({
     if (created === id) draftOverlayId.current = id;
   };
 
+  const resolvePriceAxisTarget = (clientX: number, clientY: number) => {
+    if (drawingTool !== "select" || !onPriceAxisHorizontalLine || bars.length === 0) return null;
+    const chart = chartRef.current;
+    const host = hostRef.current;
+    const axis = chart?.getSize("candle_pane", "yAxis");
+    if (!chart || !host || !axis) return null;
+    const bounds = host.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    if (x < axis.left || x > axis.left + axis.width || y < axis.top || y > axis.top + axis.height) {
+      return null;
+    }
+    const converted = chart.convertFromPixel(
+      [{ y }],
+      { paneId: "candle_pane", absolute: true },
+    );
+    const chartPoint = Array.isArray(converted) ? converted[0] : converted;
+    const lastVisibleBar = bars.at(-1);
+    if (typeof chartPoint?.value !== "number" || !Number.isFinite(chartPoint.value) || !lastVisibleBar) {
+      return null;
+    }
+    const availableHeight = bounds.height || axis.top + axis.height;
+    return {
+      point: {
+        time: lastVisibleBar.close_time,
+        price: chartPoint.value.toFixed(pricePrecision),
+      },
+      y,
+      menuTop: Math.min(Math.max(y - 24, 8), Math.max(8, availableHeight - 58)),
+      axisWidth: axis.width,
+    };
+  };
+
   const handleChartMouseMove = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (drawingTool === "select" || draftPoints.current.length === 0) return;
+    if (drawingTool === "select") {
+      if (!priceAxisMenu) setPriceAxisHover(resolvePriceAxisTarget(event.clientX, event.clientY));
+      return;
+    }
+    setPriceAxisHover(null);
+    if (draftPoints.current.length === 0) return;
     const cursor = resolveClientPoint(event.clientX, event.clientY);
     if (!cursor) return;
     updateDraftPreview(draftPoints.current, cursor);
   };
 
   const handleChartClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (priceAxisMenu) {
+      setPriceAxisMenu(null);
+      return;
+    }
     if (drawingTool === "select" || drawingRequest === 0) return;
     const chart = chartRef.current;
     if (!chart) return;
@@ -378,6 +443,22 @@ export function ReplayChart({
     setDraftPointCount(next.length);
     updateDraftPreview(next, resolvedPoint);
   };
+
+  useEffect(() => {
+    if (!priceAxisMenu) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPriceAxisMenu(null);
+    };
+    const close = () => setPriceAxisMenu(null);
+    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [priceAxisMenu]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -630,7 +711,13 @@ export function ReplayChart({
   ) ?? null;
 
   return (
-    <div className="replay-chart-shell" data-evidence-id={evidenceTarget?.evidence_id}>
+    <div
+      className="replay-chart-shell"
+      data-evidence-id={evidenceTarget?.evidence_id}
+      onMouseLeave={() => {
+        if (!priceAxisMenu) setPriceAxisHover(null);
+      }}
+    >
       <div
         aria-label={`${symbol} ${timeframe} ${english ? "replay candlestick chart" : "回放 K 线图"}`}
         className={`replay-chart ${drawingTool !== "select" ? "is-drawing" : ""}`}
@@ -639,6 +726,81 @@ export function ReplayChart({
         onMouseMove={handleChartMouseMove}
         ref={hostRef}
       />
+      {(priceAxisHover || priceAxisMenu) && (
+        <>
+          <div
+            aria-hidden="true"
+            className="price-axis-guide"
+            style={{
+              right: (priceAxisMenu ?? priceAxisHover)!.axisWidth,
+              top: (priceAxisMenu ?? priceAxisHover)!.y,
+            }}
+          />
+          {priceAxisHover && (
+            <button
+              aria-label={english
+                ? `Open price actions at ${Number(priceAxisHover.point.price).toFixed(pricePrecision)}`
+                : `打开价格 ${Number(priceAxisHover.point.price).toFixed(pricePrecision)} 的操作`}
+              className="price-axis-add"
+              onClick={() => setPriceAxisMenu(priceAxisHover)}
+              style={{ right: 4, top: priceAxisHover.y }}
+              type="button"
+            >
+              <CirclePlus aria-hidden="true" size={21} strokeWidth={1.6} />
+              <span>{Number(priceAxisHover.point.price).toLocaleString("en-US", {
+                minimumFractionDigits: pricePrecision,
+                maximumFractionDigits: pricePrecision,
+              })}</span>
+            </button>
+          )}
+          {priceAxisMenu && (
+          <div
+            aria-label={english ? "Price scale actions" : "价格刻度操作"}
+            className="price-axis-menu"
+            role="menu"
+            style={{ right: priceAxisMenu.axisWidth + 8, top: priceAxisMenu.menuTop }}
+          >
+            <button
+              onClick={() => {
+                onPriceAxisHorizontalLine?.(priceAxisMenu.point);
+                setPriceAxisMenu(null);
+                setPriceAxisHover(null);
+              }}
+              role="menuitem"
+              type="button"
+            >
+              <Minus aria-hidden="true" size={16} strokeWidth={1.7} />
+              <span>
+                {english ? "Draw horizontal line at" : "在此价格绘制水平线"}
+                <strong>{Number(priceAxisMenu.point.price).toLocaleString("en-US", {
+                  minimumFractionDigits: pricePrecision,
+                  maximumFractionDigits: pricePrecision,
+                })}</strong>
+              </span>
+            </button>
+          </div>
+          )}
+        </>
+      )}
+      {visibleIndicatorCount > 0 && drawingTool === "select" && (
+        <button
+          aria-expanded={!indicatorLegendCollapsed}
+          aria-label={indicatorLegendCollapsed
+            ? (english ? "Expand indicator legend" : "展开指标图例")
+            : (english ? "Collapse indicator legend" : "收起指标图例")}
+          className={`indicator-legend-toggle ${indicatorLegendCollapsed ? "is-collapsed" : ""}`}
+          onClick={() => setIndicatorLegendCollapsed((collapsed) => !collapsed)}
+          title={indicatorLegendCollapsed
+            ? (english ? "Show indicator names and values" : "显示指标名称和数值")
+            : (english ? "Hide indicator names and values" : "隐藏指标名称和数值")}
+          type="button"
+        >
+          {indicatorLegendCollapsed
+            ? <ChevronDown aria-hidden="true" size={13} />
+            : <ChevronUp aria-hidden="true" size={13} />}
+          <span>{visibleIndicatorCount}</span>
+        </button>
+      )}
       {drawingTool !== "select" && (
         <div className="drawing-hud" role="status">
           <strong>{drawingDefinition(drawingTool).label}</strong>

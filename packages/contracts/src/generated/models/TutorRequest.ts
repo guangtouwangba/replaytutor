@@ -45,6 +45,7 @@ export type Timeframe = "1m" | "5m" | "15m" | "1h" | "2h" | "4h" | "1d";
 export type Locale = "en-US" | "zh-CN";
 export type Question = string;
 export type Stage = "environment" | "plan" | "position" | "exit" | "after_action";
+export type ThreadId = string | null;
 
 export interface TutorRequest {
   context_annotation_ids?: ContextAnnotationIds;
@@ -52,6 +53,7 @@ export interface TutorRequest {
   locale?: Locale;
   question: Question;
   stage?: Stage;
+  thread_id?: ThreadId;
 }
 export interface IndicatorSpec {
   definition_id: DefinitionId;

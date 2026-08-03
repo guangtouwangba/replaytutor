@@ -326,6 +326,11 @@ tutor_thread
 
 线程摘要必须标记哪些是用户原话、确定性事实、旧 Agent 推断，防止推断逐轮变成“事实”。
 
+当前 Codex Adapter 继续使用 `--ephemeral`。宿主从同一 `tutor_thread` 选择最近 12 个成功
+回合，并在 24,000 字符预算内写入 `conversation_history`；完整历史只在应用数据库和 UI
+中保留。失败、取消、超时回合不进入后续 Agent 上下文。旧证据 ID 只保留为来源标记，除非
+也出现在当前回合的 `allowed_evidence_ids`，否则不得引用。
+
 ## 12. 提示与技能包
 
 Tutor 指令由版本化模板组成：

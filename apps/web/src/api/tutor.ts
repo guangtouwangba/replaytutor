@@ -1,7 +1,11 @@
 import type {
   AgentCapability,
+  CreateTutorThreadRequest,
   TutorRequest,
   TutorRun,
+  TutorThreadDetail,
+  TutorThreadListResponse,
+  UpdateTutorThreadRequest,
 } from "@replaytutor/contracts";
 import { validateContract } from "@replaytutor/contracts";
 import { API_BASE_URL, ApiResponseError, apiFetch } from "./health";
@@ -58,4 +62,59 @@ export async function cancelTutorRun(runId: string): Promise<TutorRun> {
     }),
     "TutorRun",
   );
+}
+
+export async function fetchTutorThreads(sessionId: string): Promise<TutorThreadListResponse> {
+  return validated(
+    await apiFetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/tutor/threads`),
+    "TutorThreadListResponse",
+  );
+}
+
+export async function createTutorThread(
+  sessionId: string,
+  request: CreateTutorThreadRequest = {},
+): Promise<TutorThreadDetail> {
+  return validated(
+    await apiFetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/tutor/threads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    }),
+    "TutorThreadDetail",
+  );
+}
+
+export async function fetchTutorThread(threadId: string): Promise<TutorThreadDetail> {
+  return validated(
+    await apiFetch(`${API_BASE_URL}/api/v1/tutor/threads/${threadId}`),
+    "TutorThreadDetail",
+  );
+}
+
+export async function updateTutorThread(
+  threadId: string,
+  request: UpdateTutorThreadRequest,
+): Promise<TutorThreadDetail> {
+  return validated(
+    await apiFetch(`${API_BASE_URL}/api/v1/tutor/threads/${threadId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    }),
+    "TutorThreadDetail",
+  );
+}
+
+export async function deleteTutorThread(threadId: string): Promise<void> {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/tutor/threads/${threadId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new ApiResponseError(
+      payload.error?.message ?? `Tutor thread delete failed: ${response.status}`,
+      response.status,
+    );
+  }
 }

@@ -136,7 +136,7 @@ def test_user_can_complete_core_training_flow(
     assert (
         health.json()["database"]["migration_current"]
         == health.json()["database"]["migration_head"]
-        == "0018_market_depth"
+        == "0019_tutor_threads"
     )
 
     page.goto(f"{stack.web_url}/data")
@@ -156,6 +156,20 @@ def test_user_can_complete_core_training_flow(
         timeout=30_000
     )
     session_id = page.url.rstrip("/").split("/")[-1]
+
+    page.get_by_role("button", name="交易", exact=True).click()
+    expect(page.locator(".workbench-grid")).to_have_class(
+        re.compile(r"right-tool-collapsed")
+    )
+    expect(page.get_by_role("button", name="交易", exact=True)).to_have_attribute(
+        "aria-pressed", "false"
+    )
+    page.reload()
+    expect(page.locator(".workbench-grid")).to_have_class(
+        re.compile(r"right-tool-collapsed")
+    )
+    page.get_by_role("button", name="交易", exact=True).click()
+    expect(page.get_by_role("button", name="收起交易决策台")).to_be_visible()
 
     page.get_by_role("tab", name="市场深度").click()
     expect(page.get_by_text("该时刻没有历史 L2 盘口")).to_be_visible()
@@ -203,9 +217,11 @@ def test_user_can_complete_core_training_flow(
         time.sleep(0.1)
     assert any(annotation["label"] == "E2E 用户观察" for annotation in annotations)
 
-    page.get_by_label("向 Codex 询问当前 frame").fill("为复盘生成独立 AI 证据")
-    page.get_by_role("button", name="让 Codex 检查").click()
+    page.get_by_role("button", name="Chat", exact=True).click()
+    page.get_by_label("发送给 Codex Tutor").fill("为复盘生成独立 AI 证据")
+    page.get_by_role("button", name="发送", exact=True).click()
     expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible(timeout=30_000)
+    page.get_by_role("button", name="交易", exact=True).click()
     expect(page.locator(".annotation-list", has_text="E2E Tutor 标注")).to_be_visible()
 
     with page.expect_response(

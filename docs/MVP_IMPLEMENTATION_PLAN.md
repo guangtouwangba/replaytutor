@@ -302,7 +302,7 @@ apps/web/src/
 | 订单草稿 | Zustand | 未确认前不进入后端事实 |
 | 图表 viewport、当前工具 | Zustand/localStorage | 不影响确定性结果 |
 | 右/底面板尺寸与页签 | Zustand/localStorage | 限制最小/最大尺寸 |
-| Tutor 正式消息 | FastAPI/TanStack Query | SSE 增量只是运行中视图 |
+| Tutor 线程、正式消息 | FastAPI/TanStack Query | Session 隔离持久化；SSE/轮询只负责运行中视图 |
 | 表单输入 | React Hook Form | 提交后以服务端返回为准 |
 
 ### 5.5 Workbench 组合
@@ -635,7 +635,9 @@ TutorResponse 只能引用本次 evidence manifest 中存在的 ID。
 | GET | `/api/v1/replay-sessions` | 会话库 |
 | DELETE | `/api/v1/replay-sessions/{id}` | 软删除 |
 | GET | `/api/v1/replay-sessions/{id}/review` | 确定性复盘产物 |
-| POST | `/api/v1/tutor/runs` | 创建 Tutor/Review 运行 |
+| GET/POST | `/api/v1/sessions/{id}/tutor/threads` | 列出或新建当前会话的 Chat 线程 |
+| GET/PATCH/DELETE | `/api/v1/tutor/threads/{id}` | 查看、重命名或软删除 Chat 线程 |
+| POST | `/api/v1/sessions/{id}/tutor` | 在线程中创建 Tutor/Review 运行 |
 | GET | `/api/v1/tutor/runs/{id}` | Agent 运行状态与合法结果 |
 | POST | `/api/v1/tutor/runs/{id}/cancel` | 取消运行 |
 | GET/POST | `/api/v1/playbooks` | 列表/创建 Playbook |

@@ -117,16 +117,21 @@ def test_restart_recovery_marks_orphaned_tutor_run_failed(
 ) -> None:
     created = create_session(client)
     session = created["session"]
+    thread = client.post(
+        f"/api/v1/sessions/{session['session_id']}/tutor/threads",
+        json={"title": "orphan recovery"},
+    ).json()
     run_id = new_id("run")
     now = datetime.now(UTC)
     with connect_database(settings.database_path) as connection:
         connection.execute(
             """INSERT INTO tutor_run (
-                run_id, session_id, frame_id, status, question, stage,
-                workspace_path, created_at
-            ) VALUES (?, ?, ?, 'running', ?, 'plan', ?, ?)""",
+                run_id, thread_id, sequence, session_id, frame_id, status,
+                question, stage, workspace_path, created_at
+            ) VALUES (?, ?, 1, ?, ?, 'running', ?, 'plan', ?, ?)""",
             (
                 run_id,
+                thread["thread_id"],
                 session["session_id"],
                 session["frame"]["frame_id"],
                 "orphan",

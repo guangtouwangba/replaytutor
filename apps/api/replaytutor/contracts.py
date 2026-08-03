@@ -868,6 +868,7 @@ class IndicatorEvidence(ContractModel):
 
 class TutorRequest(ContractModel):
     question: str = Field(min_length=2, max_length=2000)
+    thread_id: Identifier | None = None
     stage: Literal["environment", "plan", "position", "exit", "after_action"] = "environment"
     locale: Literal["en-US", "zh-CN"] = "en-US"
     context_annotation_ids: list[Identifier] = Field(default_factory=list, max_length=32)
@@ -914,6 +915,8 @@ class TutorResponse(ContractModel):
 class TutorRun(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     run_id: Identifier
+    thread_id: Identifier
+    sequence: int = Field(ge=1)
     session_id: Identifier
     frame_id: Identifier
     agent_id: Literal["codex-local"] = "codex-local"
@@ -925,6 +928,35 @@ class TutorRun(ContractModel):
     error: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class CreateTutorThreadRequest(ContractModel):
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class UpdateTutorThreadRequest(ContractModel):
+    title: str = Field(min_length=1, max_length=80)
+
+
+class TutorThreadSummary(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    thread_id: Identifier
+    session_id: Identifier
+    title: str
+    run_count: int = Field(ge=0)
+    last_question: str | None = None
+    last_status: Literal["running", "completed", "failed", "cancelled", "timed_out"] | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TutorThreadDetail(TutorThreadSummary):
+    runs: list[TutorRun] = Field(default_factory=list)
+
+
+class TutorThreadListResponse(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    threads: list[TutorThreadSummary] = Field(default_factory=list)
 
 
 class PlaybookVersion(ContractModel):
@@ -955,8 +987,16 @@ class PlaybookListResponse(ContractModel):
 
 class ChartGeometry(ContractModel):
     kind: Literal[
-        "point", "line", "channel", "region", "polyline", "levels",
-        "measurement", "risk_reward", "anchored_series", "pattern",
+        "point",
+        "line",
+        "channel",
+        "region",
+        "polyline",
+        "levels",
+        "measurement",
+        "risk_reward",
+        "anchored_series",
+        "pattern",
     ]
     anchors: list[AnnotationPoint] = Field(min_length=1, max_length=16)
 
@@ -979,8 +1019,16 @@ class ChartToolManifest(ContractModel):
     tool_version: int = Field(default=1, ge=1)
     group: Literal["analysis", "fibonacci", "measure", "shapes", "notes", "trade", "position"]
     geometry_kind: Literal[
-        "point", "line", "channel", "region", "polyline", "levels",
-        "measurement", "risk_reward", "anchored_series", "pattern",
+        "point",
+        "line",
+        "channel",
+        "region",
+        "polyline",
+        "levels",
+        "measurement",
+        "risk_reward",
+        "anchored_series",
+        "pattern",
     ]
     min_anchors: int = Field(ge=1, le=16)
     max_anchors: int = Field(ge=1, le=16)

@@ -1,9 +1,13 @@
 // Generated from Pydantic. Do not edit.
 
+export type CreatedAt = string;
+export type LastQuestion = string | null;
+export type LastStatus = ("running" | "completed" | "failed" | "cancelled" | "timed_out") | null;
+export type RunCount = number;
 export type AgentId = "codex-local";
 export type CompletedAt = string | null;
 export type ContextBundleId = string | null;
-export type CreatedAt = string;
+export type CreatedAt1 = string;
 export type Error = string | null;
 export type FrameId = string;
 export type Question = string;
@@ -183,12 +187,30 @@ export type SessionId = string;
 export type Stage = "environment" | "plan" | "position" | "exit" | "after_action";
 export type Status1 = "running" | "completed" | "failed" | "cancelled" | "timed_out";
 export type ThreadId = string;
+export type Runs = TutorRun[];
+export type SchemaVersion2 = "1.0";
+export type SessionId1 = string;
+export type ThreadId1 = string;
+export type Title = string;
+export type UpdatedAt = string;
 
+export interface TutorThreadDetail {
+  created_at: CreatedAt;
+  last_question?: LastQuestion;
+  last_status?: LastStatus;
+  run_count: RunCount;
+  runs?: Runs;
+  schema_version?: SchemaVersion2;
+  session_id: SessionId1;
+  thread_id: ThreadId1;
+  title: Title;
+  updated_at: UpdatedAt;
+}
 export interface TutorRun {
   agent_id?: AgentId;
   completed_at?: CompletedAt;
   context_bundle_id?: ContextBundleId;
-  created_at: CreatedAt;
+  created_at: CreatedAt1;
   error?: Error;
   frame_id: FrameId;
   question: Question;

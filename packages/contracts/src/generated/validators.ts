@@ -4831,6 +4831,27 @@ const schemas = {
     "title": "CreateSessionSpec",
     "type": "object"
   },
+  "CreateTutorThreadRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "title": {
+        "anyOf": [
+          {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Title"
+      }
+    },
+    "title": "CreateTutorThreadRequest",
+    "type": "object"
+  },
   "DataQuality": {
     "additionalProperties": false,
     "properties": {
@@ -17831,6 +17852,19 @@ const schemas = {
         ],
         "title": "Stage",
         "type": "string"
+      },
+      "thread_id": {
+        "anyOf": [
+          {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Thread Id"
       }
     },
     "required": [
@@ -18400,6 +18434,11 @@ const schemas = {
         "title": "Schema Version",
         "type": "string"
       },
+      "sequence": {
+        "minimum": 1,
+        "title": "Sequence",
+        "type": "integer"
+      },
       "session_id": {
         "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
         "title": "Session Id",
@@ -18426,10 +18465,17 @@ const schemas = {
         ],
         "title": "Status",
         "type": "string"
+      },
+      "thread_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Thread Id",
+        "type": "string"
       }
     },
     "required": [
       "run_id",
+      "thread_id",
+      "sequence",
       "session_id",
       "frame_id",
       "status",
@@ -18438,6 +18484,634 @@ const schemas = {
       "created_at"
     ],
     "title": "TutorRun",
+    "type": "object"
+  },
+  "TutorThreadDetail": {
+    "$defs": {
+      "AnnotationPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Price",
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "title": "Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "price"
+        ],
+        "title": "AnnotationPoint",
+        "type": "object"
+      },
+      "TutorChartInstruction": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/$defs/AnnotationPoint"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "shape": {
+            "enum": [
+              "line",
+              "zone",
+              "marker",
+              "label"
+            ],
+            "title": "Shape",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shape",
+          "label",
+          "evidence_ids",
+          "points"
+        ],
+        "title": "TutorChartInstruction",
+        "type": "object"
+      },
+      "TutorInference": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "confidence"
+        ],
+        "title": "TutorInference",
+        "type": "object"
+      },
+      "TutorObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TutorObservation",
+        "type": "object"
+      },
+      "TutorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "items": {
+              "$ref": "#/$defs/TutorChartInstruction"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "inferences": {
+            "items": {
+              "$ref": "#/$defs/TutorInference"
+            },
+            "title": "Inferences",
+            "type": "array"
+          },
+          "next_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Next Questions",
+            "type": "array"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/$defs/TutorObservation"
+            },
+            "title": "Observations",
+            "type": "array"
+          },
+          "risks_and_unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Risks And Unknowns",
+            "type": "array"
+          },
+          "rule_checks": {
+            "items": {
+              "$ref": "#/$defs/TutorRuleCheck"
+            },
+            "title": "Rule Checks",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "disclaimer"
+        ],
+        "title": "TutorResponse",
+        "type": "object"
+      },
+      "TutorRuleCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "reason"
+        ],
+        "title": "TutorRuleCheck",
+        "type": "object"
+      },
+      "TutorRun": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "const": "codex-local",
+            "default": "codex-local",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Completed At"
+          },
+          "context_bundle_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Context Bundle Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "frame_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TutorResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "run_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "environment",
+              "plan",
+              "position",
+              "exit",
+              "after_action"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "thread_id",
+          "sequence",
+          "session_id",
+          "frame_id",
+          "status",
+          "question",
+          "stage",
+          "created_at"
+        ],
+        "title": "TutorRun",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "last_question": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Last Question"
+      },
+      "last_status": {
+        "anyOf": [
+          {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Last Status"
+      },
+      "run_count": {
+        "minimum": 0,
+        "title": "Run Count",
+        "type": "integer"
+      },
+      "runs": {
+        "items": {
+          "$ref": "#/$defs/TutorRun"
+        },
+        "title": "Runs",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "thread_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Thread Id",
+        "type": "string"
+      },
+      "title": {
+        "title": "Title",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "date-time",
+        "title": "Updated At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "thread_id",
+      "session_id",
+      "title",
+      "run_count",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "TutorThreadDetail",
+    "type": "object"
+  },
+  "TutorThreadListResponse": {
+    "$defs": {
+      "TutorThreadSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Question"
+          },
+          "last_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "running",
+                  "completed",
+                  "failed",
+                  "cancelled",
+                  "timed_out"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Status"
+          },
+          "run_count": {
+            "minimum": 0,
+            "title": "Run Count",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "thread_id": {
+            "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "session_id",
+          "title",
+          "run_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TutorThreadSummary",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "threads": {
+        "items": {
+          "$ref": "#/$defs/TutorThreadSummary"
+        },
+        "title": "Threads",
+        "type": "array"
+      }
+    },
+    "title": "TutorThreadListResponse",
+    "type": "object"
+  },
+  "TutorThreadSummary": {
+    "additionalProperties": false,
+    "properties": {
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "last_question": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Last Question"
+      },
+      "last_status": {
+        "anyOf": [
+          {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Last Status"
+      },
+      "run_count": {
+        "minimum": 0,
+        "title": "Run Count",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "1.0",
+        "default": "1.0",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "session_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "thread_id": {
+        "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+        "title": "Thread Id",
+        "type": "string"
+      },
+      "title": {
+        "title": "Title",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "date-time",
+        "title": "Updated At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "thread_id",
+      "session_id",
+      "title",
+      "run_count",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "TutorThreadSummary",
     "type": "object"
   },
   "UpdateChartToolPreferenceRequest": {
@@ -18481,6 +19155,22 @@ const schemas = {
       }
     },
     "title": "UpdateChartToolPreferenceRequest",
+    "type": "object"
+  },
+  "UpdateTutorThreadRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "title": {
+        "maxLength": 80,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "title"
+    ],
+    "title": "UpdateTutorThreadRequest",
     "type": "object"
   }
 } as const;

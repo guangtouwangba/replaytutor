@@ -22,7 +22,7 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
     assert status.journal_mode == "wal"
     assert status.foreign_keys is True
     assert status.busy_timeout_ms == 5000
-    assert status.migration_current == status.migration_head == "0018_market_depth"
+    assert status.migration_current == status.migration_head == "0019_tutor_threads"
 
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
@@ -56,8 +56,9 @@ def test_migration_is_idempotent_and_database_pragmas_are_enabled(
         "session_annotation_event",
         "system_meta",
         "trade_plan",
-        "training_review",
-        "tutor_run",
+            "training_review",
+            "tutor_run",
+            "tutor_thread",
         "trade_episode",
         "trade_income",
         "trade_journal",
@@ -85,7 +86,7 @@ def test_initial_migration_recovers_from_sqlite_ddl_without_revision(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == status.migration_head == "0018_market_depth"
+    assert status.migration_current == status.migration_head == "0019_tutor_threads"
 
 
 def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
@@ -99,7 +100,7 @@ def test_playbook_migration_recovers_from_partial_non_transactional_ddl(
     upgrade_database(settings)
 
     status = inspect_database(settings)
-    assert status.migration_current == "0018_market_depth"
+    assert status.migration_current == "0019_tutor_threads"
     with sqlite3.connect(settings.database_path) as connection:
         tables = {
             row[0]
@@ -134,4 +135,4 @@ def test_local_hardening_migration_downgrade_and_upgrade_drill(
 
     upgrade_database(settings)
     status = inspect_database(settings)
-    assert status.migration_current == "0018_market_depth"
+    assert status.migration_current == "0019_tutor_threads"

@@ -8,7 +8,7 @@ import type {
   SubmitOrderRequest,
 } from "@replaytutor/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Bot, ChevronRight, Columns2, Crosshair, Grid2X2, Keyboard, Link2, LockKeyhole, PanelTop, Pause, Play, Rows2, Square, StepForward } from "lucide-react";
+import { BarChart3, Bot, ChevronRight, Columns2, Crosshair, Grid2X2, Keyboard, Link2, LockKeyhole, MessageSquare, PanelTop, Pause, Play, Rows2, Square, StepForward } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -238,6 +238,15 @@ export function WorkbenchPage() {
   }, [activePane]);
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [deskView, setDeskView] = useState<"order" | "depth">("order");
+  const [activeRightTool, setActiveRightTool] = useState<"trade" | "chat" | null>(() => {
+    if (typeof window === "undefined") return "trade";
+    const saved = window.localStorage.getItem("replaytutor:active-right-tool");
+    if (saved === "trade" || saved === "chat") return saved;
+    if (saved === "collapsed") return null;
+    return window.localStorage.getItem("replaytutor:decision-dock-collapsed") === "true" ? null : "trade";
+  });
+  const [chatRunning, setChatRunning] = useState(false);
+  const [chatUnread, setChatUnread] = useState(false);
   const [thesis, setThesis] = useState("");
   const [invalidation, setInvalidation] = useState("");
   const [riskAmount, setRiskAmount] = useState("100");
@@ -304,6 +313,10 @@ export function WorkbenchPage() {
     queryFn: () => fetchSession(sessionId!),
     enabled: Boolean(sessionId),
   });
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:active-right-tool", activeRightTool ?? "collapsed");
+    window.localStorage.removeItem("replaytutor:decision-dock-collapsed");
+  }, [activeRightTool]);
   const marketDepth = useQuery({
     queryKey: ["session-market-depth", sessionId, session.data?.session.frame.frame_id],
     queryFn: () => fetchSessionMarketDepth(sessionId!),
@@ -517,9 +530,11 @@ export function WorkbenchPage() {
     mutationFn: async ({
       tool,
       points,
+      source = "drawing_rail",
     }: {
       tool: Exclude<DrawingTool, "select">;
       points: AnnotationPoint[];
+      source?: "drawing_rail" | "price_axis";
     }) => {
       if (!sessionId || !session.data) throw new Error("Session is not ready");
       const definition = drawingDefinition(tool);
@@ -599,7 +614,7 @@ export function WorkbenchPage() {
         algorithm_version: "1",
         metadata: {
           side: plan?.side ?? (side === "BUY" ? "long" : "short"),
-          source: "drawing_rail",
+          source,
           ...(plan ? {
             entry_price: plan.entryPrice,
             stop_price: plan.stopPrice,
@@ -784,6 +799,9 @@ export function WorkbenchPage() {
     },
     [createDrawing],
   );
+  const handlePriceAxisHorizontalLine = useCallback((point: AnnotationPoint) => {
+    createDrawing.mutate({ tool: "horizontal_line", points: [point], source: "price_axis" });
+  }, [createDrawing]);
   const startDrawing = (tool: Exclude<DrawingTool, "select">) => {
     if (reviewMode || !chartToolRegistryReady) return;
     createDrawing.reset();
@@ -1102,7 +1120,7 @@ export function WorkbenchPage() {
     { id: "reset", label: l("Reset chart viewport", "复位图表视口"), detail: l("Return to the right edge of visible data.", "回到当前可见数据最右侧"), shortcut: "⌥/Alt + R", run: () => setChartResetRequest((value) => value + 1) },
     { id: "toggle-drawings", label: annotationsVisible ? l("Hide all drawings", "隐藏全部绘图") : l("Show all drawings", "显示全部绘图"), detail: l("Toggle visibility without deleting objects.", "不删除对象，只切换可见性"), shortcut: "⌘/Ctrl + ⌥/Alt + H", run: () => setAnnotationsVisible((value) => !value) },
     { id: "shortcuts", label: l("View keyboard shortcuts", "查看快捷键"), detail: l("Show available actions and safety limits.", "显示已接入操作和安全限制"), shortcut: "?", run: () => setShortcutHelpOpen(true) },
-    { id: "indicators", label: l("Indicators", "指标"), detail: l("Indicator management is not connected; no fake action is provided.", "指标管理模块尚未接入，当前不创建假操作"), keywords: "indicator 指标", disabled: true, run: () => undefined },
+    { id: "indicators", label: l("Indicators", "指标"), detail: l("Add, hide, configure, or remove indicators on the active chart.", "添加、隐藏、配置或删除当前窗口的指标"), keywords: "indicator 指标", run: () => setIndicatorPanelOpen(true) },
     { id: "symbol", label: l("Switch instrument", "切换品种"), detail: l("The instrument is part of the deterministic session contract. Create a new session from Training setup.", "会话品种属于确定性契约，请从训练配置创建新会话"), keywords: "symbol 品种 代码", disabled: true, run: () => undefined },
     { id: "date", label: l("Go to date", "定位到指定日期"), detail: l("Disabled in replay to prevent crossing visible_at into future data.", "回放内禁用，避免越过 visible_at 查看未来数据"), keywords: "date 日期", disabled: true, run: () => undefined },
   ];
@@ -1144,7 +1162,7 @@ export function WorkbenchPage() {
         </button>}
       </header>
 
-      <div className="workbench-grid">
+      <div className={`workbench-grid right-tool-${activeRightTool ?? "collapsed"}`}>
         <DrawingToolbar
           activeTool={drawingTool}
           annotationsLocked={annotationsLocked}
@@ -1307,6 +1325,7 @@ export function WorkbenchPage() {
                     zoomRequest={paneActive ? chartZoomRequest : undefined}
                     contextAnnotationIds={selectedAnnotationId ? [...contextAnnotationIds, selectedAnnotationId] : contextAnnotationIds}
                     onDrawingComplete={paneActive ? handleDrawingComplete : undefined}
+                    onPriceAxisHorizontalLine={paneActive && !readOnly ? handlePriceAxisHorizontalLine : undefined}
                     onAnnotationSelect={setSelectedAnnotationId}
                     onAnnotationChange={reviseAnnotationFromChart}
                     selectedAnnotationId={selectedAnnotationId}
@@ -1329,8 +1348,22 @@ export function WorkbenchPage() {
             </table>
           </details>
         </main>
-        <aside className="workbench-dock">
-          <div className="dock-heading"><Bot size={17} /><strong>{l("Decision desk", "交易决策台")}</strong><span>{l("Paper", "模拟")}</span></div>
+        <aside className={`workbench-dock right-tool-${activeRightTool ?? "collapsed"}`}>
+          <div className="right-dock-panels">
+          <div className="decision-dock-content" hidden={activeRightTool !== "trade"}>
+          <div className="dock-heading">
+            <Bot size={17} />
+            <strong>{l("Decision desk", "交易决策台")}</strong>
+            <span>{l("Paper", "模拟")}</span>
+            <button
+              aria-expanded="true"
+              aria-label={l("Collapse decision desk", "收起交易决策台")}
+              className="decision-dock-collapse"
+              onClick={() => setActiveRightTool(null)}
+              title={l("Collapse decision desk", "收起交易决策台")}
+              type="button"
+            ><ChevronRight aria-hidden="true" size={14} /></button>
+          </div>
           <div className="ticket-mode-tabs" role="tablist" aria-label={l("Trading desk view", "交易决策台视图")}>
             <button aria-selected={deskView === "order"} className={deskView === "order" ? "is-active" : ""} onClick={() => setDeskView("order")} role="tab" type="button">{l("Order", "订单")}</button>
             <button aria-selected={deskView === "depth"} className={deskView === "depth" ? "is-active" : ""} onClick={() => setDeskView("depth")} role="tab" type="button">{l("Market depth", "市场深度")}</button>
@@ -1456,20 +1489,6 @@ export function WorkbenchPage() {
               </div>
             ))}
           </div>
-          {!readOnly && preferences.data?.ai_mode !== "off" && <TutorDock
-            sessionId={sessionId}
-            contextAnnotations={effectiveAnnotations.filter((item) => contextAnnotationIds.includes(item.annotation_id))}
-            contextIndicators={tutorIndicators}
-            onContextClear={() => { setContextAnnotationIds([]); setContextIndicatorIds([]); }}
-            onContextRemove={(annotationId) => setContextAnnotationIds((items) => items.filter((item) => item !== annotationId))}
-            onIndicatorContextRemove={(instanceId) => setContextIndicatorIds((items) => items.filter((item) => item !== instanceId))}
-            onEvidenceSelect={(targetId) => {
-              if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) {
-                setSelectedAnnotationId(targetId);
-              }
-            }}
-            onAnnotationsChanged={handleAnnotationsChanged}
-          />}
           {reviewMode && (
             <div className="dock-card evidence-focus-card" role="status">
               <span className="page-kicker">EVIDENCE FOCUS</span>
@@ -1512,6 +1531,32 @@ export function WorkbenchPage() {
               if (selectedAnnotationId) annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
             }}
           />
+          </div>
+          <div className="chat-dock-content" hidden={activeRightTool !== "chat"}>
+            {preferences.data?.ai_mode === "off" ? <div className="chat-disabled"><Bot size={20} /><strong>{l("Codex Tutor is disabled", "Codex Tutor 已关闭")}</strong><p>{l("Enable AI mode in local settings to use session chat.", "请在本地设置中启用 AI 模式后使用会话聊天。")}</p></div> : <TutorDock
+              active={activeRightTool === "chat"}
+              afterAction={readOnly}
+              sessionId={sessionId}
+              contextAnnotations={effectiveAnnotations.filter((item) => contextAnnotationIds.includes(item.annotation_id))}
+              contextIndicators={tutorIndicators}
+              onContextClear={() => { setContextAnnotationIds([]); setContextIndicatorIds([]); }}
+              onContextRemove={(annotationId) => setContextAnnotationIds((items) => items.filter((item) => item !== annotationId))}
+              onIndicatorContextRemove={(instanceId) => setContextIndicatorIds((items) => items.filter((item) => item !== instanceId))}
+              onEvidenceSelect={(targetId) => {
+                if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) setSelectedAnnotationId(targetId);
+              }}
+              onAnnotationsChanged={handleAnnotationsChanged}
+              onRunningChange={(running) => {
+                if (chatRunning && !running && activeRightTool !== "chat") setChatUnread(true);
+                setChatRunning(running);
+              }}
+            />}
+          </div>
+          </div>
+          <nav aria-label={l("Right workbench tools", "右侧工作台工具")} className="right-tool-rail">
+            <button aria-pressed={activeRightTool === "trade"} className={activeRightTool === "trade" ? "is-active" : ""} onClick={() => setActiveRightTool((value) => value === "trade" ? null : "trade")} title={l("Trade desk", "交易台")} type="button"><BarChart3 size={17} /><span>{l("Trade", "交易")}</span></button>
+            <button aria-pressed={activeRightTool === "chat"} className={activeRightTool === "chat" ? "is-active" : ""} onClick={() => { setChatUnread(false); setActiveRightTool((value) => value === "chat" ? null : "chat"); }} title={l("Tutor chat", "Tutor 对话")} type="button"><MessageSquare size={17} /><span>Chat</span>{(chatRunning || chatUnread) && <i aria-label={chatRunning ? l("Tutor is running", "Tutor 正在运行") : l("Unread Tutor response", "有未读 Tutor 回复")} />}</button>
+          </nav>
         </aside>
         <footer className="replay-controls">
           <button
