@@ -41,5 +41,5 @@
 - 个人自由文本 Playbook 没有注册 evaluator 时保持 `unknown`。
 - 备份仅覆盖 SQLite 业务数据库；Parquet Snapshot 与导出文件需单独复制。
 - AI 模式仅有 Codex 或关闭；真实 Codex smoke 不进入 CI。
-- 水平线、自由文字、图层锁定和批量图层操作尚未开放。
+- 自由文字、图层锁定和批量图层操作尚未开放。
 - 本项目不提供真实下单、撤单、转账或提现能力。

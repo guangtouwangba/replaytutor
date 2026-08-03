@@ -14,7 +14,7 @@ def test_health_reports_local_runtime(client: TestClient) -> None:
     assert payload["request_id"] == "test-request"
     assert payload["api"] == {
         "status": "healthy",
-        "version": "0.1.0-alpha.1",
+        "version": "0.1.0-alpha.2",
         "detail": None,
     }
     assert payload["database"]["journal_mode"] == "wal"

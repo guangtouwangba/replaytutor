@@ -110,7 +110,7 @@ User-authored playbooks, notes, and historical Tutor output are never silently m
 
 ## Status and roadmap
 
-`v0.1.0-alpha.1` focuses on a trustworthy local loop: data → hidden-future replay → paper execution → evidence-linked review. See [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
+`v0.1.0-alpha.2` expands the trustworthy local loop with multi-pane chart workspaces, deterministic indicators, market depth, persistent Tutor threads, and price-axis horizontal-line drawing. See [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md).
 
 Not in Alpha: live trading, cloud accounts, collaboration, mobile trading, arbitrary strategy scripts, or return claims.
 

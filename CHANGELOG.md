@@ -2,6 +2,20 @@
 
 All notable changes are documented here. The project follows semantic versioning while public APIs remain experimental during Alpha.
 
+## 0.1.0-alpha.2 - 2026-08-03
+
+### Added
+
+- Multi-pane chart workspaces with pane-specific timeframes and deterministic indicators.
+- Market-depth import, storage, API contracts, and workbench visualization.
+- Persistent Tutor threads with evidence-linked indicator context.
+- Price-axis hover guide, contextual add control, and persistent horizontal-line drawing.
+- Expanded chart drawing, trade-plan context, and Tutor end-to-end coverage.
+
+### Changed
+
+- Refined the replay workbench, locked-plan order ticket, chart persistence, and bilingual interaction design.
+
 ## 0.1.0-alpha.1 - 2026-08-02
 
 ### Added
