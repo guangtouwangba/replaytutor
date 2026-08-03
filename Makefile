@@ -63,7 +63,7 @@ contracts:
 
 lint:
 	$(PNPM) lint
-	$(UV) run --project apps/api ruff check apps/api tests/backend tests/e2e scripts
+	$(UV) run --project apps/api ruff check --config apps/api/pyproject.toml apps/api tests/backend tests/e2e scripts
 
 typecheck:
 	$(PNPM) typecheck

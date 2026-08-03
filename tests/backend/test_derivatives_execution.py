@@ -5,8 +5,8 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
-from replaytutor.contracts import Bar, PriceValues
 from replaytutor.config import Settings
+from replaytutor.contracts import Bar, PriceValues
 from replaytutor.ids import new_id
 from replaytutor.modules.execution.core import match_order
 from replaytutor.modules.ledger import (

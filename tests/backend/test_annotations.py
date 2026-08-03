@@ -4,12 +4,12 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
+from replaytutor.config import Settings
 from replaytutor.contracts import (
     AnnotationPoint,
     TutorChartInstruction,
     TutorResponse,
 )
-from replaytutor.config import Settings
 from replaytutor.ids import new_id
 from replaytutor.modules.annotations import persist_ai_annotations
 from replaytutor.modules.tutor.validation import TutorValidationError, validate_evidence

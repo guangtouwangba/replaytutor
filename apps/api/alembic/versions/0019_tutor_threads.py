@@ -4,8 +4,8 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 import sqlalchemy as sa
-
 from alembic import op
+
 from replaytutor.ids import stable_id
 
 revision: str = "0019_tutor_threads"
