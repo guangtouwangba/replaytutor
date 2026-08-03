@@ -20,6 +20,6 @@
     "demo:verify": "./scripts/pnpm --filter @replaytutor/demo-video verify"
   },
   "devDependencies": {
-    "concurrently": "10.0.0"
+    "concurrently": "10.0.4"
   }
 }
