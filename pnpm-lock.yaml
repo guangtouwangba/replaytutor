@@ -62,6 +62,9 @@ importers:
       '@replaytutor/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@replaytutor/tutor-ui':
+        specifier: workspace:*
+        version: link:../../packages/tutor-ui
       '@tanstack/react-query':
         specifier: 5.90.21
         version: 5.90.21(react@19.2.8)
@@ -148,6 +151,16 @@ importers:
       json-schema-to-typescript:
         specifier: 15.0.4
         version: 15.0.4
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/tutor-ui:
+    dependencies:
+      '@replaytutor/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
       typescript:
         specifier: 5.9.3
         version: 5.9.3

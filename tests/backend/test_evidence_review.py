@@ -90,7 +90,10 @@ def test_review_is_hidden_until_finish_then_stable_and_evidence_backed(
             frame_id=advanced_body["session"]["frame"]["frame_id"],
             instructions=[
                 TutorChartInstruction(
-                    shape="marker",
+                    tool="horizontal_line",
+                    purpose="support",
+                    timeframe="1m",
+                    shape="line",
                     label="AI 证据",
                     evidence_ids=[ai_point["bar_id"]],
                     points=[

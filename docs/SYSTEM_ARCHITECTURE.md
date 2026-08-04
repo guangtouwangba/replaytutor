@@ -1,5 +1,11 @@
 # ReplayTutor 系统架构
 
+提议注记（2026-08-03）：Chrome Companion 作为可选 UI Adapter 独立位于
+`apps/chrome-extension/`。发布版通过受限 Native Messaging Connector 复用现有
+Session、Evidence、Tutor Runtime 和 Codex Adapter，不读取 TradingView 页面，不开放
+订单、账本、行情或任意本机能力。正式边界见
+[Chrome Companion 架构](CHROME_COMPANION_ARCHITECTURE.md)。
+
 实施注记（2026-08-02）：前端新增 Indicator Catalog 与 Indicator Controller 深模块。
 目录固定暴露 KLineChart 10.0.0 的 27 个内置指标及 VWAP、ATR、Bar Count、Order Block；
 Controller 是页面与 KLineChart 指标接口之间唯一 seam，负责创建、覆盖和删除实例。
@@ -58,6 +64,11 @@ append-only 处置事件。`session_annotation` 继续保存不可变原始对�
 修改和删除只追加事件，由 `AnnotationService` 解析有效形状。AI 标注默认
 `proposed`，用户接受后仍保持 `layer=ai` 与 `provenance_run_id`，不得伪装成用户
 原始判断。
+
+实施注记（2026-08-03）：Chat 自动绘图只开放 `trend_line`、`horizontal_line`、
+`parallel_channel` 与 `zone`。请求携带活动窗格 `analysis_timeframe`，服务端按同一
+ReplayFrame 聚合可见 bars；宿主只接受锚定到这些 bars 的真实 OHLC 和 evidence ID。
+合法对象写入 AI proposed 图层，接受后可修订但不改变 provenance。
 
 实施注记（2026-07-31）：`EvidenceResolver` 将计划、订单、成交、可见 K 线和
 用户/AI 标注解析为只读 `EvidenceTarget`。复盘链接使用
@@ -472,6 +483,18 @@ request_id → replay_session_id → frame_id → analysis_artifact_id
 
 M0 本地入口已经固定为 `make setup` 与 `make dev`：Vite 仅监听 `127.0.0.1:5173`，FastAPI 仅监听 `127.0.0.1:8788`，SQLite 位于 gitignored 的 `data/app.db` 并由 Alembic 管理。开发期不启动 Docker、Redis、Celery 或外部数据库。
 
+### Chrome Companion（可选产品面）
+
+```text
+Chrome Side Panel → Native Messaging Connector → Companion Facade
+                  → existing FastAPI modules → local Codex CLI
+```
+
+Companion 不成为本地 MVP 的启动依赖。开发构建可使用带精确 origin 和配对令牌的
+`127.0.0.1` transport；发布构建只使用 Native Messaging，并且不包含 TradingView
+host permission、content script 或通用 HTTP proxy。插件卸载或 Connector 故障不得影响
+Web 工作台、回放、撮合、账本或 Tutor 历史。
+
 ### 多设备/云端（后续）
 
 元数据迁移到 PostgreSQL，Parquet 迁移到对象存储，任务 worker 可独立扩展。模块接口保持不变。原生 CLI Agent 仍运行在用户本地 companion 上，通过一次性授权与云端会话连接，避免把本机登录凭据上传服务器。
@@ -482,6 +505,7 @@ M0 本地入口已经固定为 `make setup` 与 `make dev`：Vite 仅监听 `127
 replaytutor/
   apps/
     web/                    # React/Vite
+    chrome-extension/       # 可选 MV3 Side Panel Companion
     api/
       replaytutor/          # FastAPI 入口与后端模块
         api/
@@ -492,6 +516,7 @@ replaytutor/
         jobs/
   packages/
     contracts/              # JSON Schema / generated TS types
+    tutor-ui/               # 计划中的 transport-agnostic Tutor UI
   data/                     # gitignored runtime data
   tests/
     contracts/
@@ -510,6 +535,7 @@ replaytutor/
 | 回放 | 事件驱动、快照版本化 | 仅前端数组切片 |
 | AI | 确定性分析 + Agent 解释 | 让 LLM 自己计算盈亏 |
 | Agent | 原生 CLI + 通用适配器 | 只绑定一个模型 API |
+| 浏览器 Companion | MV3 Side Panel + Native Messaging + 受限 Facade | TradingView content script、通用 localhost API |
 | 权限 | 默认只读、证据包隔离 | 继承 Agent 全部本机权限 |
 | 决策时点 | 完整 K 线后决策，下一根激活 | 当前柱回填成交 |
 | 价格语义 | raw 撮合 + adjusted 展示双轨 | 使用复权价撮合 |

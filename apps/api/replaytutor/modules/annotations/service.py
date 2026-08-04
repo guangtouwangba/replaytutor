@@ -515,10 +515,14 @@ def persist_ai_annotations(
             frame_id=frame_id,
             layer="ai",
             shape=instruction.shape,
-            tool="ai_suggestion",
+            tool=instruction.tool,
             semantic_role="analysis",
             label=instruction.label,
             points=instruction.points,
+            metadata={
+                "purpose": instruction.purpose,
+                "source_timeframe": instruction.timeframe,
+            },
             provenance_run_id=run_id,
             created_at=now,
         )

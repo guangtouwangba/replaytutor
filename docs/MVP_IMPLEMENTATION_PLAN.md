@@ -203,6 +203,8 @@ Agent：
 - MVP 1A 和 1B 都只接入 Codex CLI。
 - Claude Code、Kimi 和其他 Agent Adapter 全部延后到 Post-MVP。
 - 文件证据包、只读工作目录、结构化 Schema、事件流、取消和 180 秒超时。
+- 用户明确要求时可按活动图表周期生成趋势线、水平支撑/压力、平行通道及价格区域；
+  锚点由宿主绑定当前可见 OHLC 证据，先进入 AI proposed 图层，接受后仍保留来源和修订历史。
 - 不合法 JSON 或无效 evidence ID 不能作为合格报告；UI 可展示“未校验原始输出”但不得混入正式报告。
 
 ### 3.10 会话库与复盘页

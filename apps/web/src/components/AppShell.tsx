@@ -74,7 +74,7 @@ export function AppShell({ startup, onRetry }: AppShellProps) {
     <main className={`app-shell ${isWorkbenchRoute ? "is-workbench-route" : ""}`} data-api-state={startup.kind}>
       <a className="skip-link" href="#main-content">{t("app.skip")}</a>
       <header className="topbar">
-        <NavLink className="brand" to="/"><span className="brand-mark">R</span><span>ReplayTutor</span></NavLink>
+        <NavLink className="brand" to="/" aria-label="ReplayTutor"><span className="brand-mark"><img src="/replaytutor-logo.png?v=20260803" alt="" aria-hidden="true" /></span><span>ReplayTutor</span></NavLink>
         <div className="environment-label">{t("app.environment")}</div>
         <div className="topbar-actions"><DownloadStatus enabled={startup.kind === "available"} /><StatusPill startup={startup} onRetry={onRetry} /><NavLink className="icon-button" aria-label={t("nav.settings")} to="/settings"><Settings size={17} /></NavLink></div>
       </header>

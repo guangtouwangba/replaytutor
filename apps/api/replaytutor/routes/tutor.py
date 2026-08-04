@@ -5,7 +5,6 @@ import asyncio
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import StreamingResponse
 
-from replaytutor.adapters.agents import CodexAdapter
 from replaytutor.config import Settings
 from replaytutor.contracts import (
     AgentCapability,
@@ -18,8 +17,8 @@ from replaytutor.contracts import (
 )
 from replaytutor.errors import ApiError
 from replaytutor.modules.tutor import TutorRuntime
+from replaytutor.modules.tutor.capabilities import discover_codex_capability
 from replaytutor.modules.tutor.runtime import TutorRunNotFoundError, TutorThreadNotFoundError
-from replaytutor.storage.database import connect_database
 
 router = APIRouter(prefix="/api/v1", tags=["codex-tutor"])
 
@@ -31,25 +30,8 @@ def runtime(request: Request) -> TutorRuntime:
 
 @router.get("/agents/codex", response_model=AgentCapability)
 def discover_codex(request: Request) -> AgentCapability:
-    capability = CodexAdapter().discover()
-    if not capability.available:
-        return capability
     settings: Settings = request.app.state.settings
-    with connect_database(settings.database_path) as connection:
-        completed = connection.execute(
-            "SELECT 1 FROM tutor_run WHERE status = 'completed' LIMIT 1"
-        ).fetchone()
-        auth_failure = connection.execute(
-            """SELECT 1 FROM tutor_run
-            WHERE status = 'failed'
-              AND (error LIKE '%authentication%' OR error LIKE '%codex login%')
-            LIMIT 1"""
-        ).fetchone()
-    if completed is not None:
-        return capability.model_copy(update={"authentication": "verified"})
-    if auth_failure is not None:
-        return capability.model_copy(update={"authentication": "failed"})
-    return capability
+    return discover_codex_capability(settings)
 
 
 @router.post("/sessions/{session_id}/tutor", response_model=TutorRun)

@@ -11,23 +11,12 @@ import {
   ChevronDown,
   LoaderCircle,
   MessageSquarePlus,
-  Pencil,
   Square,
-  Trash2,
   X,
 } from "lucide-react";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  cancelTutorRun,
-  createTutorThread,
-  deleteTutorThread,
-  discoverCodex,
-  fetchTutorThread,
-  fetchTutorThreads,
-  startTutor,
-  updateTutorThread,
-} from "../api/tutor";
+import { webTutorClient } from "../api/tutorClient";
 import { currentLocale } from "../i18n";
 
 type TutorStage = TutorRequest["stage"];
@@ -41,6 +30,8 @@ function TutorResponseView({
   readonly contextBundleId?: string | null;
   readonly onEvidenceSelect?: (evidenceId: string) => void;
 }) {
+  const { i18n } = useTranslation();
+  const l = (en: string, zh: string) => i18n.resolvedLanguage?.startsWith("zh") ? zh : en;
   const observations = response.observations ?? [];
   const inferences = response.inferences ?? [];
   const risks = response.risks_and_unknowns ?? [];
@@ -55,7 +46,7 @@ function TutorResponseView({
     {risks.map((item, index) => <article key={`${index}-${item}`}><span>风险 / 未知</span><p>{item}</p></article>)}
     {ruleChecks.length > 0 && <article><span>规则检查</span>{ruleChecks.map((check) => <p key={check.rule_id}><b className={`rule-status ${check.status}`}>{check.status}</b> {check.reason}</p>)}</article>}
     {nextQuestions.length > 0 && <article><span>可以继续追问</span>{nextQuestions.map((item) => <p key={item}>{item}</p>)}</article>}
-    {annotations.length > 0 && <article><span>AI 图上标注</span><p>已将 {annotations.length} 条证据标注写入独立 AI 图层。</p></article>}
+    {annotations.length > 0 && <article><span>{l("AI chart drawings", "AI 图上标注")}</span><p>{l(`${annotations.length} evidence-backed drawing(s) were added to the independent AI layer.`, `已将 ${annotations.length} 条证据标注写入独立 AI 图层。`)}</p><div className="tutor-drawing-links">{annotations.map((annotation, index) => <button disabled={!annotation.annotation_id} key={annotation.annotation_id ?? `${annotation.tool}-${index}`} onClick={() => annotation.annotation_id && onEvidenceSelect?.(annotation.annotation_id)} type="button"><strong>{annotation.label}</strong><small>{annotation.tool} · {annotation.purpose} · {annotation.timeframe}</small></button>)}</div></article>}
     <small className="tutor-disclaimer">{response.disclaimer}</small>
   </div>;
 }
@@ -93,6 +84,7 @@ export function TutorDock({
   onAnnotationsChanged,
   onRunningChange,
   active = true,
+  analysisTimeframe = "1m",
 }: {
   readonly sessionId: string;
   readonly afterAction?: boolean;
@@ -105,10 +97,10 @@ export function TutorDock({
   readonly onAnnotationsChanged?: () => void;
   readonly onRunningChange?: (running: boolean) => void;
   readonly active?: boolean;
+  readonly analysisTimeframe?: NonNullable<TutorRequest["analysis_timeframe"]>;
 }) {
   const { i18n } = useTranslation();
-  const english = !i18n.resolvedLanguage?.startsWith("zh");
-  const l = (en: string, zh: string) => english ? en : zh;
+  const l = (en: string, zh: string) => i18n.resolvedLanguage?.startsWith("zh") ? zh : en;
   const queryClient = useQueryClient();
   const storageKey = `replaytutor:tutor-thread:${sessionId}`;
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => window.localStorage.getItem(storageKey));
@@ -120,14 +112,14 @@ export function TutorDock({
   const initialCreationAttempted = useRef(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
-  const capability = useQuery({ queryKey: ["codex-capability"], queryFn: discoverCodex, enabled: active });
+  const capability = useQuery({ queryKey: ["codex-capability"], queryFn: webTutorClient.discoverCodex, enabled: active });
   const threads = useQuery({
     queryKey: ["tutor-threads", sessionId],
-    queryFn: () => fetchTutorThreads(sessionId),
+    queryFn: () => webTutorClient.listThreads(sessionId),
     enabled: active,
   });
   const create = useMutation({
-    mutationFn: () => createTutorThread(sessionId),
+    mutationFn: () => webTutorClient.createThread(sessionId),
     onSuccess: (created) => {
       setActiveThreadId(created.thread_id);
       queryClient.invalidateQueries({ queryKey: ["tutor-threads", sessionId] });
@@ -150,7 +142,7 @@ export function TutorDock({
   }, [activeThreadId, storageKey]);
   const detail = useQuery({
     queryKey: ["tutor-thread", activeThreadId],
-    queryFn: () => fetchTutorThread(activeThreadId!),
+    queryFn: () => webTutorClient.getThread(activeThreadId!),
     enabled: Boolean(activeThreadId && (active || keepPolling)),
     refetchInterval: (query) => (query.state.data?.runs ?? []).some((item) => item.status === "running") ? 500 : false,
   });
@@ -170,11 +162,12 @@ export function TutorDock({
     list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   }, [runs.length, latestRun?.status]);
   const start = useMutation({
-    mutationFn: () => startTutor(sessionId, {
+    mutationFn: () => webTutorClient.startRun(sessionId, {
       question: question.trim(),
       thread_id: activeThreadId!,
       stage: afterAction ? "after_action" : stage,
       locale: currentLocale(),
+      analysis_timeframe: analysisTimeframe,
       context_annotation_ids: contextAnnotations.map((item) => item.annotation_id),
       context_indicators: [...contextIndicators] as NonNullable<TutorRequest["context_indicators"]>,
     }),
@@ -187,19 +180,8 @@ export function TutorDock({
     },
   });
   const cancel = useMutation({
-    mutationFn: (runId: string) => cancelTutorRun(runId),
+    mutationFn: (runId: string) => webTutorClient.cancelRun(runId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tutor-thread", activeThreadId] }),
-  });
-  const rename = useMutation({
-    mutationFn: ({ threadId, title }: { threadId: string; title: string }) => updateTutorThread(threadId, { title }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tutor-threads", sessionId] }),
-  });
-  const remove = useMutation({
-    mutationFn: (threadId: string) => deleteTutorThread(threadId),
-    onSuccess: (_, threadId) => {
-      if (activeThreadId === threadId) setActiveThreadId(null);
-      queryClient.invalidateQueries({ queryKey: ["tutor-threads", sessionId] });
-    },
   });
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
@@ -218,21 +200,16 @@ export function TutorDock({
     setShowJump(false);
     list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   };
-  const error = capability.error ?? threads.error ?? detail.error ?? create.error ?? start.error ?? cancel.error ?? rename.error ?? remove.error;
+  const error = capability.error ?? threads.error ?? detail.error ?? create.error ?? start.error ?? cancel.error;
   return <section className="tutor-chat" aria-label={l("Codex Tutor chat", "Codex Tutor 对话")}>
-    <aside className="chat-thread-sidebar">
-      <header><span><Bot size={15} /><strong>Chat</strong></span><button aria-label={l("New conversation", "新建对话")} disabled={create.isPending} onClick={() => create.mutate()} title={l("New conversation", "新建对话")} type="button"><MessageSquarePlus size={15} /></button></header>
-      <div className="chat-thread-list">
-        {threads.isLoading && <p className="chat-empty"><LoaderCircle className="spin" size={16} />{l("Loading history…", "正在加载历史…")}</p>}
-        {threadItems.map((thread) => <div className={`chat-thread-item ${thread.thread_id === activeThreadId ? "is-active" : ""}`} key={thread.thread_id}>
-          <button className="chat-thread-select" onClick={() => setActiveThreadId(thread.thread_id)} type="button"><strong>{thread.title}</strong><span>{thread.last_question ?? l("Empty conversation", "空对话")}</span><small>{new Date(thread.updated_at).toLocaleString(english ? "en-US" : "zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}{thread.last_status === "running" ? ` · ${l("Running", "运行中")}` : ""}</small></button>
-          <div className="chat-thread-actions"><button aria-label={l("Rename", "重命名")} onClick={() => { const title = window.prompt(l("Conversation title", "对话标题"), thread.title)?.trim(); if (title && title !== thread.title) rename.mutate({ threadId: thread.thread_id, title }); }} type="button"><Pencil size={11} /></button><button aria-label={l("Delete", "删除")} disabled={thread.last_status === "running"} onClick={() => { if (window.confirm(l("Delete this conversation from history?", "从历史记录中删除这个对话？"))) remove.mutate(thread.thread_id); }} type="button"><Trash2 size={11} /></button></div>
-        </div>)}
-      </div>
-      <footer>{l("History belongs to this replay session", "历史仅属于当前回放会话")}</footer>
-    </aside>
     <div className="chat-conversation">
-      <header className="chat-conversation-head"><div><strong>{detail.data?.title ?? l("New conversation", "新对话")}</strong><span>{l("Recent 12 completed turns are used as context", "本次上下文使用最近 12 个成功回合")}</span></div><code>{capability.data?.available ? capability.data.version : l("Unavailable", "不可用")}</code></header>
+      <header className="chat-conversation-head">
+        <div><strong>{detail.data?.title ?? l("New conversation", "新对话")}</strong><span>{l("Recent 12 completed turns are used as context", "本次上下文使用最近 12 个成功回合")}</span></div>
+        <div className="chat-conversation-head-actions">
+          <code>{capability.data?.available ? capability.data.version : l("Unavailable", "不可用")}</code>
+          <button aria-label={l("Start a new conversation", "新建对话")} disabled={create.isPending || Boolean(runningRun)} onClick={() => create.mutate()} title={l("Start a new conversation", "新建对话")} type="button">{create.isPending ? <LoaderCircle className="spin" size={14} /> : <MessageSquarePlus size={15} />}</button>
+        </div>
+      </header>
       <div className="chat-message-list" onScroll={(event) => { const target = event.currentTarget; const nearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 80; nearBottomRef.current = nearBottom; setShowJump(!nearBottom); }} ref={messageListRef}>
         {detail.isLoading && <p className="chat-empty"><LoaderCircle className="spin" size={18} />{l("Loading conversation…", "正在加载对话…")}</p>}
         {runs.length === 0 && <div className="chat-welcome"><Bot size={22} /><strong>{l("Ask about the current visible market", "询问当前可见行情")}</strong><p>{l("Attach chart plans, drawings, or indicators as explicit context. Future bars remain hidden.", "可以把图形计划、画线或指标作为明确上下文；未来 K 线仍然不可见。")}</p></div>}

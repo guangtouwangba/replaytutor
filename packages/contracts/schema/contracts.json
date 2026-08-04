@@ -3798,6 +3798,1244 @@
       "title": "CommitImportRequest",
       "type": "object"
     },
+    "CompanionAgentResult": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "const": "codex-local",
+          "default": "codex-local",
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "authentication": {
+          "enum": [
+            "unknown",
+            "verified",
+            "failed"
+          ],
+          "title": "Authentication",
+          "type": "string"
+        },
+        "available": {
+          "title": "Available",
+          "type": "boolean"
+        },
+        "diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "installed": {
+          "title": "Installed",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "installed",
+        "available",
+        "authentication"
+      ],
+      "title": "CompanionAgentResult",
+      "type": "object"
+    },
+    "CompanionBootstrapParams": {
+      "additionalProperties": false,
+      "properties": {
+        "extension_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Extension Version",
+          "type": "string"
+        },
+        "locale": {
+          "default": "en-US",
+          "enum": [
+            "en-US",
+            "zh-CN"
+          ],
+          "title": "Locale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "extension_version"
+      ],
+      "title": "CompanionBootstrapParams",
+      "type": "object"
+    },
+    "CompanionBootstrapResult": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "enum": [
+              "session.read",
+              "tutor.run",
+              "evidence.resolve",
+              "navigation.local"
+            ],
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "compatible_protocols": {
+          "items": {
+            "const": "1.0",
+            "type": "string"
+          },
+          "title": "Compatible Protocols",
+          "type": "array"
+        },
+        "connector_version": {
+          "title": "Connector Version",
+          "type": "string"
+        },
+        "replaytutor_version": {
+          "title": "Replaytutor Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connector_version",
+        "replaytutor_version",
+        "capabilities"
+      ],
+      "title": "CompanionBootstrapResult",
+      "type": "object"
+    },
+    "CompanionEmptyParams": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "CompanionEmptyParams",
+      "type": "object"
+    },
+    "CompanionError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "native_host_not_found",
+            "local_service_stopped",
+            "origin_not_allowed",
+            "protocol_incompatible",
+            "method_not_allowed",
+            "payload_invalid",
+            "payload_too_large",
+            "session_not_found",
+            "tutor_disabled",
+            "codex_unavailable",
+            "run_conflict",
+            "run_failed",
+            "evidence_not_found",
+            "internal_error"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "CompanionError",
+      "type": "object"
+    },
+    "CompanionEvidenceParams": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "evidence_id"
+      ],
+      "title": "CompanionEvidenceParams",
+      "type": "object"
+    },
+    "CompanionHealthResult": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "title": "Api Version",
+          "type": "string"
+        },
+        "data_status": {
+          "enum": [
+            "healthy",
+            "unavailable"
+          ],
+          "title": "Data Status",
+          "type": "string"
+        },
+        "database_status": {
+          "enum": [
+            "healthy",
+            "degraded"
+          ],
+          "title": "Database Status",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "degraded"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "api_version",
+        "database_status",
+        "data_status"
+      ],
+      "title": "CompanionHealthResult",
+      "type": "object"
+    },
+    "CompanionNavigationParams": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Id"
+        },
+        "mode": {
+          "default": "review",
+          "enum": [
+            "replay",
+            "review"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "CompanionNavigationParams",
+      "type": "object"
+    },
+    "CompanionNavigationTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^/sessions/[a-z]{3}_[0-9a-f-]{36}",
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "CompanionNavigationTarget",
+      "type": "object"
+    },
+    "CompanionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "system.bootstrap",
+            "system.health",
+            "agent.codex.discover",
+            "session.list",
+            "session.get",
+            "tutor.thread.list",
+            "tutor.thread.create",
+            "tutor.thread.get",
+            "tutor.run.start",
+            "tutor.run.get",
+            "tutor.run.cancel",
+            "evidence.resolve",
+            "navigation.open_replaytutor"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "protocol_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^req_[A-Za-z0-9-]{4,124}$",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "method"
+      ],
+      "title": "CompanionRequest",
+      "type": "object"
+    },
+    "CompanionResponse": {
+      "$defs": {
+        "CompanionError": {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "enum": [
+                "native_host_not_found",
+                "local_service_stopped",
+                "origin_not_allowed",
+                "protocol_incompatible",
+                "method_not_allowed",
+                "payload_invalid",
+                "payload_too_large",
+                "session_not_found",
+                "tutor_disabled",
+                "codex_unavailable",
+                "run_conflict",
+                "run_failed",
+                "evidence_not_found",
+                "internal_error"
+              ],
+              "title": "Code",
+              "type": "string"
+            },
+            "message": {
+              "maxLength": 500,
+              "minLength": 1,
+              "title": "Message",
+              "type": "string"
+            },
+            "retryable": {
+              "default": false,
+              "title": "Retryable",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "title": "CompanionError",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CompanionError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "protocol_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^req_[A-Za-z0-9-]{4,124}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "result": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result"
+        }
+      },
+      "required": [
+        "request_id",
+        "ok"
+      ],
+      "title": "CompanionResponse",
+      "type": "object"
+    },
+    "CompanionRunParams": {
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id"
+      ],
+      "title": "CompanionRunParams",
+      "type": "object"
+    },
+    "CompanionRunStartParams": {
+      "$defs": {
+        "IndicatorSpec": {
+          "additionalProperties": false,
+          "properties": {
+            "definition_id": {
+              "enum": [
+                "MA",
+                "EMA",
+                "VOL",
+                "OBV",
+                "VWAP",
+                "ATR",
+                "BAR_COUNT",
+                "ORDER_BLOCK"
+              ],
+              "title": "Definition Id",
+              "type": "string"
+            },
+            "instance_id": {
+              "pattern": "^indicator-[A-Za-z0-9-]+$",
+              "title": "Instance Id",
+              "type": "string"
+            },
+            "params": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 8,
+              "title": "Params",
+              "type": "array"
+            },
+            "timeframe": {
+              "default": "1m",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instance_id",
+            "definition_id"
+          ],
+          "title": "IndicatorSpec",
+          "type": "object"
+        },
+        "TutorRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "analysis_timeframe": {
+              "default": "1m",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Analysis Timeframe",
+              "type": "string"
+            },
+            "context_annotation_ids": {
+              "items": {
+                "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                "type": "string"
+              },
+              "maxItems": 32,
+              "title": "Context Annotation Ids",
+              "type": "array"
+            },
+            "context_indicators": {
+              "items": {
+                "$ref": "#/$defs/IndicatorSpec"
+              },
+              "maxItems": 8,
+              "title": "Context Indicators",
+              "type": "array"
+            },
+            "locale": {
+              "default": "en-US",
+              "enum": [
+                "en-US",
+                "zh-CN"
+              ],
+              "title": "Locale",
+              "type": "string"
+            },
+            "question": {
+              "maxLength": 2000,
+              "minLength": 2,
+              "title": "Question",
+              "type": "string"
+            },
+            "stage": {
+              "default": "environment",
+              "enum": [
+                "environment",
+                "plan",
+                "position",
+                "exit",
+                "after_action"
+              ],
+              "title": "Stage",
+              "type": "string"
+            },
+            "thread_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Thread Id"
+            }
+          },
+          "required": [
+            "question"
+          ],
+          "title": "TutorRequest",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/TutorRequest"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "request"
+      ],
+      "title": "CompanionRunStartParams",
+      "type": "object"
+    },
+    "CompanionSessionListParams": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 50,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "CompanionSessionListParams",
+      "type": "object"
+    },
+    "CompanionSessionListResult": {
+      "$defs": {
+        "CompanionSessionSummary": {
+          "additionalProperties": false,
+          "properties": {
+            "frame_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Frame Id",
+              "type": "string"
+            },
+            "instrument": {
+              "$ref": "#/$defs/Instrument"
+            },
+            "revision": {
+              "minimum": 0,
+              "title": "Revision",
+              "type": "integer"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "snapshot_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "paused",
+                "completed",
+                "stopped"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            },
+            "visible_at": {
+              "format": "date-time",
+              "title": "Visible At",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id",
+            "snapshot_id",
+            "instrument",
+            "status",
+            "frame_id",
+            "revision",
+            "visible_at",
+            "updated_at"
+          ],
+          "title": "CompanionSessionSummary",
+          "type": "object"
+        },
+        "Instrument": {
+          "additionalProperties": false,
+          "properties": {
+            "asset_class": {
+              "enum": [
+                "crypto_spot",
+                "crypto_perpetual",
+                "equity"
+              ],
+              "title": "Asset Class",
+              "type": "string"
+            },
+            "base_currency": {
+              "title": "Base Currency",
+              "type": "string"
+            },
+            "canonical_symbol": {
+              "title": "Canonical Symbol",
+              "type": "string"
+            },
+            "display_name": {
+              "title": "Display Name",
+              "type": "string"
+            },
+            "instrument_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Instrument Id",
+              "type": "string"
+            },
+            "lot_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Lot Size",
+              "type": "string"
+            },
+            "market": {
+              "enum": [
+                "CRYPTO",
+                "CN"
+              ],
+              "title": "Market",
+              "type": "string"
+            },
+            "market_rule_set_id": {
+              "title": "Market Rule Set Id",
+              "type": "string"
+            },
+            "price_scale": {
+              "maximum": 18,
+              "minimum": 0,
+              "title": "Price Scale",
+              "type": "integer"
+            },
+            "quote_currency": {
+              "title": "Quote Currency",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "tick_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Tick Size",
+              "type": "string"
+            },
+            "timezone": {
+              "title": "Timezone",
+              "type": "string"
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instrument_id",
+            "asset_class",
+            "market",
+            "venue",
+            "canonical_symbol",
+            "display_name",
+            "base_currency",
+            "quote_currency",
+            "timezone",
+            "tick_size",
+            "lot_size",
+            "price_scale",
+            "market_rule_set_id"
+          ],
+          "title": "Instrument",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/CompanionSessionSummary"
+          },
+          "maxItems": 50,
+          "title": "Sessions",
+          "type": "array"
+        }
+      },
+      "title": "CompanionSessionListResult",
+      "type": "object"
+    },
+    "CompanionSessionParams": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "CompanionSessionParams",
+      "type": "object"
+    },
+    "CompanionSessionStateResult": {
+      "$defs": {
+        "CompanionSessionSummary": {
+          "additionalProperties": false,
+          "properties": {
+            "frame_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Frame Id",
+              "type": "string"
+            },
+            "instrument": {
+              "$ref": "#/$defs/Instrument"
+            },
+            "revision": {
+              "minimum": 0,
+              "title": "Revision",
+              "type": "integer"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "session_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Session Id",
+              "type": "string"
+            },
+            "snapshot_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "paused",
+                "completed",
+                "stopped"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            },
+            "visible_at": {
+              "format": "date-time",
+              "title": "Visible At",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id",
+            "snapshot_id",
+            "instrument",
+            "status",
+            "frame_id",
+            "revision",
+            "visible_at",
+            "updated_at"
+          ],
+          "title": "CompanionSessionSummary",
+          "type": "object"
+        },
+        "Instrument": {
+          "additionalProperties": false,
+          "properties": {
+            "asset_class": {
+              "enum": [
+                "crypto_spot",
+                "crypto_perpetual",
+                "equity"
+              ],
+              "title": "Asset Class",
+              "type": "string"
+            },
+            "base_currency": {
+              "title": "Base Currency",
+              "type": "string"
+            },
+            "canonical_symbol": {
+              "title": "Canonical Symbol",
+              "type": "string"
+            },
+            "display_name": {
+              "title": "Display Name",
+              "type": "string"
+            },
+            "instrument_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Instrument Id",
+              "type": "string"
+            },
+            "lot_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Lot Size",
+              "type": "string"
+            },
+            "market": {
+              "enum": [
+                "CRYPTO",
+                "CN"
+              ],
+              "title": "Market",
+              "type": "string"
+            },
+            "market_rule_set_id": {
+              "title": "Market Rule Set Id",
+              "type": "string"
+            },
+            "price_scale": {
+              "maximum": 18,
+              "minimum": 0,
+              "title": "Price Scale",
+              "type": "integer"
+            },
+            "quote_currency": {
+              "title": "Quote Currency",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "tick_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Tick Size",
+              "type": "string"
+            },
+            "timezone": {
+              "title": "Timezone",
+              "type": "string"
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instrument_id",
+            "asset_class",
+            "market",
+            "venue",
+            "canonical_symbol",
+            "display_name",
+            "base_currency",
+            "quote_currency",
+            "timezone",
+            "tick_size",
+            "lot_size",
+            "price_scale",
+            "market_rule_set_id"
+          ],
+          "title": "Instrument",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session": {
+          "$ref": "#/$defs/CompanionSessionSummary"
+        }
+      },
+      "required": [
+        "session"
+      ],
+      "title": "CompanionSessionStateResult",
+      "type": "object"
+    },
+    "CompanionSessionSummary": {
+      "$defs": {
+        "Instrument": {
+          "additionalProperties": false,
+          "properties": {
+            "asset_class": {
+              "enum": [
+                "crypto_spot",
+                "crypto_perpetual",
+                "equity"
+              ],
+              "title": "Asset Class",
+              "type": "string"
+            },
+            "base_currency": {
+              "title": "Base Currency",
+              "type": "string"
+            },
+            "canonical_symbol": {
+              "title": "Canonical Symbol",
+              "type": "string"
+            },
+            "display_name": {
+              "title": "Display Name",
+              "type": "string"
+            },
+            "instrument_id": {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "title": "Instrument Id",
+              "type": "string"
+            },
+            "lot_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Lot Size",
+              "type": "string"
+            },
+            "market": {
+              "enum": [
+                "CRYPTO",
+                "CN"
+              ],
+              "title": "Market",
+              "type": "string"
+            },
+            "market_rule_set_id": {
+              "title": "Market Rule Set Id",
+              "type": "string"
+            },
+            "price_scale": {
+              "maximum": 18,
+              "minimum": 0,
+              "title": "Price Scale",
+              "type": "integer"
+            },
+            "quote_currency": {
+              "title": "Quote Currency",
+              "type": "string"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "default": "1.0",
+              "title": "Schema Version",
+              "type": "string"
+            },
+            "tick_size": {
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "title": "Tick Size",
+              "type": "string"
+            },
+            "timezone": {
+              "title": "Timezone",
+              "type": "string"
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string"
+            }
+          },
+          "required": [
+            "instrument_id",
+            "asset_class",
+            "market",
+            "venue",
+            "canonical_symbol",
+            "display_name",
+            "base_currency",
+            "quote_currency",
+            "timezone",
+            "tick_size",
+            "lot_size",
+            "price_scale",
+            "market_rule_set_id"
+          ],
+          "title": "Instrument",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "frame_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Frame Id",
+          "type": "string"
+        },
+        "instrument": {
+          "$ref": "#/$defs/Instrument"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "paused",
+            "completed",
+            "stopped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "visible_at": {
+          "format": "date-time",
+          "title": "Visible At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "snapshot_id",
+        "instrument",
+        "status",
+        "frame_id",
+        "revision",
+        "visible_at",
+        "updated_at"
+      ],
+      "title": "CompanionSessionSummary",
+      "type": "object"
+    },
+    "CompanionThreadCreateParams": {
+      "$defs": {
+        "CreateTutorThreadRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            }
+          },
+          "title": "CreateTutorThreadRequest",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/CreateTutorThreadRequest"
+        },
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "CompanionThreadCreateParams",
+      "type": "object"
+    },
+    "CompanionThreadListParams": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "CompanionThreadListParams",
+      "type": "object"
+    },
+    "CompanionThreadParams": {
+      "additionalProperties": false,
+      "properties": {
+        "thread_id": {
+          "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+          "title": "Thread Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "thread_id"
+      ],
+      "title": "CompanionThreadParams",
+      "type": "object"
+    },
     "CompletedSession": {
       "$defs": {
         "Instrument": {
@@ -17656,6 +18894,19 @@
       },
       "additionalProperties": false,
       "properties": {
+        "annotation_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Annotation Id"
+        },
         "evidence_ids": {
           "items": {
             "type": "string"
@@ -17676,6 +18927,16 @@
           "title": "Points",
           "type": "array"
         },
+        "purpose": {
+          "enum": [
+            "trend",
+            "support",
+            "resistance",
+            "channel"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
         "shape": {
           "enum": [
             "line",
@@ -17685,9 +18946,35 @@
           ],
           "title": "Shape",
           "type": "string"
+        },
+        "timeframe": {
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Timeframe",
+          "type": "string"
+        },
+        "tool": {
+          "enum": [
+            "trend_line",
+            "horizontal_line",
+            "parallel_channel",
+            "zone"
+          ],
+          "title": "Tool",
+          "type": "string"
         }
       },
       "required": [
+        "tool",
+        "purpose",
+        "timeframe",
         "shape",
         "label",
         "evidence_ids",
@@ -17805,6 +19092,20 @@
       },
       "additionalProperties": false,
       "properties": {
+        "analysis_timeframe": {
+          "default": "1m",
+          "enum": [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "2h",
+            "4h",
+            "1d"
+          ],
+          "title": "Analysis Timeframe",
+          "type": "string"
+        },
         "context_annotation_ids": {
           "items": {
             "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
@@ -17895,6 +19196,19 @@
         "TutorChartInstruction": {
           "additionalProperties": false,
           "properties": {
+            "annotation_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Annotation Id"
+            },
             "evidence_ids": {
               "items": {
                 "type": "string"
@@ -17915,6 +19229,16 @@
               "title": "Points",
               "type": "array"
             },
+            "purpose": {
+              "enum": [
+                "trend",
+                "support",
+                "resistance",
+                "channel"
+              ],
+              "title": "Purpose",
+              "type": "string"
+            },
             "shape": {
               "enum": [
                 "line",
@@ -17924,9 +19248,35 @@
               ],
               "title": "Shape",
               "type": "string"
+            },
+            "timeframe": {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            },
+            "tool": {
+              "enum": [
+                "trend_line",
+                "horizontal_line",
+                "parallel_channel",
+                "zone"
+              ],
+              "title": "Tool",
+              "type": "string"
             }
           },
           "required": [
+            "tool",
+            "purpose",
+            "timeframe",
             "shape",
             "label",
             "evidence_ids",
@@ -18030,6 +19380,7 @@
           "items": {
             "$ref": "#/$defs/TutorChartInstruction"
           },
+          "maxItems": 8,
           "title": "Annotations",
           "type": "array"
         },
@@ -18152,6 +19503,19 @@
         "TutorChartInstruction": {
           "additionalProperties": false,
           "properties": {
+            "annotation_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Annotation Id"
+            },
             "evidence_ids": {
               "items": {
                 "type": "string"
@@ -18172,6 +19536,16 @@
               "title": "Points",
               "type": "array"
             },
+            "purpose": {
+              "enum": [
+                "trend",
+                "support",
+                "resistance",
+                "channel"
+              ],
+              "title": "Purpose",
+              "type": "string"
+            },
             "shape": {
               "enum": [
                 "line",
@@ -18181,9 +19555,35 @@
               ],
               "title": "Shape",
               "type": "string"
+            },
+            "timeframe": {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            },
+            "tool": {
+              "enum": [
+                "trend_line",
+                "horizontal_line",
+                "parallel_channel",
+                "zone"
+              ],
+              "title": "Tool",
+              "type": "string"
             }
           },
           "required": [
+            "tool",
+            "purpose",
+            "timeframe",
             "shape",
             "label",
             "evidence_ids",
@@ -18251,6 +19651,7 @@
               "items": {
                 "$ref": "#/$defs/TutorChartInstruction"
               },
+              "maxItems": 8,
               "title": "Annotations",
               "type": "array"
             },
@@ -18508,6 +19909,19 @@
         "TutorChartInstruction": {
           "additionalProperties": false,
           "properties": {
+            "annotation_id": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z]{3}_[0-9a-f-]{36}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Annotation Id"
+            },
             "evidence_ids": {
               "items": {
                 "type": "string"
@@ -18528,6 +19942,16 @@
               "title": "Points",
               "type": "array"
             },
+            "purpose": {
+              "enum": [
+                "trend",
+                "support",
+                "resistance",
+                "channel"
+              ],
+              "title": "Purpose",
+              "type": "string"
+            },
             "shape": {
               "enum": [
                 "line",
@@ -18537,9 +19961,35 @@
               ],
               "title": "Shape",
               "type": "string"
+            },
+            "timeframe": {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "1h",
+                "2h",
+                "4h",
+                "1d"
+              ],
+              "title": "Timeframe",
+              "type": "string"
+            },
+            "tool": {
+              "enum": [
+                "trend_line",
+                "horizontal_line",
+                "parallel_channel",
+                "zone"
+              ],
+              "title": "Tool",
+              "type": "string"
             }
           },
           "required": [
+            "tool",
+            "purpose",
+            "timeframe",
             "shape",
             "label",
             "evidence_ids",
@@ -18607,6 +20057,7 @@
               "items": {
                 "$ref": "#/$defs/TutorChartInstruction"
               },
+              "maxItems": 8,
               "title": "Annotations",
               "type": "array"
             },

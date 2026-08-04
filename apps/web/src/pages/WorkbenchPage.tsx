@@ -8,8 +8,8 @@ import type {
   SubmitOrderRequest,
 } from "@replaytutor/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Bot, ChevronRight, Columns2, Crosshair, Grid2X2, Keyboard, Link2, LockKeyhole, MessageSquare, PanelTop, Pause, Play, Rows2, Square, StepForward } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BarChart3, Bot, ChevronRight, Columns2, Crosshair, Grid2X2, Keyboard, Link2, LockKeyhole, Maximize2, MessageSquare, Minimize2, PanelTop, Pause, Play, Rows2, Square, StepForward } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -57,10 +57,13 @@ import { evidenceReturnUrl } from "../chart/EvidenceSelectionBridge";
 import { DEFAULT_INDICATORS, INDICATOR_CATALOG, supportsTutorEvidence, type IndicatorInstance } from "../chart/IndicatorCatalog";
 import { chartTradePlanContext } from "../chart/TradePlanContext";
 import { AnnotationInspector } from "../components/AnnotationInspector";
+import { clampResizableValue, ColumnResizeHandle, readStoredResizableValue } from "../components/ColumnResizeHandle";
 import { DrawingToolbar } from "../components/DrawingToolbar";
 import { MarketDepthPanel } from "../components/MarketDepthPanel";
 import { IndicatorPanel } from "../components/IndicatorPanel";
 import { TutorDock } from "../components/TutorDock";
+import { useElementFullscreen } from "../lib/useElementFullscreen";
+import { useObservedWidth } from "../lib/useObservedWidth";
 import {
   CommandPalette,
   ShortcutHelp,
@@ -69,6 +72,11 @@ import {
 
 const REPLAY_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 type ReplayTimeframe = typeof REPLAY_TIMEFRAMES[number];
+type AnnotationDispositionList = Awaited<ReturnType<typeof fetchAnnotationDispositions>>;
+type TimeframeBars = Partial<Record<ReplayTimeframe, Awaited<ReturnType<typeof fetchSessionBars>>["bars"]>>;
+type TimeframeBarResponse = Awaited<ReturnType<typeof fetchSessionBars>> & {
+  readonly sourceRevision: number;
+};
 
 interface SavedChartLayout {
   readonly timeframe?: ReplayTimeframe;
@@ -213,6 +221,12 @@ export function WorkbenchPage() {
   const english = !i18n.resolvedLanguage?.startsWith("zh");
   const l = (en: string, zh: string) => english ? en : zh;
   const { sessionId } = useParams();
+  const workbenchRef = useRef<HTMLElement>(null);
+  const workbenchGridRef = useRef<HTMLDivElement>(null);
+  const chartWorkspaceRef = useRef<HTMLDivElement>(null);
+  const workbenchGridWidth = useObservedWidth(workbenchGridRef, window.innerWidth);
+  const chartWorkspaceWidth = useObservedWidth(chartWorkspaceRef, 1000);
+  const fullscreen = useElementFullscreen(workbenchRef);
   const [searchParams] = useSearchParams();
   const evidenceId = searchParams.get("evidence");
   const reviewMode = searchParams.get("mode") === "review";
@@ -245,6 +259,15 @@ export function WorkbenchPage() {
     if (saved === "collapsed") return null;
     return window.localStorage.getItem("replaytutor:decision-dock-collapsed") === "true" ? null : "trade";
   });
+  const [tradeDockWidth, setTradeDockWidth] = useState(() => readStoredResizableValue(
+    "replaytutor:trade-dock-width", 400, 320, 900,
+  ));
+  const [chatDockWidth, setChatDockWidth] = useState(() => readStoredResizableValue(
+    "replaytutor:chat-dock-width", 560, 380, 900,
+  ));
+  const [chartColumnSplit, setChartColumnSplit] = useState(() => readStoredResizableValue(
+    "replaytutor:chart-column-split", 50, 20, 80,
+  ));
   const [chatRunning, setChatRunning] = useState(false);
   const [chatUnread, setChatUnread] = useState(false);
   const [thesis, setThesis] = useState("");
@@ -302,6 +325,8 @@ export function WorkbenchPage() {
   const [chartZoomRequest, setChartZoomRequest] = useState<{ sequence: number; scale: number } | undefined>();
   const timeframeDigitsRef = useRef("");
   const timeframeTimerRef = useRef<number | null>(null);
+  const committedChartBarsRef = useRef<TimeframeBars>({});
+  const committedChartSessionIdRef = useRef<string | null>(null);
   const orderTicketRef = useRef<HTMLFormElement>(null);
   const hydratedPlanIdRef = useRef<string | null>(null);
   const recordChartHistory = useCallback((entry: ChartHistoryEntry) => {
@@ -317,6 +342,15 @@ export function WorkbenchPage() {
     window.localStorage.setItem("replaytutor:active-right-tool", activeRightTool ?? "collapsed");
     window.localStorage.removeItem("replaytutor:decision-dock-collapsed");
   }, [activeRightTool]);
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:trade-dock-width", String(tradeDockWidth));
+  }, [tradeDockWidth]);
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:chat-dock-width", String(chatDockWidth));
+  }, [chatDockWidth]);
+  useEffect(() => {
+    window.localStorage.setItem("replaytutor:chart-column-split", String(chartColumnSplit));
+  }, [chartColumnSplit]);
   const marketDepth = useQuery({
     queryKey: ["session-market-depth", sessionId, session.data?.session.frame.frame_id],
     queryFn: () => fetchSessionMarketDepth(sessionId!),
@@ -324,15 +358,45 @@ export function WorkbenchPage() {
   });
   const visiblePaneCount = paneCountForLayout(chartLayout);
   const visiblePaneTimeframes = paneTimeframes.slice(0, visiblePaneCount);
-  const derivedTimeframes = REPLAY_TIMEFRAMES.slice(1);
+  const nonBasePaneTimeframes = useMemo(
+    () => [...new Set(visiblePaneTimeframes.filter((item) => item !== "1m"))],
+    [visiblePaneTimeframes],
+  );
   const timeframeQueries = useQueries({
-    queries: derivedTimeframes.map((item) => ({
+    queries: nonBasePaneTimeframes.map((item) => ({
       queryKey: ["session-bars", sessionId, item, session.data?.session.revision],
-      queryFn: () => fetchSessionBars(sessionId!, item),
-      enabled: Boolean(sessionId && session.data && visiblePaneTimeframes.includes(item)),
-      placeholderData: (previous: Awaited<ReturnType<typeof fetchSessionBars>> | undefined) => previous,
+      queryFn: async (): Promise<TimeframeBarResponse> => ({
+        ...(await fetchSessionBars(sessionId!, item)),
+        sourceRevision: session.data!.session.revision,
+      }),
+      enabled: Boolean(sessionId && session.data),
+      placeholderData: (previous: TimeframeBarResponse | undefined) => previous,
     })),
   });
+  const currentRevision = session.data?.session.revision;
+  const chartFrameReady = Boolean(
+    session.data
+    && (
+      nonBasePaneTimeframes.length === 0
+      || timeframeQueries.every((query) => (
+        !query.isFetching
+        && (query.isError || query.data?.sourceRevision === currentRevision)
+      ))
+    )
+  );
+  useEffect(() => {
+    if (!session.data || !chartFrameReady) return;
+    const previousBars = committedChartSessionIdRef.current === sessionId
+      ? committedChartBarsRef.current
+      : {};
+    committedChartSessionIdRef.current = sessionId ?? null;
+    committedChartBarsRef.current = {
+      "1m": session.data.bars,
+      ...Object.fromEntries(
+        nonBasePaneTimeframes.map((item, index) => [item, timeframeQueries[index]?.data?.bars ?? previousBars[item] ?? []]),
+      ),
+    } as TimeframeBars;
+  }, [chartFrameReady, nonBasePaneTimeframes, session.data, timeframeQueries]);
   useEffect(() => {
     if (activePane >= visiblePaneCount) setActivePane(0);
   }, [activePane, visiblePaneCount]);
@@ -674,30 +738,34 @@ export function WorkbenchPage() {
       properties?: Record<string, unknown>;
     }) => {
       if (!sessionId || !session.data) throw new Error("Session is not ready");
-      const before = dispositions.data?.dispositions.find(
+      const currentDispositions = queryClient.getQueryData<AnnotationDispositionList>(
+        ["annotation-dispositions", sessionId],
+      );
+      const before = currentDispositions?.dispositions.find(
         (item) => item.annotation_id === annotationId,
       ) ?? null;
+      const preserveRevisionFields = action === "revised";
       const updated = await actOnAnnotation(sessionId, annotationId, {
         command_id: commandId(),
         expected_revision: session.data.session.revision,
         action,
         label,
         points: points ? boundedPoints(points) as AnnotationActionRequest["points"] : undefined,
-        metadata,
-        style,
-        properties,
+        metadata: preserveRevisionFields ? metadata ?? before?.effective_metadata : metadata,
+        style: preserveRevisionFields ? style ?? before?.effective_style : style,
+        properties: preserveRevisionFields ? properties ?? before?.effective_properties ?? {} : properties,
       });
       return { updated, before, action };
     },
     onSuccess: ({ updated, before, action }) => {
-      queryClient.setQueryData(
+      queryClient.setQueryData<AnnotationDispositionList>(
         ["annotation-dispositions", sessionId],
-        {
-          schema_version: "1.0",
-          dispositions: (dispositions.data?.dispositions ?? []).map((item) => (
+        (current) => ({
+          schema_version: current?.schema_version ?? "1.0",
+          dispositions: (current?.dispositions ?? []).map((item) => (
             item.annotation_id === updated.annotation_id ? updated : item
           )),
-        },
+        }),
       );
       if (before?.original_annotation.layer === "user" && ["revised", "deleted"].includes(action)) {
         recordChartHistory({
@@ -758,6 +826,7 @@ export function WorkbenchPage() {
     },
   });
 
+  const readOnly = reviewMode || session.data?.session.status === "completed";
   const effectiveAnnotations = useMemo(
     () => (dispositions.data?.dispositions ?? [])
       .filter((item) => !["rejected", "deleted"].includes(item.state))
@@ -770,6 +839,12 @@ export function WorkbenchPage() {
         properties: item.effective_properties ?? {},
       })),
     [dispositions.data],
+  );
+  const editableAiAnnotationIds = useMemo(
+    () => readOnly ? [] : (dispositions.data?.dispositions ?? [])
+      .filter((item) => item.original_annotation.layer === "ai" && item.state === "accepted")
+      .map((item) => item.annotation_id),
+    [dispositions.data, readOnly],
   );
   const selectedDisposition = dispositions.data?.dispositions.find(
     (item) => item.annotation_id === selectedAnnotationId,
@@ -810,10 +885,12 @@ export function WorkbenchPage() {
     bumpActiveDrawingRequest();
   };
   const reviseAnnotationFromChart = useCallback((annotationId: string, points: AnnotationPoint[]) => {
+    if (readOnly) return;
     const disposition = dispositions.data?.dispositions.find(
       (item) => item.annotation_id === annotationId,
     );
-    if (!disposition || disposition.original_annotation.layer !== "user" || annotationAction.isPending) return;
+    if (!disposition || annotationAction.isPending) return;
+    if (disposition.original_annotation.layer !== "user" && disposition.state !== "accepted") return;
     let revised: ChartObjectState;
     try {
       revised = revisedChartObject(
@@ -836,7 +913,7 @@ export function WorkbenchPage() {
       style: revised.style,
       properties: revised.properties,
     });
-  }, [annotationAction, dispositions.data, queryClient, session.data?.session.instrument.price_scale, sessionId]);
+  }, [annotationAction, dispositions.data, queryClient, readOnly, session.data?.session.instrument.price_scale, sessionId]);
   const undoChartAction = () => {
     if (chartHistoryIndex < 1) return;
     chartHistoryAction.mutate({
@@ -1080,11 +1157,20 @@ export function WorkbenchPage() {
   const delta = session.data;
   const state = delta.session;
   const execution = delta.execution;
+  const committedChartBars = committedChartSessionIdRef.current === sessionId
+    ? committedChartBarsRef.current
+    : {};
   const queryForTimeframe = (item: ReplayTimeframe) => (
-    item === "1m" ? null : timeframeQueries[derivedTimeframes.indexOf(item)]
+    item === "1m" ? null : timeframeQueries[nonBasePaneTimeframes.indexOf(item)]
   );
   const barsForTimeframe = (item: ReplayTimeframe) => (
-    item === "1m" ? delta.bars : (queryForTimeframe(item)?.data?.bars ?? [])
+    item === "1m"
+      ? (chartFrameReady
+        ? delta.bars
+        : (committedChartBars["1m"] ?? delta.bars))
+      : (chartFrameReady
+        ? (queryForTimeframe(item)?.data?.bars ?? committedChartBars[item] ?? [])
+        : (committedChartBars[item] ?? queryForTimeframe(item)?.data?.bars ?? []))
   );
   const chartBars = barsForTimeframe(timeframe);
   const currentPrice = chartBars.at(-1)?.raw.close ?? delta.bars.at(-1)?.raw.close ?? "-";
@@ -1095,7 +1181,20 @@ export function WorkbenchPage() {
   const estimatedNotional = Number(quantity) > 0 && Number(orderReferencePrice) > 0
     ? (Number(quantity) * Number(orderReferencePrice)).toFixed(2)
     : null;
-  const readOnly = reviewMode || state.status === "completed";
+  const rightDockMin = activeRightTool === "chat" ? 380 : 320;
+  const rightDockMax = Math.max(
+    rightDockMin,
+    workbenchGridWidth - 48 - 560,
+  );
+  const configuredRightDockWidth = activeRightTool === "chat" ? chatDockWidth : tradeDockWidth;
+  const visibleRightDockWidth = Math.min(configuredRightDockWidth, rightDockMax);
+  const chartColumnMin = Math.max(20, 16_000 / Math.max(chartWorkspaceWidth, 1));
+  const chartColumnMax = 100 - chartColumnMin;
+  const visibleChartColumnSplit = clampResizableValue(
+    chartColumnSplit,
+    chartColumnMin,
+    chartColumnMax,
+  );
   const visibleLabel = state.hidden_real_date
     ? `Frame ${String(state.frame.current_index).padStart(5, "0")}`
     : new Date(state.frame.visible_at).toLocaleString(english ? "en-US" : "zh-CN", { hour12: false });
@@ -1121,12 +1220,13 @@ export function WorkbenchPage() {
     { id: "toggle-drawings", label: annotationsVisible ? l("Hide all drawings", "隐藏全部绘图") : l("Show all drawings", "显示全部绘图"), detail: l("Toggle visibility without deleting objects.", "不删除对象，只切换可见性"), shortcut: "⌘/Ctrl + ⌥/Alt + H", run: () => setAnnotationsVisible((value) => !value) },
     { id: "shortcuts", label: l("View keyboard shortcuts", "查看快捷键"), detail: l("Show available actions and safety limits.", "显示已接入操作和安全限制"), shortcut: "?", run: () => setShortcutHelpOpen(true) },
     { id: "indicators", label: l("Indicators", "指标"), detail: l("Add, hide, configure, or remove indicators on the active chart.", "添加、隐藏、配置或删除当前窗口的指标"), keywords: "indicator 指标", run: () => setIndicatorPanelOpen(true) },
+    { id: "fullscreen", label: fullscreen.active ? l("Exit fullscreen", "退出全屏") : l("Enter fullscreen", "进入全屏"), detail: l("Give the training workbench the entire display.", "让训练工作台使用整个显示区域"), keywords: "fullscreen immersive 全屏 沉浸", run: () => void fullscreen.toggle() },
     { id: "symbol", label: l("Switch instrument", "切换品种"), detail: l("The instrument is part of the deterministic session contract. Create a new session from Training setup.", "会话品种属于确定性契约，请从训练配置创建新会话"), keywords: "symbol 品种 代码", disabled: true, run: () => undefined },
     { id: "date", label: l("Go to date", "定位到指定日期"), detail: l("Disabled in replay to prevent crossing visible_at into future data.", "回放内禁用，避免越过 visible_at 查看未来数据"), keywords: "date 日期", disabled: true, run: () => undefined },
   ];
 
   return (
-    <section className="workbench-page">
+    <section className={`workbench-page ${fullscreen.fallback ? "is-immersive" : ""}`} ref={workbenchRef}>
       <header className="workbench-top">
         <strong>{state.instrument.canonical_symbol}</strong>
         <span>{timeframe}</span>
@@ -1134,6 +1234,16 @@ export function WorkbenchPage() {
         <span className="workbench-meta">{visibleLabel}</span>
         <span className="workbench-meta">revision {state.revision}</span>
         <span className="data-ok">{l("Data quality · OK", "数据质量 · OK")}</span>
+        <button
+          aria-pressed={fullscreen.active}
+          className="workbench-fullscreen-action"
+          onClick={() => void fullscreen.toggle()}
+          title={fullscreen.active ? l("Exit fullscreen (Esc)", "退出全屏（Esc）") : l("Enter fullscreen", "进入全屏")}
+          type="button"
+        >
+          {fullscreen.active ? <Minimize2 aria-hidden="true" size={13} /> : <Maximize2 aria-hidden="true" size={13} />}
+          {fullscreen.active ? l("Exit fullscreen", "退出全屏") : l("Fullscreen", "全屏")}
+        </button>
         {readOnly ? (
           <Link
             className="secondary-action"
@@ -1162,7 +1272,11 @@ export function WorkbenchPage() {
         </button>}
       </header>
 
-      <div className={`workbench-grid right-tool-${activeRightTool ?? "collapsed"}`}>
+      <div
+        className={`workbench-grid right-tool-${activeRightTool ?? "collapsed"}`}
+        ref={workbenchGridRef}
+        style={{ "--workbench-dock-width": `${visibleRightDockWidth}px` } as CSSProperties}
+      >
         <DrawingToolbar
           activeTool={drawingTool}
           annotationsLocked={annotationsLocked}
@@ -1263,7 +1377,11 @@ export function WorkbenchPage() {
             onToggleContext={(instanceId) => setContextIndicatorIds((items) => items.includes(instanceId) ? items.filter((item) => item !== instanceId) : [...items, instanceId].slice(-8))}
             paneNumber={activePane + 1}
           />
-          <div className={`chart-workspace layout-${chartLayout}`}>
+          <div
+            className={`chart-workspace layout-${chartLayout}`}
+            ref={chartWorkspaceRef}
+            style={{ "--chart-column-split": `${visibleChartColumnSplit}%` } as CSSProperties}
+          >
             {visiblePaneTimeframes.map((paneTimeframe, paneIndex) => {
               const paneBars = barsForTimeframe(paneTimeframe);
               const paneQuery = queryForTimeframe(paneTimeframe);
@@ -1298,7 +1416,7 @@ export function WorkbenchPage() {
                     <span className={paneQuery?.isError ? "timeframe-error" : ""}>
                       {paneQuery?.isError
                         ? l("Load failed", "加载失败")
-                        : paneQuery?.isFetching
+                      : paneQuery?.isFetching
                           ? l("Aggregating", "聚合中")
                           : `${paneBars.length} bars`}
                     </span>
@@ -1316,6 +1434,7 @@ export function WorkbenchPage() {
                     fills={execution?.fills}
                     annotations={annotationsVisible ? effectiveAnnotations : []}
                     annotationsLocked={annotationsLocked}
+                    editableAnnotationIds={editableAiAnnotationIds}
                     drawingTool={paneActive ? drawingTool : "select"}
                     drawingRequest={drawingRequests[paneIndex]}
                     magnetEnabled={magnetEnabled}
@@ -1327,7 +1446,7 @@ export function WorkbenchPage() {
                     onDrawingComplete={paneActive ? handleDrawingComplete : undefined}
                     onPriceAxisHorizontalLine={paneActive && !readOnly ? handlePriceAxisHorizontalLine : undefined}
                     onAnnotationSelect={setSelectedAnnotationId}
-                    onAnnotationChange={reviseAnnotationFromChart}
+                    onAnnotationChange={readOnly ? undefined : reviseAnnotationFromChart}
                     selectedAnnotationId={selectedAnnotationId}
                     onAnnotationDelete={readOnly ? undefined : deleteAnnotationFromChart}
                     onAnnotationDuplicate={readOnly ? undefined : (annotationId) => duplicateChartObject.mutate(annotationId)}
@@ -1339,6 +1458,18 @@ export function WorkbenchPage() {
                 </section>
               );
             })}
+            {(chartLayout === "vertical" || chartLayout === "quad") && (
+              <ColumnResizeHandle
+                className="chart-column-resize"
+                label={l("Resize chart columns", "调整图表分栏宽度")}
+                max={chartColumnMax}
+                min={chartColumnMin}
+                multiplier={100 / Math.max(chartWorkspaceWidth, 1)}
+                onChange={setChartColumnSplit}
+                onReset={() => setChartColumnSplit(50)}
+                value={visibleChartColumnSplit}
+              />
+            )}
           </div>
           <details className="chart-data-table">
             <summary>{l("View active chart as a market-data table", "以行情数据表查看当前窗口")}</summary>
@@ -1348,6 +1479,18 @@ export function WorkbenchPage() {
             </table>
           </details>
         </main>
+        {activeRightTool && (
+          <ColumnResizeHandle
+            className="workbench-dock-resize"
+            direction={-1}
+            label={l("Resize right workspace", "调整右侧工作区宽度")}
+            max={rightDockMax}
+            min={rightDockMin}
+            onChange={activeRightTool === "chat" ? setChatDockWidth : setTradeDockWidth}
+            onReset={() => activeRightTool === "chat" ? setChatDockWidth(560) : setTradeDockWidth(400)}
+            value={visibleRightDockWidth}
+          />
+        )}
         <aside className={`workbench-dock right-tool-${activeRightTool ?? "collapsed"}`}>
           <div className="right-dock-panels">
           <div className="decision-dock-content" hidden={activeRightTool !== "trade"}>
@@ -1446,10 +1589,10 @@ export function WorkbenchPage() {
               <button aria-label={l("Submit · activates on next bar", "提交 · 下一根激活")} className={`ticket-submit ${execution.plan.side === "BUY" ? "buy" : "sell"}`} disabled={readOnly || placeOrder.isPending || (needsTrigger && orderType !== "TRAILING_STOP_MARKET" && !triggerPrice) || (needsSecondaryLimit && !limitPrice) || (timeInForce === "GTD" && !goodTillIndex)} type="submit">{execution.plan.side === "BUY" ? l("Submit buy order", "提交买入订单") : l("Submit sell order", "提交卖出订单")}<small>{quantity} {state.instrument.base_currency} @ {orderReferencePrice} · {l("next bar", "下一根激活")}</small></button>
             </form>
           )}
-          <div className="dock-card">
+          <div className="dock-card chart-note-card">
             <span className="page-kicker">{l("CHART NOTE", "图上笔记")}</span>
             <label>
-              {l("Label", "标注文字")}
+              <span>{l("Label", "标注文字")}</span>
               <input
                 maxLength={200}
                 onChange={(event) => setAnnotationLabel(event.target.value)}
@@ -1528,13 +1671,15 @@ export function WorkbenchPage() {
             pending={annotationAction.isPending}
             readOnly={readOnly}
             onAction={(action, label, points) => {
-              if (selectedAnnotationId) annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
+              if (!selectedAnnotationId) return;
+              annotationAction.mutate({ annotationId: selectedAnnotationId, action, label, points });
             }}
           />
           </div>
           <div className="chat-dock-content" hidden={activeRightTool !== "chat"}>
             {preferences.data?.ai_mode === "off" ? <div className="chat-disabled"><Bot size={20} /><strong>{l("Codex Tutor is disabled", "Codex Tutor 已关闭")}</strong><p>{l("Enable AI mode in local settings to use session chat.", "请在本地设置中启用 AI 模式后使用会话聊天。")}</p></div> : <TutorDock
               active={activeRightTool === "chat"}
+              analysisTimeframe={timeframe}
               afterAction={readOnly}
               sessionId={sessionId}
               contextAnnotations={effectiveAnnotations.filter((item) => contextAnnotationIds.includes(item.annotation_id))}
@@ -1543,7 +1688,10 @@ export function WorkbenchPage() {
               onContextRemove={(annotationId) => setContextAnnotationIds((items) => items.filter((item) => item !== annotationId))}
               onIndicatorContextRemove={(instanceId) => setContextIndicatorIds((items) => items.filter((item) => item !== instanceId))}
               onEvidenceSelect={(targetId) => {
-                if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) setSelectedAnnotationId(targetId);
+                if (effectiveAnnotations.some((item) => item.annotation_id === targetId)) {
+                  setSelectedAnnotationId(targetId);
+                  setActiveRightTool("trade");
+                }
               }}
               onAnnotationsChanged={handleAnnotationsChanged}
               onRunningChange={(running) => {

@@ -125,11 +125,11 @@ Adapter 内部负责命令差异、事件解析、会话 ID 和错误映射。
 
 ### 5.2 TutorContext
 
-上下文传文件，不把大段行情拼进命令行参数：
-工作台图表周期是显示偏好；当前 TutorContext 继续绑定 ReplayFrame 的 1m
-`visible_bars`。若后续把高周期证据加入上下文，必须由服务端在同一 `visible_at` 下派生并签发。
-多图布局中的活动窗格与各窗格周期同样只是显示偏好，不会扩大 TutorContext。Tutor
-仍只接收服务端签发的当前 ReplayFrame 与用户显式选择的 Chart Context 对象。
+上下文传文件，不把大段行情拼进命令行参数。`TutorRequest.analysis_timeframe` 取自当前
+活动窗格；服务端在同一 `visible_at` 内重新聚合该周期的 `visible_bars` 并签发 evidence，
+不接收客户端行情坐标。切换活动周期只改变 Tutor 的分析证据，不推进 ReplayFrame，
+也不修改撮合、订单或账本。Tutor 仍只接收服务端签发的可见行情与用户显式选择的
+Chart Context 对象。
 
 ```json
 {
@@ -168,6 +168,11 @@ Agent 不得自行扩大对象时间范围或从坐标推导未进入 `allowed_e
 Tutor 生成的图上标注只能写入独立 AI 图层，初始状态为 `proposed`。用户接受、
 拒绝或修改时由应用追加处置事件；Agent 不得覆盖原始标注、转换为用户图层，
 也不得直接删除审计记录。
+
+自动绘图仅在用户明确要求时启用。`TutorRequest.analysis_timeframe` 由活动窗格提供，
+`TutorChartInstruction` 必须声明受支持的 `tool`、`purpose` 和同一 `timeframe`；每个锚点
+必须使用可见 bar 的 `close_time` 与精确 OHLC，并引用该 bar ID。宿主校验工具对应形状、
+用途、点数、周期和证据，删除不合格对象并把删除数量写入风险说明。普通问答返回空列表。
 
 Tutor 引用的 `evidence_id` 只作为只读定位键。时间、价格、frame、订单、成交和
 标注实体必须由应用的 `EvidenceResolver` 解析；Agent 不能自行拼装深链接或扩大
@@ -226,6 +231,12 @@ runtime/agent-runs/{run_id}/
 `manifest.json` 记录输入文件 hash、上下文裁剪时间、Agent 版本、命令模板版本和权限。目录中不得出现券商 token、数据库文件或用户主目录软链接。
 
 ## 7. Codex Adapter
+
+Codex 的启动 prompt 必须明确授权并要求使用只读文件工具读取运行目录中的
+`TUTOR_INSTRUCTIONS.md` 与 `tutor_context.json`。不得同时写入“禁止运行工具”之类与读取
+证据文件冲突的指令；读取范围仍严格限定为这两个文件，其他路径和其他工具用途保持禁止。
+普通市场环境或趋势提问应先直接回答当前问题，不得因为缺少交易计划、持仓或完成态会话而
+退化成通用的“上下文不足”；只有问题确实依赖这些事实时才标记对应未知项。
 
 已验证的非交互入口是 `codex exec`。建议命令模板：
 
@@ -327,8 +338,8 @@ tutor_thread
 线程摘要必须标记哪些是用户原话、确定性事实、旧 Agent 推断，防止推断逐轮变成“事实”。
 
 当前 Codex Adapter 继续使用 `--ephemeral`。宿主从同一 `tutor_thread` 选择最近 12 个成功
-回合，并在 24,000 字符预算内写入 `conversation_history`；完整历史只在应用数据库和 UI
-中保留。失败、取消、超时回合不进入后续 Agent 上下文。旧证据 ID 只保留为来源标记，除非
+回合，并在 24,000 字符预算内写入 `conversation_history`；完整线程历史保留在应用数据库，UI 只展示
+当前对话，不提供过去线程列表。失败、取消、超时回合不进入后续 Agent 上下文。旧证据 ID 只保留为来源标记，除非
 也出现在当前回合的 `allowed_evidence_ids`，否则不得引用。
 
 ## 12. 提示与技能包

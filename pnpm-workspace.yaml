@@ -2,6 +2,7 @@ packages:
   - apps/web
   - apps/demo-video
   - packages/contracts
+  - packages/tutor-ui
 allowBuilds:
   esbuild: true
 overrides:

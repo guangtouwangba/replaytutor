@@ -11,6 +11,44 @@ export type CreatedAt1 = string;
 export type Error = string | null;
 export type FrameId = string;
 export type Question = string;
+/**
+ * @maxItems 8
+ */
+export type Annotations =
+  | []
+  | [TutorChartInstruction]
+  | [TutorChartInstruction, TutorChartInstruction]
+  | [TutorChartInstruction, TutorChartInstruction, TutorChartInstruction]
+  | [TutorChartInstruction, TutorChartInstruction, TutorChartInstruction, TutorChartInstruction]
+  | [TutorChartInstruction, TutorChartInstruction, TutorChartInstruction, TutorChartInstruction, TutorChartInstruction]
+  | [
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction
+    ]
+  | [
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction
+    ]
+  | [
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction,
+      TutorChartInstruction
+    ];
+export type AnnotationId = string | null;
 export type EvidenceIds = string[];
 export type Label = string;
 /**
@@ -161,8 +199,10 @@ export type Points =
     ];
 export type Price = string;
 export type Time = string;
+export type Purpose = "trend" | "support" | "resistance" | "channel";
 export type Shape = "line" | "zone" | "marker" | "label";
-export type Annotations = TutorChartInstruction[];
+export type Timeframe = "1m" | "5m" | "15m" | "1h" | "2h" | "4h" | "1d";
+export type Tool = "trend_line" | "horizontal_line" | "parallel_channel" | "zone";
 export type Disclaimer = string;
 export type Confidence = "low" | "medium" | "high";
 export type EvidenceIds1 = string[];
@@ -235,10 +275,14 @@ export interface TutorResponse {
   summary: Summary;
 }
 export interface TutorChartInstruction {
+  annotation_id?: AnnotationId;
   evidence_ids: EvidenceIds;
   label: Label;
   points: Points;
+  purpose: Purpose;
   shape: Shape;
+  timeframe: Timeframe;
+  tool: Tool;
 }
 export interface AnnotationPoint {
   price: Price;

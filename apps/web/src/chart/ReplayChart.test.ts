@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Bar } from "@replaytutor/contracts";
-import { chartPeriodFor, resolveDrawingPoint } from "./ReplayChart";
+import { annotationIsEditable, annotationOverlayLineStyle, chartPeriodFor, resolveDrawingPoint } from "./ReplayChart";
 
 describe("chartPeriodFor", () => {
   it("maps every replay timeframe to the chart engine period", () => {
@@ -35,5 +35,24 @@ describe("chartPeriodFor", () => {
       2,
       true,
     )).toEqual({ time: bar.close_time, price: "110.00" });
+  });
+
+  it("keeps the chosen line color visible while an annotation is selected", () => {
+    expect(annotationOverlayLineStyle({
+      line_color: "#ff00ff",
+      line_width: 2,
+      line_dash: "solid",
+    }, true, "#20b7f5")).toEqual({
+      color: "#ff00ff",
+      size: 3,
+      style: "solid",
+    });
+  });
+
+  it("unlocks accepted AI drawings without making proposed drawings editable", () => {
+    const annotation = { annotation_id: "ann-ai", layer: "ai" } as const;
+    expect(annotationIsEditable(annotation, [], false)).toBe(false);
+    expect(annotationIsEditable(annotation, ["ann-ai"], false)).toBe(true);
+    expect(annotationIsEditable(annotation, ["ann-ai"], true)).toBe(false);
   });
 });

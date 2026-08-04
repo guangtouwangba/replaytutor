@@ -30,6 +30,7 @@ interface ReplayChartProps {
   readonly fills?: readonly PaperFill[];
   readonly annotations?: readonly ChartAnnotation[];
   readonly annotationsLocked?: boolean;
+  readonly editableAnnotationIds?: readonly string[];
   readonly drawingTool?: DrawingTool;
   readonly drawingRequest?: number;
   readonly magnetEnabled?: boolean;
@@ -71,6 +72,31 @@ export function chartPeriodFor(timeframe: ReplayTimeframe) {
     return { type: "hour", span: Number(timeframe.slice(0, -1)) } as const;
   }
   return { type: "day", span: 1 } as const;
+}
+
+export function annotationOverlayLineStyle(
+  style: ChartAnnotation["style"] | undefined,
+  selected: boolean,
+  fallbackColor: string,
+) {
+  const color = style?.line_color ?? fallbackColor;
+  const width = style?.line_width ?? 1;
+  const requestedDash = style?.line_dash ?? "solid";
+  return {
+    color,
+    size: selected ? Math.max(3, width) : width,
+    style: requestedDash === "solid" ? "solid" as const : "dashed" as const,
+  };
+}
+
+export function annotationIsEditable(
+  annotation: Pick<ChartAnnotation, "annotation_id" | "layer">,
+  editableAnnotationIds: readonly string[],
+  annotationsLocked: boolean,
+): boolean {
+  return !annotationsLocked && (
+    annotation.layer === "user" || editableAnnotationIds.includes(annotation.annotation_id)
+  );
 }
 
 export function resolveDrawingPoint(
@@ -158,6 +184,7 @@ export function ReplayChart({
   fills = [],
   annotations = [],
   annotationsLocked = false,
+  editableAnnotationIds = [],
   drawingTool = "select",
   drawingRequest = 0,
   magnetEnabled = true,
@@ -193,6 +220,7 @@ export function ReplayChart({
   const [hoveredAnnotationId, setHoveredAnnotationId] = useState<string | null>(null);
   const [visibleBoundaryX, setVisibleBoundaryX] = useState<number | null>(null);
   const [indicatorLegendCollapsed, setIndicatorLegendCollapsed] = useState(false);
+  const [objectActionsExpanded, setObjectActionsExpanded] = useState(false);
   const [priceAxisHover, setPriceAxisHover] = useState<{
     readonly point: AnnotationPoint;
     readonly y: number;
@@ -201,6 +229,10 @@ export function ReplayChart({
   } | null>(null);
   const [priceAxisMenu, setPriceAxisMenu] = useState<typeof priceAxisHover>(null);
   const visibleIndicatorCount = indicators.filter((indicator) => indicator.visible).length;
+
+  useEffect(() => {
+    setObjectActionsExpanded(false);
+  }, [selectedAnnotationId]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -532,13 +564,19 @@ export function ReplayChart({
       const name = definition?.overlayName ?? fallbackName;
       const color = annotation.layer === "ai" ? "#7c5cff" : "#20b7f5";
       const objectColor = annotation.style?.line_color ?? color;
-      const objectWidth = annotation.style?.line_width ?? 1;
-      const requestedDash = annotation.style?.line_dash ?? (annotation.layer === "ai" ? "dashed" : "solid");
-      const objectDash: "solid" | "dashed" = requestedDash === "solid" ? "solid" : "dashed";
       const fillColor = annotation.style?.fill_color ?? objectColor;
       const selected = evidenceTarget?.annotation_id === annotation.annotation_id
         || contextAnnotationIds.includes(annotation.annotation_id)
         || selectedAnnotationId === annotation.annotation_id;
+      const proposedAiStyle = annotation.layer === "ai"
+        && !editableAnnotationIds.includes(annotation.annotation_id)
+        ? { ...annotation.style, line_dash: annotation.style?.line_dash ?? "dashed" as const }
+        : annotation.style;
+      const objectLineStyle = annotationOverlayLineStyle(
+        proposedAiStyle,
+        selected,
+        color,
+      );
       if (["risk_reward", "long_position", "short_position"].includes(tool) && points.length === 3) {
         const [entry, stop, target] = points;
         for (const [suffix, areaPoints, areaColor] of [
@@ -618,9 +656,8 @@ export function ReplayChart({
         }
         continue;
       }
-      const editable = annotation.layer === "user"
+      const editable = annotationIsEditable(annotation, editableAnnotationIds, annotationsLocked)
         && Boolean(onAnnotationChange)
-        && !annotationsLocked
         && annotation.properties?.locked !== true;
       const created = chart.createOverlay({
         id,
@@ -630,7 +667,7 @@ export function ReplayChart({
         points,
         extendData: annotation.label,
         styles: {
-          line: { color: selected ? "#f5d66f" : objectColor, size: selected ? Math.max(3, objectWidth) : objectWidth, style: objectDash },
+          line: objectLineStyle,
           polygon: { color: `${fillColor}26`, borderColor: objectColor },
           point: { color: objectColor, borderColor: objectColor },
           text: { color: annotation.style?.text_color ?? objectColor, backgroundColor: "#101722", size: annotation.style?.font_size ?? 12 },
@@ -671,7 +708,7 @@ export function ReplayChart({
       }
     }
     executionOverlayIds.current = ids;
-  }, [annotations, annotationsLocked, contextAnnotationIds, evidenceTarget, fills, magnetEnabled, onAnnotationChange, onAnnotationSelect, orders, pricePrecision, selectedAnnotationId, visibleAt]);
+  }, [annotations, annotationsLocked, contextAnnotationIds, editableAnnotationIds, evidenceTarget, fills, magnetEnabled, onAnnotationChange, onAnnotationSelect, orders, pricePrecision, selectedAnnotationId, visibleAt]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -817,80 +854,104 @@ export function ReplayChart({
         </div>
       )}
       {selectedAnnotation && onAnnotationDelete && (
-        <div className="chart-object-actions" role="toolbar" aria-label="选中图表对象操作">
-          <span>
+        <div
+          className={`chart-object-actions ${objectActionsExpanded ? "is-expanded" : "is-collapsed"}`}
+          role="toolbar"
+          aria-label={english ? "Selected chart object actions" : "选中图表对象操作"}
+        >
+          <span className="chart-object-identity">
             <strong>{selectedAnnotation.label}</strong>
             <small>{selectedAnnotation.metadata?.drawing_kind ?? selectedAnnotation.tool}</small>
           </span>
-          <label title="线条颜色">
-            <span className="sr-only">线条颜色</span>
-            <input
-              aria-label="线条颜色"
+          <button
+            aria-expanded={objectActionsExpanded}
+            aria-label={objectActionsExpanded
+              ? (english ? "Collapse chart object toolbar" : "收起图表对象工具栏")
+              : (english ? "Expand chart object toolbar" : "展开图表对象工具栏")}
+            className="chart-object-actions-toggle"
+            onClick={() => setObjectActionsExpanded((expanded) => !expanded)}
+            title={objectActionsExpanded
+              ? (english ? "Collapse toolbar" : "收起工具栏")
+              : (english ? "Edit style and actions" : "展开样式与操作")}
+            type="button"
+          >
+            {objectActionsExpanded
+              ? <ChevronUp aria-hidden="true" size={15} />
+              : <ChevronDown aria-hidden="true" size={15} />}
+          </button>
+          <div className="chart-object-style-controls" hidden={!objectActionsExpanded}>
+            <label title={english ? "Line color" : "线条颜色"}>
+              <span className="sr-only">{english ? "Line color" : "线条颜色"}</span>
+              <input
+                aria-label={english ? "Line color" : "线条颜色"}
+                onChange={(event) => onAnnotationStyleChange?.(selectedAnnotation.annotation_id, {
+                  ...selectedAnnotation.style,
+                  line_color: event.target.value,
+                })}
+                type="color"
+                value={selectedAnnotation.style?.line_color ?? "#20b7f5"}
+              />
+            </label>
+            <select
+              aria-label={english ? "Line width" : "线宽"}
               onChange={(event) => onAnnotationStyleChange?.(selectedAnnotation.annotation_id, {
                 ...selectedAnnotation.style,
-                line_color: event.target.value,
+                line_width: Number(event.target.value),
               })}
-              type="color"
-              value={selectedAnnotation.style?.line_color ?? "#20b7f5"}
-            />
-          </label>
-          <select
-            aria-label="线宽"
-            onChange={(event) => onAnnotationStyleChange?.(selectedAnnotation.annotation_id, {
-              ...selectedAnnotation.style,
-              line_width: Number(event.target.value),
-            })}
-            value={selectedAnnotation.style?.line_width ?? 1}
-          >
-            {[1, 2, 3, 4].map((width) => <option key={width} value={width}>{width}px</option>)}
-          </select>
-          <select
-            aria-label="线型"
-            onChange={(event) => onAnnotationStyleChange?.(selectedAnnotation.annotation_id, {
-              ...selectedAnnotation.style,
-              line_dash: event.target.value as "solid" | "dashed" | "dotted",
-            })}
-            value={selectedAnnotation.style?.line_dash ?? "solid"}
-          >
-            <option value="solid">实线</option>
-            <option value="dashed">虚线</option>
-            <option value="dotted">点线</option>
-          </select>
-          <button aria-label="复制图表对象" onClick={() => onAnnotationDuplicate?.(selectedAnnotation.annotation_id)} title="复制" type="button">
-            <Copy aria-hidden="true" size={14} />
-          </button>
-          <button aria-label="保存为工具模板" onClick={() => onAnnotationSaveTemplate?.(selectedAnnotation.annotation_id)} title="保存模板" type="button">
-            <Save aria-hidden="true" size={14} />
-          </button>
-          <button
-            aria-label={selectedAnnotation.properties?.locked === true ? "解锁图表对象" : "锁定图表对象"}
-            onClick={() => onAnnotationPropertiesChange?.(selectedAnnotation.annotation_id, {
-              ...selectedAnnotation.properties,
-              locked: selectedAnnotation.properties?.locked !== true,
-            })}
-            title={selectedAnnotation.properties?.locked === true ? "解锁" : "锁定"}
-            type="button"
-          >
-            {selectedAnnotation.properties?.locked === true ? <Unlock aria-hidden="true" size={14} /> : <Lock aria-hidden="true" size={14} />}
-          </button>
-          <button
-            aria-label="隐藏图表对象"
-            onClick={() => onAnnotationPropertiesChange?.(selectedAnnotation.annotation_id, { ...selectedAnnotation.properties, hidden: true })}
-            title="隐藏"
-            type="button"
-          >
-            <EyeOff aria-hidden="true" size={14} />
-          </button>
-          <button
-            aria-label={`删除 ${selectedAnnotation.label}`}
-            className="is-danger"
-            onClick={() => onAnnotationDelete(selectedAnnotation.annotation_id)}
-            title="删除图表对象"
-            type="button"
-          >
-            <Trash2 aria-hidden="true" size={14} strokeWidth={1.8} />
-            删除
-          </button>
+              value={selectedAnnotation.style?.line_width ?? 1}
+            >
+              {[1, 2, 3, 4].map((width) => <option key={width} value={width}>{width}px</option>)}
+            </select>
+            <select
+              aria-label={english ? "Line style" : "线型"}
+              onChange={(event) => onAnnotationStyleChange?.(selectedAnnotation.annotation_id, {
+                ...selectedAnnotation.style,
+                line_dash: event.target.value as "solid" | "dashed" | "dotted",
+              })}
+              value={selectedAnnotation.style?.line_dash ?? "solid"}
+            >
+              <option value="solid">{english ? "Solid" : "实线"}</option>
+              <option value="dashed">{english ? "Dashed" : "虚线"}</option>
+              <option value="dotted">{english ? "Dotted" : "点线"}</option>
+            </select>
+          </div>
+          <div className="chart-object-buttons" hidden={!objectActionsExpanded}>
+            <button aria-label={english ? "Duplicate chart object" : "复制图表对象"} onClick={() => onAnnotationDuplicate?.(selectedAnnotation.annotation_id)} title={english ? "Duplicate" : "复制"} type="button">
+              <Copy aria-hidden="true" size={14} />
+            </button>
+            <button aria-label={english ? "Save chart tool template" : "保存为工具模板"} onClick={() => onAnnotationSaveTemplate?.(selectedAnnotation.annotation_id)} title={english ? "Save template" : "保存模板"} type="button">
+              <Save aria-hidden="true" size={14} />
+            </button>
+            <button
+              aria-label={selectedAnnotation.properties?.locked === true ? (english ? "Unlock chart object" : "解锁图表对象") : (english ? "Lock chart object" : "锁定图表对象")}
+              onClick={() => onAnnotationPropertiesChange?.(selectedAnnotation.annotation_id, {
+                ...selectedAnnotation.properties,
+                locked: selectedAnnotation.properties?.locked !== true,
+              })}
+              title={selectedAnnotation.properties?.locked === true ? (english ? "Unlock" : "解锁") : (english ? "Lock" : "锁定")}
+              type="button"
+            >
+              {selectedAnnotation.properties?.locked === true ? <Unlock aria-hidden="true" size={14} /> : <Lock aria-hidden="true" size={14} />}
+            </button>
+            <button
+              aria-label={english ? "Hide chart object" : "隐藏图表对象"}
+              onClick={() => onAnnotationPropertiesChange?.(selectedAnnotation.annotation_id, { ...selectedAnnotation.properties, hidden: true })}
+              title={english ? "Hide" : "隐藏"}
+              type="button"
+            >
+              <EyeOff aria-hidden="true" size={14} />
+            </button>
+            <button
+              aria-label={`${english ? "Delete" : "删除"} ${selectedAnnotation.label}`}
+              className="is-danger"
+              onClick={() => onAnnotationDelete(selectedAnnotation.annotation_id)}
+              title={english ? "Delete chart object" : "删除图表对象"}
+              type="button"
+            >
+              <Trash2 aria-hidden="true" size={14} strokeWidth={1.8} />
+              {english ? "Delete" : "删除"}
+            </button>
+          </div>
         </div>
       )}
       <div

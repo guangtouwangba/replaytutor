@@ -34,6 +34,7 @@ from replaytutor.modules.playbook import PlaybookEvaluator
 from replaytutor.modules.training_session.service import TrainingSessionService, parse_utc
 from replaytutor.modules.tutor.context import build_tutor_context
 from replaytutor.modules.tutor.validation import (
+    sanitize_chart_instructions,
     sanitize_evidence,
     strict_output_schema,
     validate_evidence,
@@ -46,6 +47,9 @@ _process_lock = threading.Lock()
 INSTRUCTIONS = """# ReplayTutor Codex Tutor
 
 You are a read-only trading-process coach. Use only tutor_context.json.
+Answer the user's actual question directly in summary before adding coaching detail.
+For market-environment or trend questions, use the visible bars and any supplied indicators;
+do not require a trading plan, position, or completed session unless the question itself does.
 Separate observations from inferences. Never invent prices, fills, rules, or evidence ids.
 Only cite ids listed in allowed_evidence_ids. Do not calculate or alter orders or account state.
 deterministic_rule_checks is read-only. Never change its status, reason, or evidence.
@@ -56,6 +60,13 @@ relationship between those objects, then assess the user's question from cited e
 indicators contains deterministic, server-evaluated values explicitly selected by the user.
 Treat calculation_version and parameters as fixed facts; cite their source bar ids, never
 recalculate them or infer values for missing warmup points.
+Create annotations only when the user explicitly asks to draw, mark, or add chart objects.
+For an unspecified count, propose only 3 to 5 high-confidence objects and never more than 8.
+Supported tools are trend_line, horizontal_line, parallel_channel, and zone. Use the declared
+analysis_timeframe exactly. Every point must use the close_time and an exact open, high, low,
+or close price from a visible bar, and that bar id must appear in the annotation evidence_ids.
+Use purpose trend for trend_line, support or resistance for horizontal_line and zone, and
+channel for parallel_channel. Return no annotations for ordinary questions.
 The market is hidden after visible_at. Treat forbidden_fields as unavailable, not unknown files.
 conversation_history is prior application context. Prior evidence ids are provenance only and
 cannot be cited unless allowed_evidence_ids also contains them for this turn. Prior inferences
@@ -109,6 +120,10 @@ class TutorRuntime:
             )
             for spec in request.context_indicators
         ]
+        analysis_bars = self.sessions.visible_bars(
+            session_id,
+            request.analysis_timeframe,
+        ).bars
         context, evidence_ids = build_tutor_context(
             delta,
             request,
@@ -116,6 +131,7 @@ class TutorRuntime:
             playbook_evaluation,
             chart_context,
             indicator_evidence,
+            analysis_bars,
         )
         context["conversation_history"] = self._conversation_history(thread_id)
         context["conversation_history_policy"] = {
@@ -452,6 +468,8 @@ class TutorRuntime:
                 timeout_seconds=self.settings.codex_timeout_seconds,
                 on_process=register,
             )
+            context = json.loads((workspace / "tutor_context.json").read_text(encoding="utf-8"))
+            response = sanitize_chart_instructions(response, context)
             response = validate_evidence(
                 sanitize_evidence(response, evidence_ids),
                 evidence_ids,
@@ -497,12 +515,26 @@ class TutorRuntime:
                 ).fetchone()
                 if run is None:
                     raise TutorRunNotFoundError("Tutor run not found")
-                persist_ai_annotations(
+                persisted_annotations = persist_ai_annotations(
                     connection,
                     run_id=run_id,
                     session_id=str(run["session_id"]),
                     frame_id=str(run["frame_id"]),
                     instructions=response.annotations,
+                )
+                response = response.model_copy(
+                    update={
+                        "annotations": [
+                            instruction.model_copy(
+                                update={"annotation_id": annotation.annotation_id}
+                            )
+                            for instruction, annotation in zip(
+                                response.annotations,
+                                persisted_annotations,
+                                strict=True,
+                            )
+                        ]
+                    }
                 )
             connection.execute(
                 """UPDATE tutor_run

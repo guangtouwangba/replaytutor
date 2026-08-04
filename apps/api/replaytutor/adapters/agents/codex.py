@@ -11,6 +11,13 @@ from pathlib import Path
 
 from replaytutor.contracts import AgentCapability, TutorResponse
 
+CODEX_TUTOR_PROMPT = (
+    "Use read-only filesystem tools to read TUTOR_INSTRUCTIONS.md and "
+    "tutor_context.json from the current working directory. Reading those two files "
+    "is required and explicitly permitted. Do not inspect any other path or use tools "
+    "for any other purpose. Return one response matching tutor_response.schema.json."
+)
+
 
 class CodexAdapterError(RuntimeError):
     pass
@@ -120,11 +127,6 @@ class CodexAdapter:
         auth_path = original_codex_home / "auth.json"
         if not auth_path.is_file():
             raise CodexAdapterError("Codex authentication is unavailable; run `codex login` first")
-        prompt = (
-            "Follow TUTOR_INSTRUCTIONS.md. Read tutor_context.json only. "
-            "Do not run tools or inspect any other path. Return one response "
-            "matching tutor_response.schema.json."
-        )
         with tempfile.TemporaryDirectory(prefix="replaytutor-codex-home-") as isolated_home:
             Path(isolated_home, "auth.json").symlink_to(auth_path)
             environment["CODEX_HOME"] = isolated_home
@@ -140,7 +142,7 @@ class CodexAdapter:
             on_process(process)
             try:
                 stdout, stderr = process.communicate(
-                    prompt,
+                    CODEX_TUTOR_PROMPT,
                     timeout=timeout_seconds,
                 )
             except subprocess.TimeoutExpired as error:

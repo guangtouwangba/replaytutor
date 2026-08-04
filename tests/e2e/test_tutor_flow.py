@@ -9,6 +9,55 @@ from .conftest import E2EStack
 from .helpers import create_training_session
 
 
+def test_chat_draws_visible_4h_structure_without_touching_execution(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    advanced = client.post(
+        f"/api/v1/sessions/{session_id}/commands",
+        json={
+            "command_id": f"cmd_{uuid4()}",
+            "expected_revision": created["session"]["revision"],
+            "kind": "advance",
+            "bars": 360,
+        },
+    )
+    advanced.raise_for_status()
+    execution_before = advanced.json()["execution"]
+
+    page.goto(f"{stack.web_url}/sessions/{session_id}")
+    page.get_by_role("button", name="4h", exact=True).click()
+    page.get_by_role("button", name="Chat", exact=True).click()
+    page.get_by_label("发送给 Codex Tutor").fill("帮我画主要趋势线和支撑压力")
+    page.get_by_role("button", name="发送", exact=True).click()
+    expect(page.locator(".tutor-drawing-links button")).to_have_count(3, timeout=30_000)
+
+    dispositions = client.get(
+        f"/api/v1/sessions/{session_id}/annotations/dispositions"
+    ).json()["dispositions"]
+    assert {item["original_annotation"]["tool"] for item in dispositions} == {
+        "trend_line",
+        "horizontal_line",
+    }
+    assert all(
+        item["original_annotation"]["metadata"]["source_timeframe"] == "4h"
+        and item["state"] == "proposed"
+        for item in dispositions
+    )
+    visible_at = advanced.json()["session"]["frame"]["visible_at"]
+    assert all(
+        point["time"] <= visible_at
+        for item in dispositions
+        for point in item["original_annotation"]["points"]
+    )
+    restored = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert restored["execution"] == execution_before
+    client.close()
+
+
 def test_tutor_response_uses_visible_evidence_and_separate_ai_layer(
     page: Page,
     e2e_stack_factory,
@@ -20,17 +69,37 @@ def test_tutor_response_uses_visible_evidence_and_separate_ai_layer(
     page.goto(f"{stack.web_url}/sessions/{session_id}")
     page.get_by_role("button", name="Chat", exact=True).click()
     expect(page.get_by_text("codex-cli fake-e2e", exact=True)).to_be_visible(timeout=30_000)
-    page.get_by_label("发送给 Codex Tutor").fill("核验当前可见证据")
+    page.get_by_label("发送给 Codex Tutor").fill("画一条当前可见趋势线")
     page.get_by_role("button", name="发送", exact=True).click()
     expect(page.get_by_text("事实观察", exact=True)).to_be_visible(timeout=30_000)
     expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible()
 
-    page.get_by_label("发送给 Codex Tutor").fill("给出第二条可修订建议")
+    page.get_by_label("发送给 Codex Tutor").fill("画一条第二组可修订趋势线建议")
     page.get_by_role("button", name="发送", exact=True).click()
     expect(page.locator(".chat-turn")).to_have_count(2, timeout=30_000)
-    page.get_by_label("发送给 Codex Tutor").fill("给出第三条可拒绝建议")
+    page.get_by_label("发送给 Codex Tutor").fill("画一条第三组可拒绝趋势线建议")
     page.get_by_role("button", name="发送", exact=True).click()
     expect(page.locator(".chat-turn")).to_have_count(3, timeout=30_000)
+
+    message_list = page.locator(".chat-message-list")
+    scroll_state = message_list.evaluate(
+        """element => ({
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+            overflowY: getComputedStyle(element).overflowY,
+        })"""
+    )
+    assert scroll_state["overflowY"] == "auto"
+    assert scroll_state["scrollHeight"] > scroll_state["clientHeight"]
+    dock_box = page.locator(".workbench-dock").bounding_box()
+    composer_box = page.locator(".chat-composer").bounding_box()
+    assert dock_box is not None
+    assert composer_box is not None
+    assert composer_box["y"] >= dock_box["y"]
+    assert composer_box["y"] + composer_box["height"] <= (
+        dock_box["y"] + dock_box["height"] + 1
+    )
+    expect(page.get_by_label("发送给 Codex Tutor")).to_be_in_viewport()
 
     page.get_by_role("button", name="交易", exact=True).click()
     ai_rows = page.locator(".annotation-list button", has_text="E2E Tutor 标注")

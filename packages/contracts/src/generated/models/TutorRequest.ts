@@ -1,5 +1,6 @@
 // Generated from Pydantic. Do not edit.
 
+export type AnalysisTimeframe = "1m" | "5m" | "15m" | "1h" | "2h" | "4h" | "1d";
 /**
  * @maxItems 32
  */
@@ -48,6 +49,7 @@ export type Stage = "environment" | "plan" | "position" | "exit" | "after_action
 export type ThreadId = string | null;
 
 export interface TutorRequest {
+  analysis_timeframe?: AnalysisTimeframe;
   context_annotation_ids?: ContextAnnotationIds;
   context_indicators?: ContextIndicators;
   locale?: Locale;

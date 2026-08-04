@@ -29,6 +29,7 @@ describe("AppShell workspace layout", () => {
     renderShell("/");
     expect(screen.getByRole("complementary", { name: "主要导航" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "跳到主要内容" })).toHaveAttribute("href", "#main-content");
+    expect(screen.getByRole("link", { name: "ReplayTutor" }).querySelector("img")).toHaveAttribute("src", "/replaytutor-logo.png?v=20260803");
   });
 
   it("releases the global rail space inside a training workbench", () => {

@@ -14,7 +14,7 @@ from .conftest import E2EStack
 from .helpers import command_id, create_training_session
 
 
-def test_home_supports_english_locale_and_lazy_demo(
+def test_home_supports_english_locale_and_simplified_landing(
     page: Page,
     e2e_stack_factory,
 ) -> None:
@@ -31,11 +31,8 @@ def test_home_supports_english_locale_and_lazy_demo(
             name="Train the decision with only what was visible then.",
         )
     ).to_be_visible()
-    poster = page.get_by_role("button", name="Play ReplayTutor demo")
-    expect(poster).to_be_visible()
-    expect(page.locator(".demo-media video")).to_have_count(0)
-    poster.click()
-    expect(page.locator(".demo-media video")).to_be_visible()
+    expect(page.get_by_role("link", name="Prepare market data")).to_be_visible()
+    expect(page.locator(".demo-media")).to_have_count(0)
 
 
 def test_workbench_shortcuts_and_order_draft_support_english_locale(
@@ -157,6 +154,24 @@ def test_user_can_complete_core_training_flow(
     )
     session_id = page.url.rstrip("/").split("/")[-1]
 
+    page.locator(".workbench-fullscreen-action").click()
+    expect(page.get_by_role("button", name="退出全屏", exact=True)).to_be_visible()
+    assert page.locator(".workbench-page").evaluate(
+        "element => document.fullscreenElement === element "
+        "|| element.classList.contains('is-immersive')"
+    )
+    page.keyboard.press("Escape")
+    expect(page.get_by_role("button", name="全屏", exact=True)).to_be_visible()
+
+    note_label = page.locator(".chart-note-card label > span")
+    note_input = page.get_by_label("标注文字")
+    label_box = note_label.bounding_box()
+    input_box = note_input.bounding_box()
+    card_box = page.locator(".chart-note-card").bounding_box()
+    assert label_box is not None and input_box is not None and card_box is not None
+    assert input_box["y"] >= label_box["y"] + label_box["height"]
+    assert input_box["x"] >= card_box["x"]
+
     page.get_by_role("button", name="交易", exact=True).click()
     expect(page.locator(".workbench-grid")).to_have_class(
         re.compile(r"right-tool-collapsed")
@@ -218,7 +233,7 @@ def test_user_can_complete_core_training_flow(
     assert any(annotation["label"] == "E2E 用户观察" for annotation in annotations)
 
     page.get_by_role("button", name="Chat", exact=True).click()
-    page.get_by_label("发送给 Codex Tutor").fill("为复盘生成独立 AI 证据")
+    page.get_by_label("发送给 Codex Tutor").fill("为复盘添加独立 AI 支撑线证据")
     page.get_by_role("button", name="发送", exact=True).click()
     expect(page.get_by_text("AI 图上标注", exact=True)).to_be_visible(timeout=30_000)
     page.get_by_role("button", name="交易", exact=True).click()
@@ -577,6 +592,81 @@ def test_api_and_web_restart_preserve_session_ledger_annotations_and_review(
     client.close()
 
 
+def test_workbench_columns_are_resizable_and_persisted(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    page.goto(f"{stack.web_url}/sessions/{session_id}")
+    expect(page.get_by_role("button", name="下一根 K 线")).to_be_visible()
+
+    drawing_active_style = page.locator(
+        ".drawing-rail button.is-active:not(.utility-tool)"
+    ).evaluate(
+        "element => { const style = getComputedStyle(element); return {"
+        "boxShadow: style.boxShadow, borderLeftColor: style.borderLeftColor, "
+        "borderTopColor: style.borderTopColor, borderLeftWidth: style.borderLeftWidth, "
+        "borderTopWidth: style.borderTopWidth }; }"
+    )
+    assert drawing_active_style["boxShadow"] == "none"
+    assert drawing_active_style["borderLeftColor"] == drawing_active_style["borderTopColor"]
+    assert drawing_active_style["borderLeftWidth"] == drawing_active_style["borderTopWidth"]
+
+    dock = page.locator(".workbench-dock")
+    dock_resize = page.get_by_role("separator", name="调整右侧工作区宽度")
+    dock_before = dock.bounding_box()
+    handle_box = dock_resize.bounding_box()
+    assert dock_before is not None and handle_box is not None
+    page.mouse.move(handle_box["x"] + handle_box["width"] / 2, handle_box["y"] + 80)
+    page.mouse.down()
+    page.mouse.move(handle_box["x"] - 100, handle_box["y"] + 80, steps=6)
+    page.mouse.up()
+    dock_after = dock.bounding_box()
+    assert dock_after is not None
+    assert dock_after["width"] >= dock_before["width"] + 80
+    stored_dock_width = page.evaluate(
+        "Number(localStorage.getItem('replaytutor:trade-dock-width'))"
+    )
+    page.reload()
+    expect(page.get_by_role("separator", name="调整右侧工作区宽度")).to_be_visible()
+    assert abs(dock.bounding_box()["width"] - stored_dock_width) < 2
+
+    page.get_by_role("button", name="Chat", exact=True).click()
+    right_tool_active_style = page.locator(".right-tool-rail button.is-active").evaluate(
+        "element => { const style = getComputedStyle(element); return {"
+        "borderLeftColor: style.borderLeftColor, borderTopColor: style.borderTopColor, "
+        "borderLeftWidth: style.borderLeftWidth, borderTopWidth: style.borderTopWidth }; }"
+    )
+    assert right_tool_active_style["borderLeftColor"] == right_tool_active_style["borderTopColor"]
+    assert right_tool_active_style["borderLeftWidth"] == right_tool_active_style["borderTopWidth"]
+    expect(page.locator(".chat-thread-sidebar")).to_have_count(0)
+    expect(page.get_by_role("separator", name="调整对话历史宽度")).to_have_count(0)
+    expect(page.get_by_role("button", name="新建对话")).to_be_visible()
+
+    page.get_by_role("button", name="左右双图").click()
+    chart_resize = page.get_by_role("separator", name="调整图表分栏宽度")
+    first_pane = page.locator(".chart-pane").first
+    pane_before = first_pane.bounding_box()
+    chart_handle_box = chart_resize.bounding_box()
+    assert pane_before is not None and chart_handle_box is not None
+    page.mouse.move(
+        chart_handle_box["x"] + chart_handle_box["width"] / 2,
+        chart_handle_box["y"] + 100,
+    )
+    page.mouse.down()
+    page.mouse.move(chart_handle_box["x"] + 100, chart_handle_box["y"] + 100, steps=6)
+    page.mouse.up()
+    pane_after = first_pane.bounding_box()
+    assert pane_after is not None
+    assert pane_after["width"] >= pane_before["width"] + 75
+    assert page.evaluate(
+        "Number(localStorage.getItem('replaytutor:chart-column-split'))"
+    ) > 50
+    client.close()
+
+
 def test_drawings_and_dispositions_survive_reload(
     page: Page, e2e_stack_factory
 ) -> None:
@@ -600,6 +690,42 @@ def test_drawings_and_dispositions_survive_reload(
     expect(page.locator(".annotation-list", has_text="E2E 趋势线")).to_be_visible(
         timeout=15_000
     )
+    object_toolbar = page.get_by_role("toolbar", name="选中图表对象操作")
+    expect(object_toolbar).to_be_visible()
+    toolbar_layout = object_toolbar.evaluate(
+        "element => ({"
+        "contentFits: element.scrollWidth <= element.clientWidth + 1,"
+        "titleFits: element.querySelector('strong').scrollWidth "
+        "<= element.querySelector('strong').clientWidth + 1,"
+        "assistiveLabelHidden: getComputedStyle("
+        "element.querySelector('.sr-only')).position === 'absolute'"
+        "})"
+    )
+    assert toolbar_layout == {
+        "contentFits": True,
+        "titleFits": True,
+        "assistiveLabelHidden": True,
+    }
+
+    page.get_by_role("button", name="展开图表对象工具栏").click()
+    color_input = page.get_by_label("线条颜色")
+    color_input.fill("#ff00ff")
+    expect(color_input).to_have_value("#ff00ff")
+    deadline = time.monotonic() + 5
+    color_persisted = False
+    while time.monotonic() < deadline:
+        dispositions = client.get(
+            f"/api/v1/sessions/{session_id}/annotations/dispositions"
+        ).json()["dispositions"]
+        color_persisted = any(
+            item["original_annotation"]["label"] == "E2E 趋势线"
+            and item["effective_style"]["line_color"] == "#ff00ff"
+            for item in dispositions
+        )
+        if color_persisted:
+            break
+        time.sleep(0.05)
+    assert color_persisted
 
     page.locator(".annotation-list button", has_text="E2E 趋势线").click()
     page.locator(".annotation-inspector input").first.fill("E2E 修订趋势线")
@@ -607,8 +733,9 @@ def test_drawings_and_dispositions_survive_reload(
     expect(page.locator(".annotation-list", has_text="E2E 修订趋势线")).to_be_visible()
     page.reload()
     expect(page.locator(".annotation-list", has_text="E2E 修订趋势线")).to_be_visible()
-
     page.locator(".annotation-list button", has_text="E2E 修订趋势线").click()
+    expect(page.get_by_label("线条颜色")).to_have_value("#ff00ff")
+
     page.locator(".annotation-inspector").get_by_role("button", name="删除").click()
     expect(page.locator(".annotation-list", has_text="deleted")).to_be_visible()
 
@@ -732,6 +859,7 @@ def test_drawings_and_dispositions_survive_reload(
     expect(page.get_by_role("toolbar", name="选中图表对象操作")).to_contain_text(
         "斐波那契回撤"
     )
+    page.get_by_role("button", name="展开图表对象工具栏").click()
     page.get_by_role("button", name="删除 斐波那契回撤").click()
     expect(page.locator(".annotation-list button", has_text="deleted")).to_have_count(4)
     client.close()
@@ -782,6 +910,40 @@ def test_workbench_shortcuts_are_operational_and_order_keys_remain_drafts(
     expect(page.locator(".shortcut-notice")).to_contain_text("请先锁定交易计划")
     session_after_shortcut = client.get(f"/api/v1/sessions/{session_id}").json()
     assert session_after_shortcut["execution"]["orders"] == []
+    client.close()
+
+
+def test_multichart_playback_keeps_all_panes_rendered_while_aggregating(
+    page: Page,
+    e2e_stack_factory,
+) -> None:
+    stack: E2EStack = e2e_stack_factory("fake")
+    client, created = create_training_session(stack.api_url)
+    session_id = created["session"]["session_id"]
+    page.goto(f"{stack.web_url}/sessions/{session_id}")
+    expect(page.get_by_role("button", name="下一根 K 线")).to_be_visible()
+
+    page.get_by_role("button", name="四图", exact=True).click()
+    expect(page.locator(".chart-pane")).to_have_count(4)
+    expect(page.locator(".replay-chart")).to_have_count(4)
+
+    def delay_aggregated_bars(route: Route) -> None:
+        time.sleep(0.8)
+        route.continue_()
+
+    page.route(f"**/api/v1/sessions/{session_id}/bars**", delay_aggregated_bars)
+    before = client.get(f"{stack.api_url}/api/v1/sessions/{session_id}").json()
+    page.get_by_role("button", name="播放", exact=True).click()
+    expect(page.get_by_role("button", name="暂停", exact=True)).to_be_visible()
+    page.wait_for_timeout(1_500)
+    page.get_by_role("button", name="暂停", exact=True).click()
+
+    after = client.get(f"{stack.api_url}/api/v1/sessions/{session_id}").json()
+    assert after["session"]["frame"]["current_index"] > before["session"]["frame"]["current_index"]
+    expect(page.locator(".chart-pane")).to_have_count(4)
+    expect(page.locator(".replay-chart")).to_have_count(4)
+    assert page.locator(".chart-pane").all_text_contents()
+    assert "0 bars" not in page.locator(".chart-workspace").inner_text()
     client.close()
 
 

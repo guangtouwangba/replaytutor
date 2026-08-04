@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 
+import pytest
 from alembic import command
 from fastapi.testclient import TestClient
 
@@ -21,7 +22,11 @@ from replaytutor.contracts import (
 )
 from replaytutor.ids import new_id
 from replaytutor.main import create_app
-from replaytutor.storage.database import alembic_config, connect_database, upgrade_database
+from replaytutor.storage.database import (
+    alembic_config,
+    connect_database,
+    upgrade_database,
+)
 
 
 def create_session(client: TestClient) -> dict:
@@ -265,6 +270,42 @@ def test_tutor_context_is_future_safe_and_fake_run_is_persisted(
     assert (workspace / "manifest.json").is_file()
 
 
+@pytest.mark.parametrize("analysis_timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"])
+def test_tutor_context_uses_requested_analysis_timeframe(
+    client: TestClient,
+    monkeypatch,
+    analysis_timeframe: str,
+) -> None:
+    created = create_session(client)
+
+    def fake_run(self, workspace, *, timeout_seconds, on_process):
+        del self, timeout_seconds, on_process
+        context = json.loads((workspace / "tutor_context.json").read_text())
+        assert context["analysis_timeframe"] == analysis_timeframe
+        assert context["visible_bars"]
+        assert all(
+            bar["timeframe"] == analysis_timeframe for bar in context["visible_bars"]
+        )
+        assert all(
+            bar["close_time"] <= context["visible_at"]
+            for bar in context["visible_bars"]
+        )
+        return response(context["visible_bars"][-1]["bar_id"])
+
+    monkeypatch.setattr(CodexAdapter, "run", fake_run)
+    started = client.post(
+        f"/api/v1/sessions/{created['session']['session_id']}/tutor",
+        json={
+            "question": f"分析当前 {analysis_timeframe} 结构",
+            "stage": "environment",
+            "analysis_timeframe": analysis_timeframe,
+        },
+    )
+    assert started.status_code == 200
+    run = wait_for_run(client, started.json()["run_id"])
+    assert run["status"] == "completed", run["error"]
+
+
 def test_selected_chart_objects_are_snapshotted_into_tutor_context(
     client: TestClient,
     settings: Settings,
@@ -440,7 +481,10 @@ def test_after_action_codex_uses_review_and_persists_ai_layer(
             update={
                 "annotations": [
                     TutorChartInstruction(
-                        shape="marker",
+                        tool="horizontal_line",
+                        purpose="support",
+                        timeframe="1m",
+                        shape="line",
                         label="回放终点",
                         evidence_ids=[visible["bar_id"]],
                         points=[
@@ -457,7 +501,7 @@ def test_after_action_codex_uses_review_and_persists_ai_layer(
     monkeypatch.setattr(CodexAdapter, "run", fake_after_action)
     started = client.post(
         f"/api/v1/sessions/{session_id}/tutor",
-        json={"question": "审查完整会话", "stage": "after_action"},
+        json={"question": "审查完整会话并标出回放终点支撑", "stage": "after_action"},
     )
     assert started.status_code == 200
     run = wait_for_run(client, started.json()["run_id"])

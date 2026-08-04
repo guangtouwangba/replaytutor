@@ -1,4 +1,4 @@
-import type { Bar } from "@replaytutor/contracts";
+import type { Bar, ChartAnnotation } from "@replaytutor/contracts";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
@@ -59,6 +59,17 @@ const bars = [{
   close_time: "2025-08-02T13:25:00Z",
   raw: { open: "100", high: "110", low: "90", close: "105", volume: "1" },
 }] as unknown as Bar[];
+
+const annotations = [{
+  annotation_id: "annotation-1",
+  label: "我的观察",
+  tool: "horizontal_line",
+  layer: "user",
+  points: [{ time: "2025-08-02T13:25:00Z", price: "105" }],
+  style: { line_color: "#20b7f5", line_width: 1, line_dash: "solid" },
+  properties: {},
+  metadata: { drawing_kind: "horizontal_line" },
+}] as unknown as ChartAnnotation[];
 
 describe("ReplayChart visible boundary", () => {
   beforeEach(async () => {
@@ -151,5 +162,32 @@ describe("ReplayChart visible boundary", () => {
       [{ y: 220 }],
       { paneId: "candle_pane", absolute: true },
     );
+  });
+
+  it("keeps selected-object actions compact until the user expands them", () => {
+    const { container } = render(
+      <ReplayChart
+        annotations={annotations}
+        bars={bars}
+        symbol="BTCUSDT"
+        timeframe="1m"
+        pricePrecision={2}
+        visibleAt="2025-08-02T13:25:00Z"
+        hideRealDate
+        onAnnotationDelete={vi.fn()}
+        selectedAnnotationId="annotation-1"
+      />,
+    );
+
+    expect(container.querySelector(".chart-object-actions")).toHaveClass("is-collapsed");
+    expect(screen.queryByRole("combobox", { name: "线宽" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "展开图表对象工具栏" }));
+
+    expect(container.querySelector(".chart-object-actions")).toHaveClass("is-expanded");
+    expect(screen.getByRole("combobox", { name: "线宽" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "收起图表对象工具栏" }));
+    expect(screen.queryByRole("combobox", { name: "线宽" })).not.toBeInTheDocument();
   });
 });

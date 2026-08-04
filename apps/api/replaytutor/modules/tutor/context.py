@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from replaytutor.contracts import (
+    Bar,
     ChartContextBundle,
     IndicatorEvidence,
     PlaybookEvaluation,
@@ -19,8 +20,10 @@ def build_tutor_context(
     playbook_evaluation: PlaybookEvaluation | None = None,
     chart_context: ChartContextBundle | None = None,
     indicator_evidence: list[IndicatorEvidence] | None = None,
+    visible_bars: list[Bar] | None = None,
 ) -> tuple[dict[str, Any], set[str]]:
-    evidence_ids = {bar.bar_id for bar in delta.bars}
+    analysis_bars = visible_bars if visible_bars is not None else delta.bars
+    evidence_ids = {bar.bar_id for bar in analysis_bars}
     execution = delta.execution
     if execution is not None:
         if execution.plan is not None:
@@ -46,12 +49,13 @@ def build_tutor_context(
         "stage": request.stage,
         "locale": request.locale,
         "question": request.question,
+        "analysis_timeframe": request.analysis_timeframe,
         "chart_context": (
             chart_context.model_dump(mode="json") if chart_context is not None else None
         ),
         "indicators": [item.model_dump(mode="json") for item in indicators],
         "instrument": delta.session.instrument.model_dump(mode="json"),
-        "visible_bars": [bar.model_dump(mode="json") for bar in delta.bars],
+        "visible_bars": [bar.model_dump(mode="json") for bar in analysis_bars],
         "account_state": (
             execution.portfolio.model_dump(mode="json") if execution is not None else None
         ),

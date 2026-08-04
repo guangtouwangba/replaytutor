@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@replaytutor/contracts": "workspace:*",
+    "@replaytutor/tutor-ui": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "i18next": "25.6.0",
     "i18next-browser-languagedetector": "8.2.0",

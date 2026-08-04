@@ -14,6 +14,7 @@ from replaytutor.middleware import RequestIdMiddleware
 from replaytutor.modules.local_system import LocalSystemService
 from replaytutor.modules.market_data.download_jobs import DatasetDownloadJobService
 from replaytutor.routes.chart_tools import router as chart_tools_router
+from replaytutor.routes.companion import router as companion_router
 from replaytutor.routes.datasets import router as datasets_router
 from replaytutor.routes.health import router as health_router
 from replaytutor.routes.local_system import router as local_system_router
@@ -72,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(playbooks_router)
     app.include_router(datasets_router)
     app.include_router(chart_tools_router)
+    app.include_router(companion_router)
     app.include_router(reviews_router)
     app.include_router(sessions_router)
     app.include_router(tutor_router)

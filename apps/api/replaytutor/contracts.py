@@ -4,7 +4,7 @@ from datetime import datetime
 from math import isfinite
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ContractModel(BaseModel):
@@ -871,6 +871,7 @@ class TutorRequest(ContractModel):
     thread_id: Identifier | None = None
     stage: Literal["environment", "plan", "position", "exit", "after_action"] = "environment"
     locale: Literal["en-US", "zh-CN"] = "en-US"
+    analysis_timeframe: Timeframe = "1m"
     context_annotation_ids: list[Identifier] = Field(default_factory=list, max_length=32)
     context_indicators: list[IndicatorSpec] = Field(default_factory=list, max_length=8)
 
@@ -894,6 +895,10 @@ class TutorRuleCheck(ContractModel):
 
 
 class TutorChartInstruction(ContractModel):
+    annotation_id: Identifier | None = None
+    tool: Literal["trend_line", "horizontal_line", "parallel_channel", "zone"]
+    purpose: Literal["trend", "support", "resistance", "channel"]
+    timeframe: Timeframe
     shape: Literal["line", "zone", "marker", "label"]
     label: str
     evidence_ids: list[str]
@@ -908,7 +913,7 @@ class TutorResponse(ContractModel):
     risks_and_unknowns: list[str] = Field(default_factory=list)
     rule_checks: list[TutorRuleCheck] = Field(default_factory=list)
     next_questions: list[str] = Field(default_factory=list)
-    annotations: list[TutorChartInstruction] = Field(default_factory=list)
+    annotations: list[TutorChartInstruction] = Field(default_factory=list, max_length=8)
     disclaimer: str
 
 
@@ -957,6 +962,173 @@ class TutorThreadDetail(TutorThreadSummary):
 class TutorThreadListResponse(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     threads: list[TutorThreadSummary] = Field(default_factory=list)
+
+
+CompanionMethod = Literal[
+    "system.bootstrap",
+    "system.health",
+    "agent.codex.discover",
+    "session.list",
+    "session.get",
+    "tutor.thread.list",
+    "tutor.thread.create",
+    "tutor.thread.get",
+    "tutor.run.start",
+    "tutor.run.get",
+    "tutor.run.cancel",
+    "evidence.resolve",
+    "navigation.open_replaytutor",
+]
+CompanionErrorCode = Literal[
+    "native_host_not_found",
+    "local_service_stopped",
+    "origin_not_allowed",
+    "protocol_incompatible",
+    "method_not_allowed",
+    "payload_invalid",
+    "payload_too_large",
+    "session_not_found",
+    "tutor_disabled",
+    "codex_unavailable",
+    "run_conflict",
+    "run_failed",
+    "evidence_not_found",
+    "internal_error",
+]
+
+
+class CompanionEmptyParams(ContractModel):
+    pass
+
+
+class CompanionBootstrapParams(ContractModel):
+    extension_version: str = Field(min_length=1, max_length=64)
+    locale: Literal["en-US", "zh-CN"] = "en-US"
+
+
+class CompanionSessionListParams(ContractModel):
+    limit: int = Field(default=50, ge=1, le=50)
+
+
+class CompanionSessionParams(ContractModel):
+    session_id: Identifier
+
+
+class CompanionThreadListParams(ContractModel):
+    session_id: Identifier
+
+
+class CompanionThreadCreateParams(ContractModel):
+    session_id: Identifier
+    request: CreateTutorThreadRequest = Field(default_factory=CreateTutorThreadRequest)
+
+
+class CompanionThreadParams(ContractModel):
+    thread_id: Identifier
+
+
+class CompanionRunStartParams(ContractModel):
+    session_id: Identifier
+    request: TutorRequest
+
+
+class CompanionRunParams(ContractModel):
+    run_id: Identifier
+
+
+class CompanionEvidenceParams(ContractModel):
+    session_id: Identifier
+    evidence_id: Identifier
+
+
+class CompanionNavigationParams(ContractModel):
+    session_id: Identifier
+    evidence_id: Identifier | None = None
+    mode: Literal["replay", "review"] = "review"
+
+
+class CompanionBootstrapResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    connector_version: str
+    replaytutor_version: str
+    compatible_protocols: list[Literal["1.0"]] = Field(default_factory=lambda: ["1.0"])
+    capabilities: list[
+        Literal["session.read", "tutor.run", "evidence.resolve", "navigation.local"]
+    ]
+
+
+class CompanionHealthResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    status: Literal["healthy", "degraded"]
+    api_version: str
+    database_status: Literal["healthy", "degraded"]
+    data_status: Literal["healthy", "unavailable"]
+
+
+class CompanionAgentResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    agent_id: Literal["codex-local"] = "codex-local"
+    installed: bool
+    version: str | None = None
+    available: bool
+    authentication: Literal["unknown", "verified", "failed"]
+    diagnostics: list[str] = Field(default_factory=list)
+
+
+class CompanionSessionSummary(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    session_id: Identifier
+    snapshot_id: Identifier
+    instrument: Instrument
+    status: Literal["ready", "paused", "completed", "stopped"]
+    frame_id: Identifier
+    revision: int = Field(ge=0)
+    visible_at: datetime
+    updated_at: datetime
+
+
+class CompanionSessionListResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    sessions: list[CompanionSessionSummary] = Field(default_factory=list, max_length=50)
+
+
+class CompanionSessionStateResult(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    session: CompanionSessionSummary
+
+
+class CompanionNavigationTarget(ContractModel):
+    schema_version: Literal["1.0"] = "1.0"
+    path: str = Field(pattern=r"^/sessions/[a-z]{3}_[0-9a-f-]{36}")
+
+
+class CompanionError(ContractModel):
+    code: CompanionErrorCode
+    message: str = Field(min_length=1, max_length=500)
+    retryable: bool = False
+
+
+class CompanionRequest(ContractModel):
+    protocol_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(pattern=r"^req_[A-Za-z0-9-]{4,124}$")
+    method: CompanionMethod
+    params: dict[str, object] = Field(default_factory=dict)
+
+
+class CompanionResponse(ContractModel):
+    protocol_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(pattern=r"^req_[A-Za-z0-9-]{4,124}$")
+    ok: bool
+    result: object | None = None
+    error: CompanionError | None = None
+
+    @model_validator(mode="after")
+    def validate_outcome(self) -> CompanionResponse:
+        if self.ok and (self.result is None or self.error is not None):
+            raise ValueError("Successful companion responses require result and forbid error")
+        if not self.ok and (self.error is None or self.result is not None):
+            raise ValueError("Failed companion responses require error and forbid result")
+        return self
 
 
 class PlaybookVersion(ContractModel):

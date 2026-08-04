@@ -99,7 +99,48 @@ if "--version" in sys.argv:
 output = pathlib.Path(sys.argv[sys.argv.index("--output-last-message") + 1])
 context = json.loads(pathlib.Path.cwd().joinpath("tutor_context.json").read_text())
 bar = context["visible_bars"][-1]
+first_bar = context["visible_bars"][0]
 bar_id = bar["bar_id"]
+drawing_requested = any(token in context["question"] for token in ("画", "标出", "添加"))
+drawings = []
+if drawing_requested:
+    drawings = [
+        {{
+            "annotation_id": None,
+            "tool": "trend_line",
+            "purpose": "trend",
+            "timeframe": context["analysis_timeframe"],
+            "shape": "line",
+            "label": "E2E Tutor 标注",
+            "evidence_ids": [first_bar["bar_id"], bar_id],
+            "points": [
+                {{"time": first_bar["close_time"], "price": first_bar["raw"]["low"]}},
+                {{"time": bar["close_time"], "price": bar["raw"]["close"]}},
+            ],
+        }},
+        {{
+            "annotation_id": None,
+            "tool": "horizontal_line",
+            "purpose": "support",
+            "timeframe": context["analysis_timeframe"],
+            "shape": "line",
+            "label": "E2E Tutor 支撑",
+            "evidence_ids": [bar_id],
+            "points": [{{"time": bar["close_time"], "price": bar["raw"]["low"]}}],
+        }},
+        {{
+            "annotation_id": None,
+            "tool": "horizontal_line",
+            "purpose": "resistance",
+            "timeframe": context["analysis_timeframe"],
+            "shape": "line",
+            "label": "E2E Tutor 压力",
+            "evidence_ids": [bar_id],
+            "points": [{{"time": bar["close_time"], "price": bar["raw"]["high"]}}],
+        }},
+    ]
+    if "一条" in context["question"]:
+        drawings = drawings[:1]
 payload = {{
     "schema_version": "1.0",
     "summary": "E2E Tutor 已完成当前证据检查",
@@ -108,12 +149,7 @@ payload = {{
     "risks_and_unknowns": ["测试响应不构成交易建议。"],
     "rule_checks": [],
     "next_questions": ["失效条件是否足够明确？"],
-    "annotations": [{{
-        "shape": "marker",
-        "label": "E2E Tutor 标注",
-        "evidence_ids": [bar_id],
-        "points": [{{"time": bar["close_time"], "price": bar["raw"]["close"]}}],
-    }}],
+    "annotations": drawings,
     "disclaimer": "仅供训练复盘，不构成投资建议。",
 }}
 output.write_text(json.dumps(payload, ensure_ascii=False))

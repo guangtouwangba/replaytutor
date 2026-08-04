@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from replaytutor.config import Settings
@@ -12,7 +13,11 @@ from replaytutor.contracts import (
 )
 from replaytutor.ids import new_id
 from replaytutor.modules.annotations import persist_ai_annotations
-from replaytutor.modules.tutor.validation import TutorValidationError, validate_evidence
+from replaytutor.modules.tutor.validation import (
+    TutorValidationError,
+    sanitize_chart_instructions,
+    validate_evidence,
+)
 from replaytutor.storage.database import connect_database
 
 
@@ -77,7 +82,10 @@ def test_ai_annotation_evidence_is_whitelisted() -> None:
         summary="结构测试",
         annotations=[
             TutorChartInstruction(
-                shape="marker",
+                tool="horizontal_line",
+                purpose="support",
+                timeframe="1m",
+                shape="line",
                 label="潜在触发",
                 evidence_ids=["bar_future"],
                 points=[
@@ -96,6 +104,154 @@ def test_ai_annotation_evidence_is_whitelisted() -> None:
         assert "bar_future" in str(error)
     else:
         raise AssertionError("Invalid annotation evidence must be rejected")
+
+
+def test_ai_drawings_are_limited_to_visible_timeframe_ohlc() -> None:
+    close_time = datetime(2026, 8, 3, 4, 0, tzinfo=UTC)
+    bar_id = new_id("bar")
+    valid = TutorChartInstruction(
+        tool="horizontal_line",
+        purpose="support",
+        timeframe="4h",
+        shape="line",
+        label="关键支撑",
+        evidence_ids=[bar_id],
+        points=[AnnotationPoint(time=close_time, price="100")],
+    )
+    invalid_price = valid.model_copy(
+        update={"label": "虚构价格", "points": [AnnotationPoint(time=close_time, price="101")]}
+    )
+    invalid_tool_shape = valid.model_copy(
+        update={"tool": "parallel_channel", "purpose": "channel", "shape": "zone"}
+    )
+    response = TutorResponse(
+        summary="绘图完成",
+        annotations=[valid, invalid_price, invalid_tool_shape],
+        disclaimer="仅用于训练",
+    )
+    sanitized = sanitize_chart_instructions(
+        response,
+        {
+            "analysis_timeframe": "4h",
+            "question": "帮我画主要支撑线",
+            "locale": "zh-CN",
+            "visible_bars": [
+                {
+                    "bar_id": bar_id,
+                    "close_time": close_time.isoformat().replace("+00:00", "Z"),
+                    "raw": {"open": "99", "high": "103", "low": "98", "close": "100"},
+                }
+            ],
+        },
+    )
+    assert sanitized.annotations == [valid]
+    assert sanitized.risks_and_unknowns[-1].startswith("宿主已删除 2 个")
+
+
+def test_ai_drawings_require_explicit_intent_and_only_visible_bar_evidence() -> None:
+    close_time = datetime(2026, 8, 3, 4, 0, tzinfo=UTC)
+    bar_id = new_id("bar")
+    drawing = TutorChartInstruction(
+        tool="horizontal_line",
+        purpose="resistance",
+        timeframe="4h",
+        shape="line",
+        label="关键压力",
+        evidence_ids=[bar_id],
+        points=[AnnotationPoint(time=close_time, price="103")],
+    )
+    response = TutorResponse(
+        summary="结构分析",
+        annotations=[drawing],
+        disclaimer="Training only",
+    )
+    base_context = {
+        "analysis_timeframe": "4h",
+        "locale": "en-US",
+        "visible_bars": [
+            {
+                "bar_id": bar_id,
+                "close_time": close_time.isoformat().replace("+00:00", "Z"),
+                "raw": {"open": "99", "high": "103", "low": "98", "close": "100"},
+            }
+        ],
+    }
+
+    ordinary = sanitize_chart_instructions(
+        response,
+        {**base_context, "question": "Analyze the current trend and key levels."},
+    )
+    assert ordinary.annotations == []
+    assert "did not explicitly request drawing" in ordinary.risks_and_unknowns[-1]
+
+    foreign_evidence = drawing.model_copy(
+        update={"evidence_ids": [bar_id, new_id("bar")]}
+    )
+    invalid = sanitize_chart_instructions(
+        response.model_copy(update={"annotations": [foreign_evidence]}),
+        {**base_context, "question": "Draw the main resistance line."},
+    )
+    assert invalid.annotations == []
+    assert "evidence validation" in invalid.risks_and_unknowns[-1]
+
+
+@pytest.mark.parametrize(
+    ("tool", "purpose", "shape", "point_count"),
+    [
+        ("trend_line", "trend", "line", 2),
+        ("horizontal_line", "support", "line", 1),
+        ("parallel_channel", "channel", "zone", 3),
+        ("zone", "resistance", "zone", 2),
+    ],
+)
+def test_supported_ai_drawing_tool_matrix(
+    tool: str,
+    purpose: str,
+    shape: str,
+    point_count: int,
+) -> None:
+    close_times = [
+        datetime(2026, 8, 3, hour, 0, tzinfo=UTC) for hour in (4, 8, 12)
+    ]
+    bar_ids = [new_id("bar") for _ in close_times]
+    bars = [
+        {
+            "bar_id": bar_id,
+            "close_time": close_time.isoformat().replace("+00:00", "Z"),
+            "raw": {"open": "99", "high": "103", "low": "98", "close": "100"},
+        }
+        for bar_id, close_time in zip(bar_ids, close_times, strict=True)
+    ]
+    instruction = TutorChartInstruction.model_validate(
+        {
+            "tool": tool,
+            "purpose": purpose,
+            "timeframe": "4h",
+            "shape": shape,
+            "label": f"valid {tool}",
+            "evidence_ids": bar_ids[:point_count],
+            "points": [
+                {"time": close_time, "price": "100"}
+                for close_time in close_times[:point_count]
+            ],
+        }
+    )
+    response = TutorResponse(
+        summary="draw",
+        annotations=[instruction],
+        disclaimer="Training only",
+    )
+
+    sanitized = sanitize_chart_instructions(
+        response,
+        {
+            "analysis_timeframe": "4h",
+            "question": "Draw the main trend line, support, resistance and channel zone.",
+            "locale": "en-US",
+            "visible_bars": bars,
+        },
+    )
+    assert sanitized.annotations == [instruction]
 
 
 def test_user_annotation_revision_and_delete_are_append_only(
@@ -202,7 +358,10 @@ def test_ai_annotation_can_be_accepted_or_rejected(
             frame_id=session["frame"]["frame_id"],
             instructions=[
                 TutorChartInstruction(
-                    shape="marker",
+                    tool="horizontal_line",
+                    purpose="support",
+                    timeframe="1m",
+                    shape="line",
                     label="AI 候选标注",
                     evidence_ids=[point["bar_id"]],
                     points=[
@@ -216,6 +375,8 @@ def test_ai_annotation_can_be_accepted_or_rejected(
         )
         connection.commit()
     annotation = annotations[0]
+    assert annotation.tool == "horizontal_line"
+    assert annotation.metadata == {"purpose": "support", "source_timeframe": "1m"}
     endpoint = (
         f"/api/v1/sessions/{session['session_id']}/annotations/"
         f"{annotation.annotation_id}/actions"
