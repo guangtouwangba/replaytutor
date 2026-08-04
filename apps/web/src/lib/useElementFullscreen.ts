@@ -20,7 +20,6 @@ export function useElementFullscreen<T extends HTMLElement>(
   }, [targetRef]);
 
   useEffect(() => {
-    if (!nativeActive && !fallback) return;
     const syncEscapeExit = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setNativeActive(false);
@@ -28,7 +27,7 @@ export function useElementFullscreen<T extends HTMLElement>(
     };
     window.addEventListener("keydown", syncEscapeExit, true);
     return () => window.removeEventListener("keydown", syncEscapeExit, true);
-  }, [fallback, nativeActive]);
+  }, []);
 
   const toggle = useCallback(async () => {
     const target = targetRef.current;
