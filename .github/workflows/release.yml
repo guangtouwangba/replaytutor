@@ -23,7 +23,7 @@ jobs:
           node-version-file: .nvmrc
           package-manager-cache: false
       - name: Set up uv and Python
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           enable-cache: true
           python-version: "3.12"
